@@ -5,6 +5,7 @@ const path = require('path');
 const ping = require('ping');
 const config = require('./config');
 const mkdirp = require('mkdirp');
+const fs = require('fs');
 
 const host = process.argv[2] || 'localhost';
 
