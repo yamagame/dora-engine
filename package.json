@@ -1,0 +1,37 @@
+{
+  "name": "robot-samples",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/speech": "^0.10.3",
+    "aws-iot-device-sdk": "^2.1.0",
+    "body-parser": "^1.18.2",
+    "dora": "git+https://github.com/yamagame/dora.git",
+    "express": "^4.16.2",
+    "mecab-async": "^0.1.2",
+    "mic": "git+https://github.com/yamagame/mic.git",
+    "mkdirp": "^0.5.1",
+    "mustache": "^2.3.0",
+    "ping": "^0.2.2",
+    "ps-tree": "^1.1.0",
+    "raspi": "^5.0.1",
+    "raspi-gpio": "^5.0.0",
+    "raspi-soft-pwm": "^4.0.1",
+    "request": "^2.83.0",
+    "request-promise": "^4.2.2",
+    "socket.io": "^2.0.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "robot": "node robot-server.js",
+    "robot-dev": "SPEECH=off node robot-server.js",
+    "macintosh": "SPEECH=off MACINTOSH=on node robot-server.js",
+    "button": "./button-server.sh",
+    "servo": "sudo node servo-head.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}

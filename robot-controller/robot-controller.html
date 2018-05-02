@@ -1,0 +1,974 @@
+<script type="text/javascript">
+  (function () {
+
+    RED.nodes.registerType('text-to-speech', {
+      category: 'robot',
+      color: '#c1ddf5',
+      defaults: {
+        name: { value: "", },
+        voice: { value: "keep", required: true, },
+        speed: { value: "keep", required: true, },
+        volume: { value: "keep", required: true, },
+        direction: { value: "keep", required: true, },
+        silence: { value: false, required: true, },
+        algorithm: { value: "keep", required: true, },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "feed.png",
+      align: "right",
+      label: function () {
+        return this.name || this._("text-to-speech.label.name");
+      }
+    });
+
+    RED.nodes.registerType('speech-to-text', {
+      category: 'robot',
+      color: '#b8daf4',
+      defaults: {
+        name: { value: "", },
+        timeout: { value: 30000, validate: RED.validators.number() },
+        sensitivity: { value: "keep", required: true, },
+      },
+      inputs: 1,
+      outputs: 2,
+      icon: "feed.png",
+      label: function () {
+        return this.name || this._("speech-to-text.label.name");
+      }
+    });
+
+    RED.nodes.registerType('robot-listener', {
+      category: 'robot',
+      color: '#a5d3f1',
+      defaults: {
+        name: { value: "" },
+        host: { value: "http://localhost:3090", required: true, },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "bridge.png",
+      label: function () {
+        return this.name || this.host || 'robot-listener';
+      },
+      oneditprepare: function () {
+      }
+    });
+
+    RED.nodes.registerType('robot-voice', {
+      category: 'robot',
+      color: '#a5d3f1',
+      defaults: {
+        name: { value: "" },
+        voice: { value: "keep", required: true, },
+        speed: { value: "keep", required: true, },
+        volume: { value: "keep", required: true, },
+        tone: { value: "keep", required:true, },
+        direction: { value: "keep", required: true, },
+        algorithm: { value: "keep", required: true, },
+        sensitivity: { value: "keep", required: true, },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "bridge.png",
+      label: function () {
+        var voice = this.voice || null;
+        if (voice != null) {
+          voice = this._("common.label."+voice)
+        }
+        return this.name || voice || 'robot-voice';
+      },
+      oneditprepare: function () {
+      }
+    });
+
+    RED.nodes.registerType('utterance', {
+      category: 'robot',
+      color: '#92cbee',
+      defaults: {
+        name: { value: "", },
+        utterance: { value: "", },
+        voice: { value: "keep", required: true, },
+        speed: { value: "keep", required: true, },
+        volume: { value: "keep", required: true, },
+        direction: { value: "keep", required: true, },
+        silence: { value: false, required: true, },
+        algorithm: { value: "keep", required: true, },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "feed.png",
+      align: "right",
+      label: function () {
+        return this.name || this.utterance.split('\n')[0] || this._("utterance.label.name");
+      },
+      oneditprepare: function () {
+        var that = this;
+        // $("#node-input-outputs").spinner({
+        //   min: 1
+        // });
+
+        this.editor = RED.editor.createEditor({
+          id: 'node-input-func-editor',
+          mode: 'ace/mode/plain_text',
+          value: $("#node-input-utterance").val(),
+          globals: {
+            msg: true,
+            context: true,
+            RED: true,
+            util: true,
+            flow: true,
+            global: true,
+            console: true,
+            Buffer: true,
+            setTimeout: true,
+            clearTimeout: true,
+            setInterval: true,
+            clearInterval: true
+          }
+        });
+
+        RED.library.create({
+          url: "functions", // where to get the data from
+          type: "function", // the type of object the library is for
+          editor: this.editor, // the field name the main text body goes to
+          mode: "ace/mode/plain_text",
+          fields: ['name', 'outputs']
+        });
+        this.editor.focus();
+      },
+      oneditsave: function () {
+        var annot = this.editor.getSession().getAnnotations();
+        this.noerr = 0;
+        $("#node-input-noerr").val(0);
+        for (var k = 0; k < annot.length; k++) {
+          //console.log(annot[k].type,":",annot[k].text, "on line", annot[k].row);
+          if (annot[k].type === "error") {
+            $("#node-input-noerr").val(annot.length);
+            this.noerr = annot.length;
+          }
+        }
+        $("#node-input-utterance").val(this.editor.getValue());
+        this.editor.destroy();
+        delete this.editor;
+      },
+      oneditcancel: function () {
+        this.editor.destroy();
+        delete this.editor;
+      },
+      oneditresize: function (size) {
+        var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+        var height = $("#dialog-form").height();
+        for (var i = 0; i < rows.size(); i++) {
+          height -= $(rows[i]).outerHeight(true);
+        }
+        var editorRow = $("#dialog-form>div.node-text-editor-row");
+        height -= (parseInt(editorRow.css("marginTop")) + parseInt(editorRow.css("marginBottom")));
+        $(".node-text-editor").css("height", height + "px");
+        this.editor.resize();
+      }
+    });
+
+    RED.nodes.registerType('chat', {
+      category: 'robot',
+      color: '#7dc3ec',
+      defaults: {
+        voice: { value: "keep", required: true, },
+        speed: { value: "keep", required: true, },
+        volume: { value: "keep", required: true, },
+        tone: { value: "keep", required:true, },
+        direction: { value: "keep", required: true, },
+        silence: { value: false, required: true, },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "feed.png",
+      align: "right",
+      label: function () {
+        return this._("chat.label.name");
+      }
+    });
+
+    // RED.nodes.registerType('command', {
+    //   category: 'robot',
+    //   color: '#6abcea',
+    //   defaults: {
+    //     name: { value: "", },
+    //     command: { value: "", },
+    //     args: {value: "", },
+    //   },
+    //   inputs: 1,
+    //   outputs: 1,
+    //   icon: "feed.png",
+    //   label: function () {
+    //     return this.name || this.command || this._("command.label.name");
+    //   }
+    // });
+
+    // RED.nodes.registerType('open-slide', {
+    //   category: 'robot',
+    //   color: '#6abcea',
+    //   defaults: {
+    //     name: { value: "スライドを開く", },
+    //     args: {value: "", },
+    //   },
+    //   inputs: 1,
+    //   outputs: 1,
+    //   icon: "feed.png",
+    //   label: function () {
+    //     return this.name || this._("open-slide.label.name");
+    //   }
+    // });
+
+    // RED.nodes.registerType('next-page', {
+    //   category: 'robot',
+    //   color: '#6abcea',
+    //   defaults: {
+    //     name: { value: "次のページへ", },
+    //   },
+    //   inputs: 1,
+    //   outputs: 1,
+    //   icon: "feed.png",
+    //   label: function () {
+    //     return this.name || this._("next-page.label.name");
+    //   }
+    // });
+
+    // RED.nodes.registerType('close-slide', {
+    //   category: 'robot',
+    //   color: '#6abcea',
+    //   defaults: {
+    //     name: { value: "スライドを閉じる", },
+    //   },
+    //   inputs: 1,
+    //   outputs: 1,
+    //   icon: "feed.png",
+    //   label: function () {
+    //     return this.name || this._("close-slide.label.name");
+    //   }
+    // });
+
+    RED.nodes.registerType('mecab', {
+      category: 'robot',
+      color: '#4eb1e6',
+      defaults: {
+        name: { value: "", },
+        intent: { value: "", },
+        priority: { value: 10, validate:RED.validators.number(true) },
+        pattern: { value: "", },
+      },
+      inputs: 1,
+      outputs: 2,
+      icon: "bridge.png",
+      outputLabels: function(index) {
+        if (index == 0) return this._("mecab.outputlabel.OK");
+        return this._("mecab.outputlabel.NG");
+      },
+      label: function () {
+        return this.name || this.pattern.split('\n')[0] || this._("mecab.label.name");
+      },
+      oneditprepare: function () {
+        var that = this;
+        // $("#node-input-outputs").spinner({
+        //   min: 1
+        // });
+
+        this.editor = RED.editor.createEditor({
+          id: 'node-input-func-editor',
+          mode: 'ace/mode/plain_text',
+          value: $("#node-input-pattern").val(),
+          globals: {
+            msg: true,
+            context: true,
+            RED: true,
+            util: true,
+            flow: true,
+            global: true,
+            console: true,
+            Buffer: true,
+            setTimeout: true,
+            clearTimeout: true,
+            setInterval: true,
+            clearInterval: true
+          }
+        });
+
+        RED.library.create({
+          url: "functions", // where to get the data from
+          type: "function", // the type of object the library is for
+          editor: this.editor, // the field name the main text body goes to
+          mode: "ace/mode/plain_text",
+          fields: ['name', 'outputs']
+        });
+        this.editor.focus();
+      },
+      oneditsave: function () {
+        var annot = this.editor.getSession().getAnnotations();
+        this.noerr = 0;
+        $("#node-input-noerr").val(0);
+        for (var k = 0; k < annot.length; k++) {
+          //console.log(annot[k].type,":",annot[k].text, "on line", annot[k].row);
+          if (annot[k].type === "error") {
+            $("#node-input-noerr").val(annot.length);
+            this.noerr = annot.length;
+          }
+        }
+        $("#node-input-pattern").val(this.editor.getValue());
+        this.editor.destroy();
+        delete this.editor;
+      },
+      oneditcancel: function () {
+        this.editor.destroy();
+        delete this.editor;
+      },
+      oneditresize: function (size) {
+        var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+        var height = $("#dialog-form").height();
+        for (var i = 0; i < rows.size(); i++) {
+          height -= $(rows[i]).outerHeight(true);
+        }
+        var editorRow = $("#dialog-form>div.node-text-editor-row");
+        height -= (parseInt(editorRow.css("marginTop")) + parseInt(editorRow.css("marginBottom")));
+        $(".node-text-editor").css("height", height + "px");
+        this.editor.resize();
+      }
+    });
+
+    RED.nodes.registerType('topic-fork', {
+      category: 'robot',
+      color: '#6abcea',
+      defaults: {
+        name: { value: "", },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "feed.png",
+      label: function () {
+        return this.name || this._("topic-fork.label.name");
+      }
+    });
+
+    RED.nodes.registerType('topic-join', {
+      category: 'robot',
+      color: '#6abcea',
+      defaults: {
+        name: { value: "", },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "feed.png",
+      label: function () {
+        return this.name || this._("topic-join.label.name");
+      }
+    });
+
+    RED.nodes.registerType('topic-priority', {
+      category: 'robot',
+      color: '#6abcea',
+      defaults: {
+        name: { value: "", },
+        priority: { value: 10, required:true, validate:RED.validators.number() },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "feed.png",
+      label: function () {
+        return this.name || this._("topic-priority.label.name")+((this.priority > 0) ? '+'+this.priority : this.priority);
+      }
+    });
+
+    RED.nodes.registerType('topic', {
+      category: 'robot',
+      color: '#6abcea',
+      defaults: {
+        name: { value: "", },
+        topic: { value: "天気の話", required:true, },
+        priority: { value: 100, required:true, validate:RED.validators.number() },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "feed.png",
+      label: function () {
+        return this.name || this.topic || this._("topic.label.name");
+      }
+    });
+
+    RED.nodes.registerType('repeat', {
+      category: 'robot',
+      color: '#6abcea',
+      defaults: {
+        name: { value: "", },
+        repetitions: { value: 1, required:true, },
+        step: { value: "inc", required:true, },
+      },
+      inputs: 1,
+      outputs: 2,
+      icon: "feed.png",
+      label: function () {
+        return this.name || "Repeat " + (this.repetitions || "N") + " times" || this._("repeat.label.name");
+      }
+    });
+
+    RED.nodes.registerType('quiz-button', {
+      category: 'robot',
+      color: '#b8daf4',
+      defaults: {
+        name: { value: "", },
+        timeout: { value: 30000, validate: RED.validators.number() },
+      },
+      inputs: 1,
+      outputs: 2,
+      icon: "feed.png",
+      label: function () {
+        return this.name || this._("quiz-button.label.name");
+      }
+    });
+
+  })();
+</script>
+
+<script type="text/x-red" data-template-name="text-to-speech">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-algorithm"><i class="icon-tag"></i> <span data-i18n="common.label.algorithm"></label>
+    <!-- <input type="text" id="node-input-algorithm" placeholder="Algorithm"> -->
+    <select type="text" id="node-input-algorithm" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="sequential" data-i18n="common.label.sequential"></option>
+    <option value="shuffle" data-i18n="common.label.shuffle"></option>
+    <option value="random" data-i18n="common.label.random"></option>
+    <option value="onetime" data-i18n="common.label.onetime"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-voice"><i class="icon-tag"></i> <span data-i18n="common.label.voice"></label>
+    <!-- <input type="text" id="node-input-voice" placeholder="Direction"> -->
+    <select type="text" id="node-input-voice" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="reimu" data-i18n="common.label.reimu"></option>
+    <option value="marisa" data-i18n="common.label.marisa"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-speed"><i class="icon-tag"></i> <span data-i18n="common.label.talk-speed"></label>
+    <!-- <input type="text" id="node-input-speed" placeholder="Speed"> -->
+    <select type="text" id="node-input-speed" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    <option value="110">110</option>
+    <option value="120">120</option>
+    <option value="130">130</option>
+    <option value="140">140</option>
+    <option value="150">150</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-volume"><i class="icon-tag"></i> <span data-i18n="common.label.volume"></label>
+    <!-- <input type="text" id="node-input-volume" placeholder="Volume"> -->
+    <select type="text" id="node-input-volume" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="10">10</option>
+    <option value="20">20</option>
+    <option value="30">30</option>
+    <option value="40">40</option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-direction"><i class="icon-tag"></i> <span data-i18n="common.label.head-direction"></label>
+    <!-- <input type="text" id="node-input-direction" placeholder="Direction"> -->
+    <select type="text" id="node-input-direction" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="center" data-i18n="common.label.head-center"></option>
+    <option value="left" data-i18n="common.label.head-left"></option>
+    <option value="right" data-i18n="common.label.head-right"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <input type="checkbox" id="node-input-silence" style="display: inline-block; width: auto; vertical-align: top;">
+    <label for="node-input-silence" style="width: 70%;" data-i18n="common.label.silence"></label>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="text-to-speech">
+  <p>text-to-speech</p>
+</script>
+
+<script type="text/x-red" data-template-name="speech-to-text">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-timeout"><i class="icon-tag"></i> <span data-i18n="common.label.timeout"></label>
+    <input type="text" id="node-input-timeout" placeholder="Timeout">
+  </div>
+  <div class="form-row">
+    <label for="node-input-sensitivity"><i class="icon-tag"></i> <span data-i18n="common.label.sensitivity"></label>
+    <input type="text" id="node-input-sensitivity" list="default" placeholder="Sensitivity">
+    <datalist id="default">
+      <option value="keep" data-i18n="common.label.keep"></option>
+    </datalist>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="speech-to-text">
+  <p>speech-to-text</p>
+</script>
+
+<script type="text/x-red" data-template-name="robot-listener">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-host"><i class="icon-tag"></i> <span data-i18n="common.label.host"></label>
+    <input type="text" id="node-input-host" placeholder="Host">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="robot-listener">
+  <p>robot-listener</p>
+</script>
+
+<script type="text/x-red" data-template-name="robot-voice">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-algorithm"><i class="icon-tag"></i> <span data-i18n="common.label.algorithm"></label>
+    <!-- <input type="text" id="node-input-algorithm" placeholder="Algorithm"> -->
+    <select type="text" id="node-input-algorithm" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="sequential" data-i18n="common.label.sequential"></option>
+    <option value="shuffle" data-i18n="common.label.shuffle"></option>
+    <option value="random" data-i18n="common.label.random"></option>
+    <option value="onetime" data-i18n="common.label.onetime"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-voice"><i class="icon-tag"></i> <span data-i18n="common.label.voice"></label>
+    <!-- <input type="text" id="node-input-voice" placeholder="Direction"> -->
+    <select type="text" id="node-input-voice" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="reimu" data-i18n="common.label.reimu"></option>
+    <option value="marisa" data-i18n="common.label.marisa"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-speed"><i class="icon-tag"></i> <span data-i18n="common.label.talk-speed"></label>
+    <!-- <input type="text" id="node-input-speed" placeholder="Speed"> -->
+    <select type="text" id="node-input-speed" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    <option value="110">110</option>
+    <option value="120">120</option>
+    <option value="130">130</option>
+    <option value="140">140</option>
+    <option value="150">150</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-volume"><i class="icon-tag"></i> <span data-i18n="common.label.volume"></label>
+    <!-- <input type="text" id="node-input-volume" placeholder="Volume"> -->
+    <select type="text" id="node-input-volume" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="10">10</option>
+    <option value="20">20</option>
+    <option value="30">30</option>
+    <option value="40">40</option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-direction"><i class="icon-tag"></i> <span data-i18n="common.label.head-direction"></label>
+    <!-- <input type="text" id="node-input-direction" placeholder="Direction"> -->
+    <select type="text" id="node-input-direction" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="center" data-i18n="common.label.head-center"></option>
+    <option value="left" data-i18n="common.label.head-left"></option>
+    <option value="right" data-i18n="common.label.head-right"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-sensitivity"><i class="icon-tag"></i> <span data-i18n="common.label.sensitivity"></label>
+    <input type="text" id="node-input-sensitivity" list="default" placeholder="Sensitivity">
+    <datalist id="default">
+      <option value="keep" data-i18n="common.label.keep"></option>
+    </datalist>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="robot-voice">
+  <p>robot-voice</p>
+</script>
+
+<script type="text/x-red" data-template-name="utterance">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <!-- <div class="form-row">
+    <label for="node-input-utterance"><i class="icon-tag"></i> <span data-i18n="common.label.utterance"></label>
+    <input type="text" id="node-input-utterance" placeholder="Utterance">
+  </div> -->
+  <div class="form-row" style="margin-bottom: 0px;">
+    <label for="node-input-utterance"><i class="fa fa-wrench"></i> <span data-i18n="common.label.utterance"></label>
+    <input type="hidden" id="node-input-utterance" autofocus="autofocus">
+    <input type="hidden" id="node-input-noerr">
+  </div>
+  <div class="form-row node-text-editor-row">
+    <div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-func-editor" ></div>
+  </div>
+  <div class="form-row">
+    <label for="node-input-algorithm"><i class="icon-tag"></i> <span data-i18n="common.label.algorithm"></label>
+    <!-- <input type="text" id="node-input-algorithm" placeholder="Algorithm"> -->
+    <select type="text" id="node-input-algorithm" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="sequential" data-i18n="common.label.sequential"></option>
+    <option value="shuffle" data-i18n="common.label.shuffle"></option>
+    <option value="random" data-i18n="common.label.random"></option>
+    <option value="onetime" data-i18n="common.label.onetime"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-voice"><i class="icon-tag"></i> <span data-i18n="common.label.voice"></label>
+    <!-- <input type="text" id="node-input-voice" placeholder="Direction"> -->
+    <select type="text" id="node-input-voice" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="reimu" data-i18n="common.label.reimu"></option>
+    <option value="marisa" data-i18n="common.label.marisa"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-speed"><i class="icon-tag"></i> <span data-i18n="common.label.talk-speed"></label>
+    <!-- <input type="text" id="node-input-speed" placeholder="Speed"> -->
+    <select type="text" id="node-input-speed" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    <option value="110">110</option>
+    <option value="120">120</option>
+    <option value="130">130</option>
+    <option value="140">140</option>
+    <option value="150">150</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-volume"><i class="icon-tag"></i> <span data-i18n="common.label.volume"></label>
+    <!-- <input type="text" id="node-input-volume" placeholder="Volume"> -->
+    <select type="text" id="node-input-volume" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="10">10</option>
+    <option value="20">20</option>
+    <option value="30">30</option>
+    <option value="40">40</option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-direction"><i class="icon-tag"></i> <span data-i18n="common.label.head-direction"></label>
+    <!-- <input type="text" id="node-input-direction" placeholder="Direction"> -->
+    <select type="text" id="node-input-direction" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="center" data-i18n="common.label.head-center"></option>
+    <option value="left" data-i18n="common.label.head-left"></option>
+    <option value="right" data-i18n="common.label.head-right"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <input type="checkbox" id="node-input-silence" style="display: inline-block; width: auto; vertical-align: top;">
+    <label for="node-input-silence" style="width: 70%;" data-i18n="common.label.silence"></label>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="utterance">
+  <p>utterance</p>
+</script>
+
+<script type="text/x-red" data-template-name="chat">
+  <div class="form-row">
+    <label for="node-input-voice"><i class="icon-tag"></i> <span data-i18n="common.label.voice"></label>
+    <!-- <input type="text" id="node-input-voice" placeholder="Direction"> -->
+    <select type="text" id="node-input-voice" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="reimu" data-i18n="common.label.reimu"></option>
+    <option value="marisa" data-i18n="common.label.marisa"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-speed"><i class="icon-tag"></i> <span data-i18n="common.label.talk-speed"></label>
+    <!-- <input type="text" id="node-input-speed" placeholder="Speed"> -->
+    <select type="text" id="node-input-speed" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    <option value="110">110</option>
+    <option value="120">120</option>
+    <option value="130">130</option>
+    <option value="140">140</option>
+    <option value="150">150</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-volume"><i class="icon-tag"></i> <span data-i18n="common.label.volume"></label>
+    <!-- <input type="text" id="node-input-volume" placeholder="Volume"> -->
+    <select type="text" id="node-input-volume" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="10">10</option>
+    <option value="20">20</option>
+    <option value="30">30</option>
+    <option value="40">40</option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+    <option value="70">70</option>
+    <option value="80">80</option>
+    <option value="90">90</option>
+    <option value="100">100</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-tone"><i class="icon-tag"></i> <span data-i18n="common.label.tone"></label>
+    <!-- <input type="text" id="node-input-tone" placeholder="Tone"> -->
+    <select type="text" id="node-input-tone" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="standard_japanese" data-i18n="common.label.standard_japanese"></option>
+    <option value="kansai_dialect" data-i18n="common.label.kansai_dialect"></option>
+    <option value="baby_talk_japanese" data-i18n="common.label.baby_talk_japanese"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-direction"><i class="icon-tag"></i> <span data-i18n="common.label.head-direction"></label>
+    <!-- <input type="text" id="node-input-direction" placeholder="Direction"> -->
+    <select type="text" id="node-input-direction" style="width:70%;">
+    <option value="keep" data-i18n="common.label.keep"></option>
+    <option value="center" data-i18n="common.label.head-center"></option>
+    <option value="left" data-i18n="common.label.head-left"></option>
+    <option value="right" data-i18n="common.label.head-right"></option>
+    </select>
+  </div>
+  <div class="form-row">
+    <input type="checkbox" id="node-input-silence" style="display: inline-block; width: auto; vertical-align: top;">
+    <label for="node-input-silence" style="width: 70%;" data-i18n="common.label.silence"></label>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="chat">
+  <p>chat</p>
+</script>
+
+<script type="text/x-red" data-template-name="command">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-command"><i class="icon-tag"></i> <span data-i18n="common.label.command"></label>
+    <input type="text" id="node-input-command" placeholder="Command">
+  </div>
+  <div class="form-row">
+    <label for="node-input-args"><i class="icon-tag"></i> <span data-i18n="common.label.args"></label>
+    <input type="text" id="node-input-args" placeholder="Args">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="command">
+  <p>command</p>
+</script>
+
+<script type="text/x-red" data-template-name="open-slide">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-args"><i class="icon-tag"></i> <span data-i18n="common.label.args"></label>
+    <input type="text" id="node-input-args" placeholder="Args">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="open-slide">
+  <p>スライドを開く</p>
+</script>
+
+<script type="text/x-red" data-template-name="next-page">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="next-page">
+  <p>スライドを次のページへめくる</p>
+</script>
+
+<script type="text/x-red" data-template-name="close-slide">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="close-slide">
+  <p>スライドを閉じる</p>
+</script>
+
+<script type="text/x-red" data-template-name="mecab">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></span></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-intent"><i class="icon-tag"></i> <span data-i18n="common.label.intent"></label>
+    <input type="text" id="node-input-intent" placeholder="Intent">
+  </div>
+  <div class="form-row">
+    <label for="node-input-priority"><i class="icon-tag"></i> <span data-i18n="common.label.priority"></label>
+    <input type="text" id="node-input-priority" placeholder="Priority">
+  </div>
+  <div class="form-row" style="margin-bottom: 0px;">
+    <label for="node-input-pattern"><i class="fa fa-wrench"></i> <span data-i18n="common.label.pattern"></label>
+    <input type="hidden" id="node-input-pattern" autofocus="autofocus">
+    <input type="hidden" id="node-input-noerr">
+  </div>
+  <div class="form-row node-text-editor-row">
+    <div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-func-editor" ></div>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="mecab">
+  <p>mecab</p>
+  <p>pattern:</p>
+  <p>例：[天気]を教えて</p>
+  <p>パターンに一致するとOK端子へ、不一致ならNG端子へ</p>
+</script>
+
+<script type="text/x-red" data-template-name="topic-fork">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="topic-fork">
+  <p>トピック分岐</p>
+</script>
+
+<script type="text/x-red" data-template-name="topic-join">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="topic-join">
+  <p>トピック結合</p>
+</script>
+
+<script type="text/x-red" data-template-name="topic-priority">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-priority"><i class="icon-tag"></i> <span data-i18n="common.label.priority"></label>
+    <input type="text" id="node-input-priority" placeholder="Priority">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="topic-priority">
+  <p>トピック優先</p>
+</script>
+
+<script type="text/x-red" data-template-name="topic">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-topic"><i class="icon-tag"></i> <span data-i18n="common.label.topic"></label>
+    <input type="text" id="node-input-topic" placeholder="Topic">
+  </div>
+  <!-- <div class="form-row">
+    <label for="node-input-priority"><i class="icon-tag"></i> <span data-i18n="common.label.priority"></label>
+    <input type="text" id="node-input-priority" placeholder="Priority">
+  </div> -->
+</script>
+
+<script type="text/x-red" data-help-name="topic">
+  <p>トピック</p>
+</script>
+
+<script type="text/x-red" data-template-name="repeat">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+      <label for="node-input-repetitions"><i class="fa fa-undo"></i> <span data-i18n="common.label.repeat"></label>
+      <input type="number" id="node-input-repetitions", style="width:80px">
+  </div>
+  <div class="form-row">
+    <label for="node-input-step"><i class="icon-tag"></i> <span data-i18n="common.label.step"></label>
+    <select type="text" id="node-input-step" style="width:70%;">
+    <option value="inc" data-i18n="common.label.increment"></option>
+    <option value="dec" data-i18n="common.label.decrement"></option>
+    </select>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="repeat">
+  <p>繰り返し</p>
+</script>
+
+<script type="text/x-red" data-template-name="quiz-button">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.label.name"></label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-timeout"><i class="icon-tag"></i> <span data-i18n="common.label.timeout"></label>
+    <input type="text" id="node-input-timeout" placeholder="Timeout">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="quiz-button">
+  <p>quiz-button</p>
+</script>

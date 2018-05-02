@@ -1,0 +1,106 @@
+{
+  "common": {
+      "label": {
+          "name": "名前",
+          "command": "コマンド",
+          "args": "引数",
+          "host": "ホスト",
+          "talk-speed": "喋る速さ",
+          "volume": "声の大きさ",
+          "tone": "口調",
+          "head-direction": "頭の向き",
+          "action": "アクション",
+          "intent": "インテント",
+          "pattern": "パターン",
+          "utterance": "発話",
+          "head-center": "正面",
+          "head-left": "左向き",
+          "head-right": "右向き",
+          "timeout": "タイムアウト",
+          "voice": "声",
+          "reimu": "霊夢",
+          "marisa": "魔理沙",
+          "standard_japanese": "標準語",
+          "kansai_dialect": "関西弁",
+          "baby_talk_japanese": "赤ちゃん言葉",
+          "silence": "しゃべらない",
+          "keep": "変更しない",
+          "algorithm": "読み方",
+          "shuffle": "シャッフル",
+          "random": "ランダム",
+          "onetime": "ワンタイム",
+          "sequential": "シーケンシャル",
+          "topic": "トピック名",
+          "priority": "優先度",
+          "repeat": "繰り返し",
+          "step": "ステップ",
+          "increment": "増やす",
+          "decrement": "減らす",
+          "sensitivity": "マイク感度"
+      }
+  },
+  "mecab": {
+    "label": {
+      "name": "会話判定"
+    },
+    "outputlabel": {
+      "OK": "OK",
+      "NG": "NG"
+    }
+  },
+  "utterance": {
+    "label": {
+      "name": "おしゃべり"
+    }
+  },
+  "text-to-speech": {
+    "label": {
+      "name": "text-to-speech"
+    }
+  },
+  "speech-to-text": {
+    "label": {
+      "name": "speech-to-text"
+    }
+  },
+  "chat": {
+    "label": {
+      "name": "雑談する"
+    }
+  },
+  "command": {
+    "label": {
+      "name": "コマンド実行"
+    }
+  },
+  "topic-fork": {
+    "label": {
+      "name": "トピック分岐"
+    }
+  },
+  "topic-join": {
+    "label": {
+      "name": "トピック結合"
+    }
+  },
+  "topic-priority": {
+    "label": {
+      "name": "優先"
+    }
+  },
+  "topic": {
+    "label": {
+      "name": "トピック"
+    }
+  },
+  "repeat": {
+    "label": {
+      "name": "繰り返し"
+    }
+  },
+  "quiz-button": {
+    "label": {
+      "name": "クイズボタン"
+    }
+  }
+}

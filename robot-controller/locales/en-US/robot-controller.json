@@ -1,0 +1,106 @@
+{
+  "common": {
+      "label": {
+          "name": "Name",
+          "command": "Command",
+          "args": "Args",
+          "host": "Host",
+          "talk-speed": "Talk Speed",
+          "volume": "Volume",
+          "tone": "Tone",
+          "head-direction": "Head Direction",
+          "action": "Action",
+          "intent": "Intent",
+          "pattern": "Pattern",
+          "utterance": "Utterance",
+          "head-center": "Center",
+          "head-left": "Left",
+          "head-right": "Right",
+          "timeout": "Timeout",
+          "voice": "Voice",
+          "reimu": "reimu",
+          "marisa": "marisa",
+          "standard_japanese": "standard Japanese",
+          "kansai_dialect": "Kansai dialect",
+          "baby_talk_japanese": "Baby talk (Japanese)",
+          "silence": "Silence",
+          "keep": "Keep",
+          "algorithm": "Play Algorithm",
+          "shuffle": "Shuffle",
+          "random": "Random",
+          "onetime": "Onetime",
+          "sequential": "Sequential",
+          "topic": "topic",
+          "priority": "priority",
+          "repeat": "Repeat",
+          "step": "Step",
+          "increment": "Increment",
+          "decrement": "Decrement",
+          "sensitivity": "Mic Sensitivity"
+      }
+  },
+  "mecab": {
+    "label": {
+      "name": "mecab"
+    },
+    "outputlabel": {
+      "OK": "OK",
+      "NG": "NG"
+    }
+  },
+  "utterance": {
+    "label": {
+      "name": "utterance"
+    }
+  },
+  "text-to-speech": {
+    "label": {
+      "name": "text-to-speech"
+    }
+  },
+  "speech-to-text": {
+    "label": {
+      "name": "speech-to-text"
+    }
+  },
+  "chat": {
+    "label": {
+      "name": "chat"
+    }
+  },
+  "command": {
+    "label": {
+      "name": "command"
+    }
+  },
+  "topic-fork": {
+    "label": {
+      "name": "topic-fork"
+    }
+  },
+  "topic-join": {
+    "label": {
+      "name": "topic-join"
+    }
+  },
+  "topic-priority": {
+    "label": {
+      "name": "pri"
+    }
+  },
+  "topic": {
+    "label": {
+      "name": "topic"
+    }
+  },
+  "repeat": {
+    "label": {
+      "name": "repeat"
+    }
+  },
+  "quiz-button": {
+    "label": {
+      "name": "quiz-button"
+    }
+  }
+}

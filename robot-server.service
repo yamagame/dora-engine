@@ -1,0 +1,12 @@
+[Unit]
+Description=Cardboard Robot Service
+After=servo-head.service
+
+[Service]
+ExecStart=/bin/bash -c './robot-server.sh'
+WorkingDirectory=/home/pi/dora-engine
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
