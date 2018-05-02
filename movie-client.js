@@ -17,16 +17,13 @@ function MovieClient(host) {
   });
   socket.on('movie', function(data, callback){
     if (data.action === 'play') {
-      const base = path.join(__dirname, '../Videos', config.workFolder);
-      mkdirp(base, function(err) {
-        const p = path.join(base ,data.movie);
-        fs.stat(p, (err, stats) => {
-          if (stats.isFile()) {
-            player.play(p);
-          } else {
-            player.play(path.join(__dirname, '../Movie', data.movie));
-          }
-        });
+      const p = path.join(__dirname, '../Videos', data.movie);
+      fs.stat(p, (err, stats) => {
+        if (stats.isFile()) {
+          player.play(p);
+        } else {
+          player.play(path.join(__dirname, '../Movie', data.movie));
+        }
       });
     } else if (data.action === 'check') {
       if (callback) callback({ state: player.state });
