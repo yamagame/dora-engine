@@ -95,11 +95,17 @@ var students = (function() {
           kana: '',
         }
       }
-      const t = v.match(/(.+)\((.+)\)/);
-      if (!t) return null;
+      var t = v.match(/(.+)\((.+)\)\/(.*)/);
+      if (!t) {
+        t = v.match(/(.+)\((.+)\)/);
+        if (!t) {
+          return null;
+        }
+      }
       return {
         name: t[1].trim(),
         kana: t[2].trim(),
+        indx: (t[3])?t[3].trim():-1,
       }
     }).filter( l => {
       return (l);
