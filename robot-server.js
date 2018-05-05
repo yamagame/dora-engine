@@ -701,7 +701,7 @@ app.post('/command', (req, res) => {
       res.send(payload.quizAnswers);
       return;
     }
-    if (req.body.action == 'quiz-init') {
+    if (req.body.action === 'quiz-init') {
       res.send(payload.quizStartTime);
       return;
     }
@@ -850,6 +850,8 @@ const io = require('socket.io')(server);
 const iop = io.of('player');
 var playerSocket = null;
 
+const quiz_masters = {};
+
 iop.on('connection', function (socket) {
   console.log('connected iop');
   playerSocket = socket;
@@ -864,6 +866,8 @@ io.on('connection', function (socket) {
   socket.on('disconnect', function () {
     speech.recording = false;
     console.log('disconnect');
+    delete quiz_masters[socket.id];
+    console.log(Object.keys(quiz_masters));
   });
   socket.on('docomo-chat', function (payload, callback) {
     try {
@@ -969,11 +973,17 @@ io.on('connection', function (socket) {
       //参加登録
       if (typeof payload.clientId !== 'undefined') {
         robotData.quizEntry[payload.clientId] = payload;
+        console.log(payload.name);
+        if (payload.name === quiz_master) {
+          quiz_masters[socket.id] = socket;
+        }
         writeRobotData();
-        io.emit('quiz', quizPacket({
-          action: 'entry',
-          name: quiz_master,
-        }));
+        Object.keys(quiz_masters).forEach( key => {
+          quiz_masters[key].emit('quiz', quizPacket({
+            action: 'entry',
+            name: quiz_master,
+          }));
+        });
         socket.emit('quiz', loadQuizPayload(payload));
       }
     } else {
@@ -990,6 +1000,12 @@ io.on('connection', function (socket) {
       delete p.quizId
       robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
       writeRobotData();
+      Object.keys(quiz_masters).forEach( key => {
+        quiz_masters[key].emit('quiz', {
+          action: 'refresh',
+          name: quiz_master,
+        });
+      });
     }
     if (callback) callback();
   });
