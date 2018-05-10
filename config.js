@@ -14,5 +14,4 @@ module.exports = {
   voice_hat: true,
   usb_mic:   false,
   free_editor: true,
-  workFolder: 'DoraEngine',
 }

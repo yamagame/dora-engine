@@ -10,12 +10,24 @@ const APIKEY= config.docomo.api_key;
 const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const workFolder = 'DoraEngine';  //for macOS(development)
 const buttonClient = require('./button-client')();
-const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', config.workFolder) : process.env.HOME;
-const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', config.workFolder) : path.join(process.env.HOME, 'Pictures');
+const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
+const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
+
+/*
+{HOME}/robot-data.json
+{HOME}/quiz-student.txt
+{HOME}/date-list.txt
+{HOME}/Documents/{username}/{script}
+{HOME}/Sound/{sound file}
+{HOME}/Pictures/{slide image file}
+*/
+
 const mkdirp = require('mkdirp');
 const Dora = require('dora');
 const dora = new Dora();
+const utils = require('./utils');
 
 dora.request = async function(command, options, params) {
   var len = 0;
@@ -58,7 +70,7 @@ var led_mode = 'auto';
 talk.dummy = (process.env['SPEECH'] === 'off' && process.env['MACINTOSH'] !== 'on');
 talk.macvoice = (process.env['MACINTOSH'] === 'on');
 
-var robotDataPath = process.argv[2] || 'robot-data.json';
+var robotDataPath = process.argv[2] || path.join(HOME, 'robot-data.json');
 
 const m = function() {
   let res = {};
@@ -85,35 +97,7 @@ if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
 var saveTimeout = null;
 var savedData = null;
 
-var students = (function() {
-  try {
-    var d = fs.readFileSync('quiz-student.txt');
-    return d.toString().split('\n').map( v => {
-      if (v == '-') {
-        return {
-          name: '-',
-          kana: '',
-        }
-      }
-      var t = v.match(/(.+)\((.+)\)\/(.*)/);
-      if (!t) {
-        t = v.match(/(.+)\((.+)\)/);
-        if (!t) {
-          return null;
-        }
-      }
-      return {
-        name: t[1].trim(),
-        kana: t[2].trim(),
-        indx: (t[3])?t[3].trim():-1,
-      }
-    }).filter( l => {
-      return (l);
-    });
-  } catch(err) {
-  }
-  return [];
-})();
+let { students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), null);
 
 function writeRobotData() {
   if (saveTimeout == null) {
@@ -477,35 +461,6 @@ app.post('/mic-threshold', (req, res) => {
   res.send('OK');
 })
 
-/*
-  Google Drive の PDFファイルを Documents フォルダにダウンロードする POST リクエスト
-
-  curlコマンド使用例
-  curl -X POST -d '{"url":"https://drive.google.com/file/d/[FILE-ID]/view?usp=sharing", "filename":"test.pdf"}' http:/192.168.X.X:3090/download-from-google-drive -H "Content-Type:application/json"
-*/
-app.post('/download-from-google-drive', (req, res) => {
-  try {
-    const s = req.body;
-    const m = s.url.match(/.+\/file\/d\/(.+)\//);
-    if (m !== null) {
-      if (typeof s.filename === 'undefined') {
-        s.filename = 'document.pdf';
-      } else {
-        s.filename = path.basename(s.filename);
-      }
-      const url = `https://drive.google.com/uc?export=download&id=${m[1]}`;
-      const _download = spawn('/usr/bin/curl', [`-o`, path.join(HOME, 'Documents', s.filename), `-L`, `${url}`]);
-      _download.on('close', function(code) {
-        res.send(`${s.filename}`);
-      });
-    } else {
-      res.send(`NG`);
-    }
-  } catch(err) {
-    res.send(`NG`);
-  }
-});
-
 function changeLed(payload) {
   if (payload.action === 'auto') {
     led_mode = 'auto';
@@ -530,7 +485,7 @@ function changeLed(payload) {
 function execSoundCommand(payload) {
   const sound = (typeof payload.play !== 'undefined') ? payload.play : payload.sound;
   if (typeof sound !== 'undefined') {
-    const base = `${HOME}/Sound`;
+    const base = path.join(HOME, 'Sound');
     const p = path.normalize(path.join(base, sound));
     if (p.indexOf(base) == 0) {
       console.log(`/usr/bin/aplay ${p}`);
@@ -746,7 +701,7 @@ app.post('/command', (req, res) => {
       }
       try {
         const { filename, range, name } = req.body;
-        const base = `${HOME}/Documents`;
+        const base = path.join(HOME, 'Documents');
         const username = (name) ? path.basename(name) : null;
         fs.readFile(path.join(base, username, filename), (err, data) => {
           if (err) {
@@ -799,9 +754,66 @@ app.post('/command', (req, res) => {
 })
 
 app.post('/scenario', (req, res) => {
-  const base = `${HOME}/Documents`;
+  const base = path.join(HOME, 'Documents');
   const username = (req.body.name) ? path.basename(req.body.name) : null;
   const filename = (req.body.filename) ? path.basename(req.body.filename) : null;
+  if (username === 'admin-user') {
+    if (req.body.action == 'save') {
+      if (filename === '生徒リスト') {
+        if (typeof req.body.text !== 'undefined') {
+          if (filename) {
+            mkdirp(HOME, function(err) {
+              fs.writeFile(path.join(HOME, 'quiz-student.txt'), req.body.text, (err) => {
+                let r = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), null);
+                if (typeof r.students !== 'undefined') students = r.students;
+                res.send({ status: (!err) ? 'OK' : err.code, });
+              });
+            });
+          } else {
+            res.send({ status: 'Not found filename', });
+          }
+        } else {
+          res.send({ status: 'No data', });
+        }
+      } else if (filename === '出席CSV') {
+        res.send({ status: 'OK' });
+      } else if (filename === '日付リスト') {
+        if (typeof req.body.text !== 'undefined') {
+          if (filename) {
+            mkdirp(HOME, function(err) {
+              fs.writeFile(path.join(HOME, 'date-list.txt'), req.body.text, (err) => {
+                res.send({ status: (!err) ? 'OK' : err.code, });
+              });
+            });
+          } else {
+            res.send({ status: 'Not found filename', });
+          }
+        } else {
+          res.send({ status: 'No data', });
+        }
+      } else {
+        res.send({ status: 'OK' });
+      }
+    } else
+    if (req.body.action == 'load') {
+      if (filename === '生徒リスト') {
+        fs.readFile(path.join(HOME, 'quiz-student.txt'), (err, data) => {
+          res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
+        });
+      } else if (filename === '出席CSV') {
+        const { dates, students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), path.join(HOME, 'date-list.txt'));
+        res.send({ status: 'OK', text: utils.attendance.csv(robotData, dates,  students)});
+      } else if (filename === '日付リスト') {
+        fs.readFile(path.join(HOME, 'date-list.txt'), (err, data) => {
+          res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
+        });
+      } else {
+        res.send({ status: 'OK' });
+      }
+    } else {
+      res.send({ status: 'OK' });
+    }
+  } else
   if (students.some( m => m.name === username ) || config.free_editor) 
   {
     if (req.body.action == 'save') {
