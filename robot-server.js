@@ -12,6 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const workFolder = 'DoraEngine';  //for macOS(development)
 const buttonClient = require('./button-client')();
+
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
 
@@ -264,7 +265,7 @@ function speech_to_text(payload, callback) {
   led_mode = 'auto';
 
   var threshold = payload.threshold;
-  speech.emit('mic_threshold', threshold.toString('utf-8'));
+  speech.emit('mic_threshold', threshold.toString());
 
   function removeListener() {
     speech.removeListener('data', listener);
