@@ -725,7 +725,6 @@ app.post('/command', (req, res) => {
                 emitError(err);
                 console.log(`${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
               } else {
-                delete msg.labels;
                 io.emit('scenario_status', {
                   message: msg,
                 });
