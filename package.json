@@ -13,6 +13,7 @@
     "mic": "git+https://github.com/yamagame/mic.git",
     "mkdirp": "^0.5.1",
     "mustache": "^2.3.0",
+    "node-fetch": "^2.1.2",
     "ping": "^0.2.2",
     "ps-tree": "^1.1.0",
     "raspi": "^5.0.1",
