@@ -1,3 +1,3 @@
 #!/bin/bash
 cd `dirname $0`
-sudo node servo-head.js
+sudo node servo-head.js > servo-head.log
