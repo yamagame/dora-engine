@@ -9,7 +9,7 @@
 - [AquesTalk Pi](https://www.a-quest.com/products/aquestalkpi.html) を使って音声合成ができます。他の音声合成エンジンに変更することもできます。
 - サーボ２つで、ロボットの頭部を２軸動作できます。
 - Node-REDとの連携でコントロールできます。
-- 専用スクリプト(DoraScript)を使ってブラウザ経由でコントロールできます。
+- 専用スクリプト([DoraScript](https://github.com/yamagame/dora))を使ってブラウザ経由でコントロールできます。
 - 自動プレゼンテーション機能
 - 音声認識によるQ&A機能
 - [ドコモ雑談対話](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=dialogue&p_name=api_reference)に対応しています
