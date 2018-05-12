@@ -1,7 +1,10 @@
 # Dora Engine
 
-ラズベリーパイとVoiceKitで作るコミュニケーションロボット用エンジンです。
-プログラムはNode.jsで動作します。
+ラズベリーパイとVoiceKitで作るコミュニケーションロボットエンジンです。
+
+<p align="center">
+  <img src="./images/IMG_3140.jpg"/>
+</p>
 
 ## 機能
 
