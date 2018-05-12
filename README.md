@@ -15,7 +15,7 @@
 - 専用スクリプト([DoraScript](https://github.com/yamagame/dora))を使ってブラウザ経由でコントロールできます。
 - 自動プレゼンテーション機能
 - 音声認識によるQ&A機能
-- [ドコモ雑談対話](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=dialogue&p_name=api_reference)に対応しています
+- [ドコモ雑談対話API](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=dialogue&p_name=api_reference)に対応しています
 
 ## 準備
 
