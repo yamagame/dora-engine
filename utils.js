@@ -68,6 +68,9 @@ function AttendanceLoad(robotdata_path, studentlist_path, datelist_path) {
     try {
       var d = fs.readFileSync(studentlist_path);
       return d.toString().split('\n').map( v => {
+        if (v.indexOf('#') === 0) {
+          return null;
+        }
         if (v == '-') {
           return {
             name: '-',
