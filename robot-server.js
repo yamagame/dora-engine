@@ -175,6 +175,11 @@ speech.on('data', function(data) {
 
 const app = express()
 
+app.use((req, res, next) => {
+  console.log(`# ${(new Date()).toLocaleString()} ${req.ip} ${req.url}`);
+  next();
+});
+
 app.use(bodyParser.json({ type: 'application/json' }))
 app.use(bodyParser.raw({ type: 'application/*' }))
 
