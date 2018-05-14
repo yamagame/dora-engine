@@ -467,6 +467,10 @@ app.post('/mic-threshold', (req, res) => {
   res.send('OK');
 })
 
+app.get('/health', (req, res) => {
+  res.send(`${(new Date()).toLocaleString()}`);
+});
+
 function changeLed(payload) {
   if (payload.action === 'auto') {
     led_mode = 'auto';
