@@ -123,12 +123,15 @@ function chat(message, context, tone, callback) {
   if (tone) {
     json.t = tone;
   }
-  request.post({
+  request({
+    method: 'POST',
     url:'https://api.apigw.smt.docomo.ne.jp/dialogue/v1/dialogue?APIKEY='+APIKEY,
     json,
-  }, function optionalCallback(err, httpResponse, body) {
-    callback(err, body);
-  });
+  }).then((body) => {
+    callback(null, body);
+  }).catch((err) => {
+    callback(err, null);
+  })
 }
 
 speech.recording = false;
@@ -199,6 +202,8 @@ function docomo_chat(payload, callback) {
     try {
       if (err) {
         console.error(err);
+        if (callback) callback(err, 'エラー');
+        return;
       } else {
         utt = body.utt;
         context = body.context;
@@ -273,10 +278,10 @@ function speech_to_text(payload, callback) {
   speech.emit('mic_threshold', threshold.toString());
 
   function removeListener() {
+    buttonClient.removeListener('button', listenerButton);
     speech.removeListener('data', listener);
     speech.removeListener('speech', speechListener);
     speech.removeListener('button', buttonListener);
-    buttonClient.removeListener('button', listener);
   }
 
   if (payload.timeout != 0) {
