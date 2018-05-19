@@ -878,18 +878,30 @@ const iop = io.of('player');
 var playerSocket = null;
 
 const quiz_masters = {};
+const imageServers = {};
 
 iop.on('connection', function (socket) {
-  console.log('connected iop');
+  console.log('connected iop', socket.conn.remoteAddress);
   playerSocket = socket;
   socket.on('disconnect', function () {
     playerSocket = null;
     console.log('disconnect iop');
+    delete imageServers[socket.id];
+    io.emit('imageServers', imageServers);
+  });
+  socket.on('notify', function(data) {
+    const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
+    if (ip != null && data.role === 'imageServer') {
+      data.host = ip[1];
+      console.log(data);
+      imageServers[socket.id] = data;
+      io.emit('imageServers', imageServers);
+    }
   });
 });
 
 io.on('connection', function (socket) {
-  console.log('connected');
+  console.log('connected io', socket.conn.remoteAddress);
   socket.on('disconnect', function () {
     speech.recording = false;
     console.log('disconnect');
@@ -1012,6 +1024,7 @@ io.on('connection', function (socket) {
           }));
         });
         socket.emit('quiz', loadQuizPayload(payload));
+        socket.emit('imageServers', imageServers);
       }
     } else {
       if (payload.name === quiz_master) return;
