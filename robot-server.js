@@ -579,10 +579,16 @@ function quizPacket(payload) {
           if (players) {
             Object.keys(players).forEach( clientId => {
               const player = players[clientId];
-              if (player.name.indexOf('ゲスト') != 0
-              && player.name.indexOf('guest') != 0
-              && player.name.indexOf('学生講師') != 0) {
-                ret[quizId][clientId] = player;
+              if (player.quizStartTime === payload.quizStartTime) {
+                if (player.name.indexOf('ゲスト') != 0
+                && player.name.indexOf('guest') != 0
+                && player.name.indexOf('学生講師') != 0) {
+                  ret[quizId][clientId] = {
+                      name: player.name,
+                      answer: player.answer,
+                      time: player.time,
+                  }
+                }
               }
             });
           }
