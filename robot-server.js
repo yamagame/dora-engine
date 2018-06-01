@@ -65,7 +65,6 @@ dora.request = async function(command, options, params) {
 
 const quiz_master = process.env.QUIZ_MASTER || '_quiz_master_';
 
-var context = null;
 var led_mode = 'auto';
 
 talk.dummy = (process.env['SPEECH'] === 'off' && process.env['MACINTOSH'] !== 'on');
@@ -113,7 +112,7 @@ function writeRobotData() {
   }
 }
 
-function chat(message, context, tone, callback) {
+function chat(message, tone, callback) {
   const json = {
     language: "ja-JP",
     botId: "Chatting",
@@ -127,11 +126,6 @@ function chat(message, context, tone, callback) {
     appRecvTime: "2018-05-05 13:30:00",
     appSendTime: "2018-05-05 13:31:00",
   }
-  /*
-  if (context) {
-    json.context = context;
-  }
-  */
 
   if (tone) {
     json.clientData.option.t = tone;
@@ -211,7 +205,7 @@ function docomo_chat(payload, callback) {
   } else {
     var tone = "";
   }
-	chat(payload.message, context, tone, function(err, body) {
+	chat(payload.message, tone, function(err, body) {
     var utt = payload.message+'がどうかしましたか。';
     try {
       if (err) {
@@ -220,7 +214,6 @@ function docomo_chat(payload, callback) {
         return;
       } else {
         utt = body.systemText.expression;
-        // context = body.context;
       }
       if (payload.silence) {
         if (callback) callback(err, utt);
