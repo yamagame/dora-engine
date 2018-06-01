@@ -119,6 +119,11 @@ function chat(message, context, tone, callback) {
     botId: "Chatting",
     appId: "11210b7b-e1e7-47e7-b448-9ae3af519cce",
     voiceText: message,
+    clientData: {
+      option: {
+        t: '',
+      },
+    },
     appRecvTime: "2018-05-05 13:30:00",
     appSendTime: "2018-05-05 13:31:00",
   }
@@ -127,11 +132,11 @@ function chat(message, context, tone, callback) {
     json.context = context;
   }
   */
-  /*
+
   if (tone) {
-    //json.t = tone;
+    json.clientData.option.t = tone;
   }
-  */
+
   request({
     method: 'POST',
     url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
@@ -200,9 +205,9 @@ app.use('/images', express.static(PICT))
 
 function docomo_chat(payload, callback) {
   if (payload.tone == 'kansai_dialect') {
-    var tone = "20";
+    var tone = "kansai";
   } else if (payload.tone == 'baby_talk_japanese') {
-    var tone = "30";
+    var tone = "akachan";
   } else {
     var tone = "";
   }
@@ -215,7 +220,7 @@ function docomo_chat(payload, callback) {
         return;
       } else {
         utt = body.systemText.expression;
-        context = body.context;
+        // context = body.context;
       }
       if (payload.silence) {
         if (callback) callback(err, utt);
