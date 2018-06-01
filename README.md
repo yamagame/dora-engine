@@ -69,7 +69,7 @@ Downloadsフォルダにファイルがダウンロードされますので、�
 
 ```
 $ cd ~/Downloads
-$ tar xvf aquestalkpi-20130827.tgz 
+$ tar xvf aquestalkpi-20130827.tgz
 ```
 
 以下のコマンドを入力して、音声合成のテストを行います。
@@ -107,10 +107,23 @@ $ node speech.js
 
 ## docomo雑談対話APIの準備
 
-[docomo Developer support](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=dialogue&p_name=api_reference) のページから、雑談対話のAPIキーを取得して、環境変数 DOCOMO_API_KEY に設定します。
+[docomo Developer support](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=natural_dialogue&p_name=api_4_usage_scenario#tag01) のページから、雑談対話のAPIキーを取得して、環境変数 DOCOMO_API_KEY に設定します。
 
 ```
 export DOCOMO_API_KEY=7570304351643...................
+```
+
+以下のコマンドを実行して、雑談対話のappIdを取得します。
+
+```
+$ ./setup_docomo_appid.sh
+{"appId":"eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}
+```
+
+appIdとして出力された文字列を、環境変数 DOCOMO_APP_ID に設定します。
+
+```
+export DOCOMO_API_KEY=eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 ## DoraEditorの使い方

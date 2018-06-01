@@ -6,7 +6,8 @@ const speech = (() => (process.env['SPEECH'] === 'off') ? (new EventEmitter()) :
 const talk = require('./talk');
 const dgram = require('dgram');
 const config = require('./config');
-const APIKEY= config.docomo.api_key;
+const APIKEY = config.docomo.api_key;
+const APPID = config.docomo.app_id;
 const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -129,7 +130,7 @@ function chat(message, tone, callback) {
     const json = {
       language: "ja-JP",
       botId: "Chatting",
-      appId: "11210b7b-e1e7-47e7-b448-9ae3af519cce",
+      appId: APPID,
       voiceText: message,
       clientData: {
         option: {
