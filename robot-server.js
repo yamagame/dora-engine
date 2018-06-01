@@ -115,17 +115,26 @@ function writeRobotData() {
 
 function chat(message, context, tone, callback) {
   const json = {
-    utt: message,
+    language: "ja-JP",
+    botId: "Chatting",
+    appId: "11210b7b-e1e7-47e7-b448-9ae3af519cce",
+    voiceText: message,
+    appRecvTime: "2018-05-05 13:30:00",
+    appSendTime: "2018-05-05 13:31:00",
   }
+  /*
   if (context) {
     json.context = context;
   }
+  */
+  /*
   if (tone) {
-    json.t = tone;
+    //json.t = tone;
   }
+  */
   request({
     method: 'POST',
-    url:'https://api.apigw.smt.docomo.ne.jp/dialogue/v1/dialogue?APIKEY='+APIKEY,
+    url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
     json,
   }).then((body) => {
     callback(null, body);
@@ -205,7 +214,7 @@ function docomo_chat(payload, callback) {
         if (callback) callback(err, 'エラー');
         return;
       } else {
-        utt = body.utt;
+        utt = body.systemText.expression;
         context = body.context;
       }
       if (payload.silence) {
@@ -835,7 +844,7 @@ app.post('/scenario', (req, res) => {
       res.send({ status: 'OK' });
     }
   } else
-  if (students.some( m => m.name === username ) || config.free_editor) 
+  if (students.some( m => m.name === username ) || config.free_editor)
   {
     if (req.body.action == 'save') {
       if (typeof req.body.text !== 'undefined') {
