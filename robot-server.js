@@ -29,6 +29,7 @@ const mkdirp = require('mkdirp');
 const Dora = require('dora');
 const dora = new Dora();
 const utils = require('./utils');
+const dateutlis = require('date-utils');
 
 dora.request = async function(command, options, params) {
   var len = 0;
@@ -113,33 +114,56 @@ function writeRobotData() {
 }
 
 function chat(message, tone, callback) {
-  const json = {
-    language: "ja-JP",
-    botId: "Chatting",
-    appId: "11210b7b-e1e7-47e7-b448-9ae3af519cce",
-    voiceText: message,
-    clientData: {
-      option: {
-        t: '',
+  var dt = new Date();
+  var sendTime = dt.toFormat("YYYY-MM-DD HH24:MI:SS");
+  var recvTime = "1970-01-01 00:00:00";
+
+  fs.readFile('./last_chat.txt', 'utf8', function (err, data) {
+    if (err) {
+
+    }
+    if (data != undefined) {
+      console.log("not undefined: ", data);
+      recvTime = data;
+    }
+    console.log("last_chat: ", data);
+
+    const json = {
+      language: "ja-JP",
+      botId: "Chatting",
+      appId: "11210b7b-e1e7-47e7-b448-9ae3af519cce",
+      voiceText: message,
+      clientData: {
+        option: {
+          t: '',
+        },
       },
-    },
-    appRecvTime: "2018-05-05 13:30:00",
-    appSendTime: "2018-05-05 13:31:00",
-  }
+      appRecvTime: recvTime,
+      appSendTime: sendTime,
+    }
 
-  if (tone) {
-    json.clientData.option.t = tone;
-  }
+    if (tone) {
+      json.clientData.option.t = tone;
+    }
 
-  request({
-    method: 'POST',
-    url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
-    json,
-  }).then((body) => {
-    callback(null, body);
-  }).catch((err) => {
-    callback(err, null);
-  })
+    console.log(json);
+
+    request({
+      method: 'POST',
+      url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
+      json,
+    }).then((body) => {
+      callback(null, body);
+      console.log("serverSendTime: ", body.serverSendTime);
+      fs.writeFile('./last_chat.txt', body.serverSendTime, function (err) {
+        if (err) {
+          throw err;
+        }
+      });
+    }).catch((err) => {
+      callback(err, null);
+    })
+  });
 }
 
 speech.recording = false;
