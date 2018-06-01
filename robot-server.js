@@ -123,10 +123,8 @@ function chat(message, tone, callback) {
 
     }
     if (data != undefined) {
-      console.log("not undefined: ", data);
       recvTime = data;
     }
-    console.log("last_chat: ", data);
 
     const json = {
       language: "ja-JP",
@@ -146,15 +144,12 @@ function chat(message, tone, callback) {
       json.clientData.option.t = tone;
     }
 
-    console.log(json);
-
     request({
       method: 'POST',
       url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
       json,
     }).then((body) => {
       callback(null, body);
-      console.log("serverSendTime: ", body.serverSendTime);
       fs.writeFile('./last_chat.txt', body.serverSendTime, function (err) {
         if (err) {
           throw err;
