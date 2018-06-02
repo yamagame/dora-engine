@@ -21,12 +21,14 @@
     "raspi-soft-pwm": "^4.0.1",
     "request": "^2.83.0",
     "request-promise": "^4.2.2",
-    "socket.io": "^2.0.4"
+    "sequelize": "^4.37.10",
+    "socket.io": "^2.0.4",
+    "sqlite3": "^4.0.0"
   },
   "devDependencies": {},
   "scripts": {
     "robot": "node robot-server.js",
-    "robot-dev": "SPEECH=off node robot-server.js",
+    "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node robot-server.js",
     "button": "./button-server.sh",
     "servo": "sudo node servo-head.js",

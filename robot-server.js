@@ -12,6 +12,9 @@ const path = require('path');
 const fs = require('fs');
 const workFolder = 'DoraEngine';  //for macOS(development)
 const buttonClient = require('./button-client')();
+const RobotDB = require('./robot-db');
+const USE_DB = config.use_db;
+const saveInterval = 1000;
 
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
@@ -95,21 +98,38 @@ if (typeof robotData.quizEntry === 'undefined') robotData.quizEntry = {};
 if (typeof robotData.quizPayload === 'undefined') robotData.quizPayload = {};
 if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
 
-var saveTimeout = null;
-var savedData = null;
-
 let { students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), null);
 
+var saveDelay = false;
+var savedData = null;
+var saveWFlag = false;
+
 function writeRobotData() {
-  if (saveTimeout == null) {
-    const data = JSON.stringify(robotData, null, '  ');
-    if (savedData == null || savedData !== data) {
-      savedData = data;
-      saveTimeout = setTimeout(() => {
-        fs.writeFileSync(robotDataPath, data);
-        saveTimeout = null;
-      }, 1000);
+  saveWFlag = true;
+  if (!saveDelay) {
+    const save = () => {
+      if (saveWFlag) {
+        saveWFlag = false;
+        saveDelay = true;
+        const data = JSON.stringify(robotData, null, '  ');
+        if (savedData == null || savedData !== data) {
+          savedData = data;
+          try {
+            console.log(`write ${robotDataPath}`);
+            fs.writeFile(robotDataPath, data, () => {
+              setTimeout(() => {
+                save();
+              }, saveInterval);
+            });
+            return;
+          } catch(err) {
+            console.error(err);
+          }
+        }
+      }
+      saveDelay = false;
     }
+    save();
   }
 }
 
@@ -503,8 +523,9 @@ function execSoundCommand(payload) {
     const base = path.join(HOME, 'Sound');
     const p = path.normalize(path.join(base, sound));
     if (p.indexOf(base) == 0) {
-      console.log(`/usr/bin/aplay ${p}`);
-      const _playone = spawn('/usr/bin/aplay', [p]);
+      const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
+      console.log(`/usr/bin/${cmd} ${p}`);
+      const _playone = spawn(`/usr/bin/${cmd}`, [p]);
       _playone.on('close', function(code) {
         console.log('close', code);
       });
@@ -512,7 +533,7 @@ function execSoundCommand(payload) {
   }
 }
 
-function quizPacket(payload) {
+async function quizPacket(payload) {
   // if (payload.action === 'result') {
   //   payload.result = quizAnswers[payload.question];
   // }
@@ -528,7 +549,7 @@ function quizPacket(payload) {
   if (payload.action === 'quiz-entry-init') {
     robotData.quizEntry = {};
     writeRobotData();
-    const result = quizPacket({
+    const result = await quizPacket({
       action: 'entry',
       name: quiz_master,
     });
@@ -540,63 +561,120 @@ function quizPacket(payload) {
   }
   if (payload.action === 'quiz-init') {
     //クイズデータの保存
-    if (payload.quizId) {
-      if (!robotData.quizList) {
-        robotData.quizList = {};
-      }
-      if (!robotData.quizList[payload.quizId]) {
-        robotData.quizList[payload.quizId] = {}
-      }
-      if (payload.quizName) {
-        robotData.quizList[payload.quizId].name = payload.quizName;
-      }
-      if (payload.pages) {
-        if (!robotData.quizList[payload.quizId].quiz) {
-          robotData.quizList[payload.quizId].quiz = {}
-        }
-        payload.pages.forEach( page => {
-          if (page.action == 'quiz' && page.question) {
-            robotData.quizList[payload.quizId].quiz[page.question] = {
-              choices: page.choices,
-              answers: page.answers,
+    if (USE_DB) {
+      const startTime = new Date();
+      if (payload.quizId) {
+        if (payload.pages) {
+          for (var i=0;i<payload.pages.length;i++) {
+            const page = payload.pages[i];
+            if (page.action == 'quiz' && page.question) {
+              const a = {
+                quizId: payload.quizId,
+                quizTitle: page.question,
+                quizOrder: i,
+                choices: page.choices,
+                answers: page.answers,
+                startTime,
+              }
+              if (payload.quizName) {
+                a.quizName = payload.quizName;
+              }
+              db.update('updateQuiz', a);
             }
           }
-        })
+        }
       }
-      writeRobotData();
+      payload.quizStartTime = startTime;
+    } else {
+      if (payload.quizId) {
+        if (!robotData.quizList) {
+          robotData.quizList = {};
+        }
+        if (!robotData.quizList[payload.quizId]) {
+          robotData.quizList[payload.quizId] = {}
+        }
+        if (payload.quizName) {
+          robotData.quizList[payload.quizId].name = payload.quizName;
+        }
+        if (payload.pages) {
+          if (!robotData.quizList[payload.quizId].quiz) {
+            robotData.quizList[payload.quizId].quiz = {}
+          }
+          payload.pages.forEach( page => {
+            if (page.action == 'quiz' && page.question) {
+              robotData.quizList[payload.quizId].quiz[page.question] = {
+                choices: page.choices,
+                answers: page.answers,
+              }
+            }
+          })
+        }
+        writeRobotData();
+      }
+      payload.quizStartTime = new Date();
     }
-    payload.quizStartTime = new Date();
   }
   if (payload.action === 'quiz-ranking') {
-    if (typeof payload.quizId !== 'undefined') {
-      payload.quizAnswers = robotData.quizAnswers[payload.quizId];
-      //ゲストプレイヤーはランキングから外す
-      const ret = {};
-      if (payload.quizAnswers) {
-        Object.keys(payload.quizAnswers).forEach( quizId => {
-          const players = payload.quizAnswers[quizId];
-          ret[quizId] = {}
-          if (players) {
-            Object.keys(players).forEach( clientId => {
-              const player = players[clientId];
-              if (player.quizStartTime === payload.quizStartTime) {
+    if (USE_DB) {
+      if (typeof payload.quizId !== 'undefined') {
+        const { answers } = await db.findAnswers({ quizId: payload.quizId, startTime: payload.quizStartTime });
+        //ゲストプレイヤーはランキングから外す
+        const ret = {};
+        if (answers) {
+          Object.keys(answers).forEach( quizTitle => {
+            const players = answers[quizTitle];
+            ret[quizTitle] = {}
+            if (players) {
+              Object.keys(players).forEach( clientId => {
+                const player = players[clientId];
                 if (player.name.indexOf('ゲスト') != 0
                 && player.name.indexOf('guest') != 0
                 && player.name.indexOf('学生講師') != 0) {
-                  ret[quizId][clientId] = {
+                  ret[quizTitle][clientId] = {
                       name: player.name,
                       answer: player.answer,
                       time: player.time,
                   }
                 }
-              }
-            });
-          }
-        });
+              });
+            }
+          });
+        }
+        payload.quizAnswers = ret;
+      } else {
+        payload.quizAnswers = await db.answerAll();
       }
-      payload.quizAnswers = ret;
     } else {
-      payload.quizAnswers = robotData.quizAnswers;
+      if (typeof payload.quizId !== 'undefined') {
+        payload.quizAnswers = robotData.quizAnswers[payload.quizId];
+        //ゲストプレイヤーはランキングから外す
+        const ret = {};
+        if (payload.quizAnswers) {
+          Object.keys(payload.quizAnswers).forEach( quizId => {
+            const players = payload.quizAnswers[quizId];
+            ret[quizId] = {}
+            if (players) {
+              Object.keys(players).forEach( clientId => {
+                const player = players[clientId];
+                if (player.quizStartTime === payload.quizStartTime) {
+                  if (player.name.indexOf('ゲスト') != 0
+                  && player.name.indexOf('guest') != 0
+                  && player.name.indexOf('学生講師') != 0) {
+                    ret[quizId][clientId] = {
+                        name: player.name,
+                        answer: player.answer,
+                        time: player.time,
+                    }
+                  }
+                }
+              });
+            }
+          });
+        }
+        payload.quizAnswers = ret;
+      } else {
+        payload.quizAnswers = robotData.quizAnswers;
+      }
     }
     payload.name = quiz_master;
   }
@@ -626,51 +704,68 @@ function loadQuizPayload(payload)
   return m(val, { initializeLoad: true, });
 }
 
-app.post('/result', (req, res) => {
+app.post('/result', async (req, res) => {
   if (req.body.type === 'answers') {
     if (req.body.quizId) {
-      const quizAnswers = robotData.quizAnswers[req.body.quizId];
       if (req.body.startTime) {
         //スタート時間が同じものだけを返す
-        const result = {};
-        Object.keys(quizAnswers).map( quiz => {
-          const qq = quizAnswers[quiz];
-          const tt = {};
-          Object.keys(qq).forEach( clientId => {
-            const answer = qq[clientId];
-            if (answer.quizStartTime === req.body.startTime) {
-              tt[clientId] = answer;
+        if (USE_DB) {
+          const retval = await db.findAnswers({ quizId: req.body.quizId, startTime: req.body.startTime });
+          res.send(retval);
+        } else {
+          const result = {};
+          const quizAnswers = robotData.quizAnswers[req.body.quizId];
+          Object.keys(quizAnswers).map( quiz => {
+            const qq = quizAnswers[quiz];
+            const tt = {};
+            Object.keys(qq).forEach( clientId => {
+              const answer = qq[clientId];
+              if (answer.quizStartTime === req.body.startTime) {
+                tt[clientId] = answer;
+              }
+            });
+            if (Object.keys(tt).length > 0) {
+              result[quiz] = tt;
             }
           });
-          if (Object.keys(tt).length > 0) {
-            result[quiz] = tt;
-          }
-        });
-        const question = (robotData.quizList) ? robotData.quizList[req.body.quizId] : null;
-        res.send({ answers: result, question: question });
+          const question = (robotData.quizList) ? robotData.quizList[req.body.quizId] : null;
+          res.send({ answers: result, question: question });
+        }
       } else {
         //スタート時間のリストを返す
-        const result = {};
-        Object.keys(quizAnswers).map( quiz => {
-          const qq = quizAnswers[quiz];
-          Object.keys(qq).forEach( clientId => {
-            result[qq[clientId].quizStartTime] = true;
+        if (USE_DB) {
+          const retval = await db.startTimeList({ quizId: req.body.quizId })
+          res.send(retval);
+        } else {
+          const quizAnswers = robotData.quizAnswers[req.body.quizId];
+          const result = {};
+          Object.keys(quizAnswers).map( quiz => {
+            const qq = quizAnswers[quiz];
+            Object.keys(qq).forEach( clientId => {
+              result[qq[clientId].quizStartTime] = true;
+            })
           })
-        })
-        res.send({ startTimes: Object.keys(result) });
+          res.send({ startTimes: Object.keys(result) });
+        }
       }
     } else {
       //クイズIDを返す
-      res.send({ quizIds: Object.keys(robotData.quizAnswers)})
+      if (USE_DB) {
+        const list = await db.quizIdList();
+        res.send(list)
+      } else {
+        const list = { quizIds: Object.keys(robotData.quizAnswers)};
+        res.send(list)
+      }
     }
     return;
   }
   res.send({ status: 'OK' });
 })
 
-app.post('/command', (req, res) => {
+app.post('/command', async (req, res) => {
   if (req.body.type === 'quiz') {
-    const payload = quizPacket(req.body);
+    const payload = await quizPacket(req.body);
     storeQuizPayload(payload);
     io.emit('quiz', payload);
     if (req.body.action == 'quiz-ranking') {
@@ -823,7 +918,13 @@ app.post('/scenario', (req, res) => {
         });
       } else if (filename === '出席CSV') {
         const { dates, students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), path.join(HOME, 'date-list.txt'));
-        res.send({ status: 'OK', text: utils.attendance.csv(robotData, dates,  students)});
+        if (USE_DB) {
+          db.loadAttendance(dates).then( robotData => {
+            res.send({ status: 'OK', text: utils.attendance.csv(robotData, dates,  students)});
+          });
+        } else {
+          res.send({ status: 'OK', text: utils.attendance.csv(robotData, dates,  students)});
+        }
       } else if (filename === '日付リスト') {
         fs.readFile(path.join(HOME, 'date-list.txt'), (err, data) => {
           res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
@@ -994,8 +1095,8 @@ io.on('connection', function (socket) {
     console.log('message', payload);
     if (callback) callback();
   });
-  socket.on('quiz-command', function(payload, callback) {
-    const result = quizPacket(payload);
+  socket.on('quiz-command', async function(payload, callback) {
+    const result = await quizPacket(payload);
     storeQuizPayload(result);
     io.emit('quiz', result);
     if (callback) callback();
@@ -1012,7 +1113,7 @@ io.on('connection', function (socket) {
     buttonClient.doCommand(payload);
     if (callback) callback();
   });
-  socket.on('quiz', function(payload, callback) {
+  socket.on('quiz', async function(payload, callback) {
     payload.time = new Date();
     if (typeof payload.question === 'undefined') {
       //参加登録
@@ -1023,29 +1124,43 @@ io.on('connection', function (socket) {
           quiz_masters[socket.id] = socket;
         }
         writeRobotData();
+        const quizPayload = await quizPacket({
+          action: 'entry',
+          name: quiz_master,
+        })
         Object.keys(quiz_masters).forEach( key => {
-          quiz_masters[key].emit('quiz', quizPacket({
-            action: 'entry',
-            name: quiz_master,
-          }));
+          quiz_masters[key].emit('quiz', quizPayload);
         });
         socket.emit('quiz', loadQuizPayload(payload));
         socket.emit('imageServers', imageServers);
       }
     } else {
       if (payload.name === quiz_master) return;
-      let quizId = payload.quizId;
-      if (robotData.quizAnswers[quizId] == null) {
-        robotData.quizAnswers[quizId] = {};
+      if (USE_DB) {
+        const a = {
+          quizId: payload.quizId,
+          quizTitle: payload.question,
+          clientId: payload.clientId,
+          username: payload.name,
+          answerString: payload.answer,
+          time: payload.time,
+          startTime: payload.quizStartTime,
+        }
+        await db.update('updateAnswer', a);
+      } else {
+        const quizId = payload.quizId;
+        if (robotData.quizAnswers[quizId] == null) {
+          robotData.quizAnswers[quizId] = {};
+        }
+        if (robotData.quizAnswers[quizId][payload.question] == null) {
+          robotData.quizAnswers[quizId][payload.question] = {};
+        }
+        const p = { ...payload };
+        delete p.question
+        delete p.quizId
+        robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
+        writeRobotData();
       }
-      if (robotData.quizAnswers[quizId][payload.question] == null) {
-        robotData.quizAnswers[quizId][payload.question] = {};
-      }
-      const p = { ...payload };
-      delete p.question
-      delete p.quizId
-      robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
-      writeRobotData();
       Object.keys(quiz_masters).forEach( key => {
         quiz_masters[key].emit('quiz', {
           action: 'refresh',
@@ -1072,7 +1187,19 @@ io.on('connection', function (socket) {
   });
 });
 
-server.listen(config.port, () => console.log(`Example app listening on port ${config.port}!`))
+const startServer = function() {
+  if (USE_DB) {
+    return RobotDB(`${HOME}/robot-server.db`, {
+      operatorsAliases: false,
+    }, async (err, db) => {
+      server.listen(config.port, () => console.log(`Example app listening on port ${config.port}!`))
+    })
+  }
+  server.listen(config.port, () => console.log(`Example app listening on port ${config.port}!`))
+  return {}
+}
+
+const db = startServer();
 
 const gpioSocket = (function() {
   const io = require('socket.io-client');

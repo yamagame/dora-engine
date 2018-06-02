@@ -15,4 +15,6 @@ module.exports = {
   voice_hat: true,
   usb_mic:   false,
   free_editor: true,
+  home: process.env.HOME,
+  use_db: (process.env.ROBOT_DB==='true'),
 }
