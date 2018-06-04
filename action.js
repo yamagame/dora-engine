@@ -23,14 +23,16 @@ function Servo(center) {
   t.now = center;
   t.speed = 0.08;
 
-  t.update = function () {
+  t.update = function (mode) {
     const d = this.target - this.now;
-    if (abs(d) > 0.001) {
+    if (abs(d) > (mode === 'talking' ? 0.001 : 0.0001)) {
       var q = d * this.speed;
       if (abs(q) > 0.0015) q = 0.0015 * sgn(q);
       this.now += q;
       this.emit('updated');
       return true;
+    } else {
+      this.now = this.target;
     }
     return false;
   }
@@ -58,8 +60,8 @@ function Action(servo0, servo1) {
   }
 
   t.idle = function (mode) {
-    const u0 = this.servo0.update();
-    const u1 = this.servo1.update();
+    const u0 = this.servo0.update(this.state);
+    const u1 = this.servo1.update(this.state);
 
     if (mode == 'left') {
       this.servo1.center = 0.055;
@@ -104,6 +106,18 @@ function Action(servo0, servo1) {
             }
         }
         this.talkstep = 0;
+      } else
+      if (mode == 'centering') {
+        if (abs(this.servo0.target - this.servo0.center) > 0.001) {
+          this.servo0.target = this.servo0.center;
+          this.servo1.target = this.servo1.center;
+        } else
+        if (abs(this.servo1.target - this.servo1.center) > 0.001) {
+          this.servo0.target = this.servo0.center;
+          this.servo1.target = this.servo1.center;
+        } else {
+          this.setState(mode, 'ready');
+        }
       } else
       if (mode == 'talk') {
         if (abs(this.servo0.target - this.servo0.center) > 0.001) {

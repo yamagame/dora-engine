@@ -3,8 +3,6 @@ const pigpio = require('pigpio');
 const raspi = require('raspi');
 const Servo = require('./action').Servo;
 const Action = require('./action').Action;
-const dgram = require('dgram');
-const server = dgram.createSocket('udp4');
 const config = require('./config');
 
 if (config.voice_hat) {
@@ -18,7 +16,7 @@ var buttonLevel = null;
 
 const servo0 = Servo(0.073);	//UP DOWN
 const servo1 = Servo(0.073);	//LEFT RIGHT
-const action = Action(servo0, servo1);
+const servoAction = Action(servo0, servo1);
 
 function startServo() {
   const servo = require('./servo')();
@@ -36,7 +34,7 @@ function startServo() {
     servo.pwm2.write(led.now);
   })
   setInterval(() => {
-    action.idle(mode);
+    servoAction.idle(mode);
     led.idle(led_mode);
   }, 20);
 }
@@ -64,50 +62,8 @@ function changeLed(payload) {
   console.log(`led_mode ${led_mode} led_bright ${led_bright} `);
 }
 
-function startServer() {
-  server.on('error', (err) => {
-    console.log(`server error:\n${err.stack}`);
-    server.close();
-  });
-  
-  server.on('message', (data, rinfo) => {
-    console.log(`server got: ${data} from ${rinfo.address}:${rinfo.port}`);
-    try {
-      if (data == 'talk' || data == 'idle' || data == 'stop') {
-        mode = data;
-      } else
-      if (data == 'led-on' || data == 'led-off' || data == 'led-blink') {
-        led_mode = data.toString().split('-')[1];
-      } else {
-        action.idle(data);
-      }
-      
-      function change(state) {
-        if (state == 'talking') {
-          server.send(data, 0, data.length, rinfo.port, rinfo.address, (err) => {
-          });
-          action.removeListener('talk', change);
-        } else {
-          console.log('centering');
-        }
-      }
-      action.on('talk', change);
-
-    } catch(err) {
-    }
-  });
-  
-  server.on('listening', () => {
-    const address = server.address();
-    console.log(`server listening ${address.address}:${address.port}`);
-  });
-  
-  server.bind(config.udp.port);
-}
-
 raspi.init(() => {
   startServo();
-  startServer();
 
   const app = require('http').createServer(handler)
   const io = require('socket.io')(app);
@@ -118,14 +74,49 @@ raspi.init(() => {
 
   app.listen(3091);
 
-  io.on('connection', function (socket) {
+  io.on('connection', function(socket) {
     console.log('connected', socket.id);
+    
     socket.on('led-command', (payload, callback) => {
       changeLed(payload);
       if (callback) callback();
     });
-    socket.on('disconnect', function () {
+    
+    socket.on('disconnect', function() {
       console.log('disconnect');
+    });
+    
+    socket.on('message', function(payload, callback) {
+      try {
+        const { action, direction } = payload;
+        if (action === 'centering') {
+          mode = 'centering';
+        } else
+        if (action === 'talk' || action === 'idle' || action === 'stop') {
+          mode = action;
+          if (direction) {
+            servoAction.idle(direction);
+          }
+        } else
+        if (action === 'led-on' || action === 'led-off' || action === 'led-blink') {
+          led_mode = action.toString().split('-')[1];
+        }
+        if (callback) {
+          if (action === 'centering') {
+            //首が正面を向くまで待つ
+            function change(state) {
+              if (state === 'ready') {
+                callback({ action });
+                servoAction.removeListener('centering', change);
+              }
+            }
+            servoAction.on('centering', change);
+          } else {
+            callback({ action });
+          }
+        }
+      } catch(err) {
+      }
     });
   });
 
@@ -136,7 +127,7 @@ raspi.init(() => {
     edge: Gpio.EITHER_EDGE
   })
   
-  button.on('interrupt', function (level) {
+  button.on('interrupt', function(level) {
     if (buttonLevel != level) {
       buttonLevel = level;
       io.emit('button', { level: level, state: (level==0) });

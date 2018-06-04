@@ -4,7 +4,6 @@ const bodyParser = require('body-parser')
 const request = require('request-promise');
 const speech = (() => (process.env['SPEECH'] === 'off') ? (new EventEmitter()) : require('./speech'))();
 const talk = require('./talk');
-const dgram = require('dgram');
 const config = require('./config');
 const APIKEY= config.docomo.api_key;
 const { exec, spawn } = require('child_process');
@@ -158,30 +157,30 @@ speech.recording = false;
 
 var last_led_action = 'led-off';
 
-function servoAction(action, direction, callback) {
+const gpioSocket = (function() {
+  const io = require('socket.io-client');
+  return io(`http://localhost:${config.gpio_port}`);
+})();
+
+function servoAction(action, payload, callback) {
   if (process.env['SPEECH'] === 'off') {
     if (callback) callback();
     return;
   }
-  const client = dgram.createSocket('udp4');
-  var done = false;
-  function response() {
-    if (!done) {
-      client.removeListener('message', response);
-      if (callback) callback();
-    }
+  let done = false;
+  gpioSocket.emit('message', { action, ...payload, }, (payload) => {
+    if (done) return;
     done = true;
-  }
-  client.on('message', response);
-  if (direction) {
-    client.send(direction, 0, direction.length, config.udp.port, config.udp.host, (err) => {
-    });
-  }
-  client.send(action, 0, action.length, config.udp.port, config.udp.host, (err) => {
+    console.log(payload);
+    if (callback) callback();
   });
-  setTimeout(()=>{
-    response();
-  }, 3000);
+  if (callback) {
+    setTimeout(() => {
+      if (done) return;
+      done = true;
+      if (callback) callback();
+    }, 3000);
+  }
 }
 
 talk.on('idle', function() {
@@ -235,20 +234,22 @@ function docomo_chat(payload, callback) {
           servoAction('led-off');
           last_led_action = 'led-off';
         }
-        servoAction('talk', payload.direction, () => {
-          talk.voice = payload.voice;
-          talk.play(utt, {
-            speed: payload.speed,
-            volume: payload.volume,
-            voice: payload.voice,
-          }, () => {
-            // if (led_mode == 'auto') {
-            //   servoAction('led-on');
-            // }
-            servoAction('idle');
-            if (callback) callback(err, utt);
+        servoAction('centering', { direction: payload.direction, }, () => {
+          servoAction('talk', {}, () => {
+            talk.voice = payload.voice;
+            talk.play(utt, {
+              speed: payload.speed,
+              volume: payload.volume,
+              voice: payload.voice,
+            }, () => {
+              // if (led_mode == 'auto') {
+              //   servoAction('led-on');
+              // }
+              servoAction('idle');
+              if (callback) callback(err, utt);
+            });
           });
-        });
+        })
       }
     } catch(err) {
       console.error(err);
@@ -269,18 +270,20 @@ function text_to_speech(payload, callback) {
         servoAction('led-off');
         last_led_action = 'led-off';
       }
-      servoAction('talk', payload.direction, () => {
-        talk.play(payload.message, {
-          speed: payload.speed,
-          volume: payload.volume,
-          voice: payload.voice,
-        }, () => {
-          // if (led_mode == 'auto') {
-          //   servoAction('led-on');
-          // }
-          servoAction('idle');
-          playing = false;
-          if (callback) callback();
+      servoAction('centering', { direction: payload.direction, }, () => {
+        servoAction('talk', {}, () => {
+          talk.play(payload.message, {
+            speed: payload.speed,
+            volume: payload.volume,
+            voice: payload.voice,
+          }, () => {
+            // if (led_mode == 'auto') {
+            //   servoAction('led-on');
+            // }
+            servoAction('idle');
+            playing = false;
+            if (callback) callback();
+          });
         });
       });
     }
@@ -1200,11 +1203,6 @@ const startServer = function() {
 }
 
 const db = startServer();
-
-const gpioSocket = (function() {
-  const io = require('socket.io-client');
-  return io('http://localhost:3091');
-})();
 
 var shutdownTimer = null;
 var shutdownLEDTimer = null;
