@@ -11,6 +11,7 @@ module.exports = {
   },
   docomo: {
     api_key: process.env.DOCOMO_API_KEY || '',
+    app_id:  process.env.DOCOMO_APP_ID  || '',
   },
   voice_hat: true,
   usb_mic:   false,

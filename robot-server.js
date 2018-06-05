@@ -5,7 +5,8 @@ const request = require('request-promise');
 const speech = (() => (process.env['SPEECH'] === 'off') ? (new EventEmitter()) : require('./speech'))();
 const talk = require('./talk');
 const config = require('./config');
-const APIKEY= config.docomo.api_key;
+const APIKEY = config.docomo.api_key;
+const APPID = config.docomo.app_id;
 const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -31,6 +32,7 @@ const mkdirp = require('mkdirp');
 const Dora = require('dora');
 const dora = new Dora();
 const utils = require('./utils');
+const dateutlis = require('date-utils');
 
 dora.request = async function(command, options, params) {
   var len = 0;
@@ -67,7 +69,6 @@ dora.request = async function(command, options, params) {
 
 const quiz_master = process.env.QUIZ_MASTER || '_quiz_master_';
 
-var context = null;
 var led_mode = 'auto';
 
 talk.dummy = (process.env['SPEECH'] === 'off' && process.env['MACINTOSH'] !== 'on');
@@ -132,25 +133,52 @@ function writeRobotData() {
   }
 }
 
-function chat(message, context, tone, callback) {
-  const json = {
-    utt: message,
-  }
-  if (context) {
-    json.context = context;
-  }
-  if (tone) {
-    json.t = tone;
-  }
-  request({
-    method: 'POST',
-    url:'https://api.apigw.smt.docomo.ne.jp/dialogue/v1/dialogue?APIKEY='+APIKEY,
-    json,
-  }).then((body) => {
-    callback(null, body);
-  }).catch((err) => {
-    callback(err, null);
-  })
+function chat(message, tone, callback) {
+  var dt = new Date();
+  var sendTime = dt.toFormat("YYYY-MM-DD HH24:MI:SS");
+  var recvTime = "1970-01-01 00:00:00";
+
+  fs.readFile('./last_chat.txt', 'utf8', function (err, data) {
+    if (err) {
+
+    }
+    if (data != undefined) {
+      recvTime = data;
+    }
+
+    const json = {
+      language: "ja-JP",
+      botId: "Chatting",
+      appId: APPID,
+      voiceText: message,
+      clientData: {
+        option: {
+          t: '',
+        },
+      },
+      appRecvTime: recvTime,
+      appSendTime: sendTime,
+    }
+
+    if (tone) {
+      json.clientData.option.t = tone;
+    }
+
+    request({
+      method: 'POST',
+      url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
+      json,
+    }).then((body) => {
+      callback(null, body);
+      fs.writeFile('./last_chat.txt', body.serverSendTime, function (err) {
+        if (err) {
+          throw err;
+        }
+      });
+    }).catch((err) => {
+      callback(err, null);
+    })
+  });
 }
 
 speech.recording = false;
@@ -210,13 +238,13 @@ app.use('/images', express.static(PICT))
 
 function docomo_chat(payload, callback) {
   if (payload.tone == 'kansai_dialect') {
-    var tone = "20";
+    var tone = "kansai";
   } else if (payload.tone == 'baby_talk_japanese') {
-    var tone = "30";
+    var tone = "akachan";
   } else {
     var tone = "";
   }
-	chat(payload.message, context, tone, function(err, body) {
+	chat(payload.message, tone, function(err, body) {
     var utt = payload.message+'がどうかしましたか。';
     try {
       if (err) {
@@ -224,8 +252,7 @@ function docomo_chat(payload, callback) {
         if (callback) callback(err, 'エラー');
         return;
       } else {
-        utt = body.utt;
-        context = body.context;
+        utt = body.systemText.expression;
       }
       if (payload.silence) {
         if (callback) callback(err, utt);
@@ -954,7 +981,7 @@ app.post('/scenario', (req, res) => {
       res.send({ status: 'OK' });
     }
   } else
-  if (students.some( m => m.name === username ) || config.free_editor) 
+  if (students.some( m => m.name === username ) || config.free_editor)
   {
     if (req.body.action == 'save') {
       if (typeof req.body.text !== 'undefined') {
