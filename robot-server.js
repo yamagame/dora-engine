@@ -305,6 +305,7 @@ function speech_to_text(payload, callback) {
     speech.removeListener('data', listener);
     speech.removeListener('speech', speechListener);
     speech.removeListener('button', buttonListener);
+    speech.removeListener('camera', cameraListener);
   }
 
   if (payload.timeout != 0) {
@@ -382,6 +383,18 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
+  function cameraListener(data) {
+    if (!done) {
+      removeListener();
+      if (callback) callback(null, '[camera]');
+      if (led_mode == 'auto') {
+        servoAction('led-off');
+        last_led_action = 'led-off';
+      }
+    }
+    done = true;
+  }
+
   if (led_mode == 'auto') {
     if (payload.timeout > 0) {
         servoAction('led-on');
@@ -396,6 +409,7 @@ function speech_to_text(payload, callback) {
   speech.on('data', listener);
   speech.on('speech', speechListener);
   speech.on('button', buttonListener);
+  speech.on('camera', cameraListener);
 }
 
 function quiz_button(payload, callback) {
@@ -484,11 +498,12 @@ app.post('/speech', (req, res) => {
   res.send('OK');
 });
 
-/* マイクによる音声認識の閾値を変更する
-   閾値が0に近い程マイクの感度は高くなる
+/*
+  マイクによる音声認識の閾値を変更する
+  閾値が0に近い程マイクの感度は高くなる
 
-   curlコマンド使用例
-   $ curl -X POST --data '200' http://192.168.X.X:3090/mic-threshold
+  curlコマンド使用例
+  $ curl -X POST --data '200' http://192.168.X.X:3090/mic-threshold
 */
 app.post('/mic-threshold', (req, res) => {
   speech.emit('mic_threshold', req.body.toString('utf-8'));
@@ -980,6 +995,24 @@ app.post('/scenario', (req, res) => {
     res.send({ status: `No name: ${username}` });
   }
 })
+
+const camera = new (require('./robot-camera'))();
+
+camera.on('change', (payload) => {
+  console.log('camera changed');
+  speech.emit('camera', payload);
+});
+
+/*
+  カメラ連携
+
+  curlコマンド使用例
+  $ curl -X POST --data '[{"id":100, "area":200}]' --header "content-type:application/json" http://localhost:3090/camera
+*/
+app.post('/camera', (req, res) => {
+  camera.up(req.body);
+  res.send({ status: 'OK' });
+});
 
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
