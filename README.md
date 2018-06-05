@@ -123,7 +123,7 @@ $ ./setup_docomo_appid.sh
 appIdとして出力された文字列を、環境変数 DOCOMO_APP_ID に設定します。
 
 ```
-export DOCOMO_API_KEY=eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+export DOCOMO_APP_ID=eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 ## DoraEditorの使い方
