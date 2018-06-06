@@ -312,7 +312,14 @@ const RobotDB = function(databasePath, options, callback) {
       ],
       attributes: ['startTime'],
     });
-    return { quizId, startTimes: quiz.map( v => v.startTime ) };
+    const startTimes = [];
+    for (var i=0;i<quiz.length;i++) {
+      const retval = await this.findAnswers({ quizId, startTime: quiz[i].startTime });
+      if (retval && retval.answers && Object.keys(retval.answers).length > 0) {
+        startTimes.push(quiz[i].startTime);
+      }
+    }
+    return { quizId, startTimes };
   }
 
   async function quizIdList() {
