@@ -715,6 +715,10 @@ module.exports = function(RED) {
         if (res == '[canceled]') {
           msg.payload = 'canceled';
           node.send([null, msg]);
+        } else
+        if (res == '[camera]') {
+          msg.payload = 'camera';
+          node.send([null, msg]);
         } else {
           if (res.button) {
             msg.payload = 'button';
