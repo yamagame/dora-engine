@@ -143,14 +143,14 @@ function Action(servo0, servo1) {
             this.servo0.speed = 0.1;
             switch (this.talkstep) {
             case 0:
-              this.wait = 5 + Math.random() * 5;
+              this.wait = parseInt(Math.random() * 10);
               this.talkstep = 1;
               break;
             case 1:
               if (this.wait > 0) {
                 this.wait--;
               } else {
-                this.talkstep = 1;
+                this.talkstep = 0;
                 this.servo0.target = this.servo0.center + (Math.random() * 0.0025 + 0.0025);
               }
               break;
