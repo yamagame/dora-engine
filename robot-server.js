@@ -34,6 +34,127 @@ const dora = new Dora();
 const utils = require('./utils');
 const dateutlis = require('date-utils');
 
+dora.loadModule('button', function(DORA, config) {
+  function allBlink(node, options) {
+    node.on("input", async function(msg) {
+      buttonClient.emit('all-blink', {});
+      node.send(msg);
+    });
+  }
+  DORA.registerType('led-all-blink', allBlink);
+
+  function allOn(node, options) {
+    node.on("input", async function(msg) {
+      buttonClient.emit('all-on', {
+        bright: 1,
+      });
+      node.send(msg);
+    });
+  }
+  DORA.registerType('led-all-on', allOn);
+
+  function allOff(node, options) {
+    node.on("input", async function(msg) {
+      buttonClient.emit('all-off', {});
+      node.send(msg);
+    });
+  }
+  DORA.registerType('led-all-off', allOff);
+
+  function ledOn(node, options) {
+    node.on("input", async function(msg) {
+      buttonClient.emit('one', {
+        name: msg.button.name,
+        bright: 1,
+      });
+      node.send(msg);
+    });
+  }
+  DORA.registerType('led-on', ledOn);
+
+  function sound(node, options) {
+    var isTemplated = (options||"").indexOf("{{") != -1;
+    node.on("input", async function(msg) {
+      const socket = buttonClient.socket(msg.button.name);
+      let message = options;
+      if (isTemplated) {
+        message = DORA.utils.mustache.render(message, msg);
+      }
+      socket.emit('sound-command', { sound: message });
+      node.send(msg);
+    });
+  }
+  DORA.registerType('sound', sound);
+
+  function soundAll(node, options) {
+    var isTemplated = (options||"").indexOf("{{") != -1;
+    node.on("input", async function(msg) {
+      let message = options;
+      if (isTemplated) {
+        message = DORA.utils.mustache.render(message, msg);
+      }
+      buttonClient.emit('sound', { sound: message });
+      node.send(msg);
+    });
+  }
+  DORA.registerType('sound-all', soundAll);
+
+  function speechToText(node, options) {
+    node.nextLabel(options);
+    node.on("input", async function(msg) {
+      const socket = buttonClient.socket(msg.button.name);
+      const params = {
+        timeout: 30000,
+        sensitivity: 'keep',
+      };
+      if (typeof msg.timeout !== 'undefined') {
+        params.timeout = msg.timeout;
+      }
+      if (typeof msg.sensitivity !== 'undefined') {
+        params.sensitivity = msg.sensitivity;
+      }
+      node.recording = true;
+      socket.emit('speech-to-text', params, (res) => {
+        if (!node.recording) return;
+        node.recording = false;
+        if (res == '[timeout]') {
+          msg.payload = 'timeout';
+          node.send([msg, null]);
+        } else
+        if (res == '[canceled]') {
+          msg.payload = 'canceled';
+          node.send([msg, null]);
+        } else
+        if (res == '[camera]') {
+          msg.payload = 'camera';
+          node.send([msg, null]);
+        } else {
+          if (res.button) {
+            msg.payload = 'button';
+            msg.button = res;
+            delete res.button;
+            node.send([msg, null]);
+          } else
+          if (res.speechRequest) {
+            msg.speechRequest = true;
+            msg.payload = res.payload;
+            msg.speechText = msg.payload;
+            msg.topicPriority = 0;
+            node.send([null, msg]);
+          } else {
+            msg.payload = res;
+            msg.speechText = msg.payload;
+            msg.topicPriority = 0;
+            delete msg.speechRequest;
+            node.send([null, msg]);
+          }
+        }
+      });
+    });
+  }
+  DORA.registerType('speech-to-text', speechToText);
+});
+
 dora.request = async function(command, options, params) {
   var len = 0;
   if (typeof command !== 'undefined') len += 1;
@@ -562,15 +683,24 @@ function changeLed(payload) {
   }
 }
 
+let _playone = null;
+
 function execSoundCommand(payload) {
   const sound = (typeof payload.play !== 'undefined') ? payload.play : payload.sound;
+  if (sound === 'stop') {
+    if (_playone) {
+      utils.kill(_playone.pid,'SIGTERM',function() {
+      });
+      _playone = null;
+    }
+  } else
   if (typeof sound !== 'undefined') {
     const base = path.join(HOME, 'Sound');
     const p = path.normalize(path.join(base, sound));
     if (p.indexOf(base) == 0) {
       const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
       console.log(`/usr/bin/${cmd} ${p}`);
-      const _playone = spawn(`/usr/bin/${cmd}`, [p]);
+      _playone = spawn(`/usr/bin/${cmd}`, [p]);
       _playone.on('close', function(code) {
         console.log('close', code);
       });
@@ -658,6 +788,10 @@ async function quizPacket(payload) {
       }
       payload.quizStartTime = new Date();
     }
+  }
+  if (payload.action === 'quiz-show') {
+    //クイズの表示
+    payload.action = 'quiz-init';
   }
   if (payload.action === 'quiz-ranking') {
     if (USE_DB) {
@@ -904,6 +1038,9 @@ app.post('/command', async (req, res) => {
       dora.stop();
       //talk.stop();
       //servoAction('idle');
+      execSoundCommand({ sound: 'stop' });
+      buttonClient.emit('stop-speech-to-text');
+      buttonClient.emit('all-blink', {});
       speech.emit('data', 'stoped');
       if (playerSocket) {
         playerSocket.emit('movie', { action: 'cancel', }, (data) => {
@@ -1255,10 +1392,10 @@ const startServer = function() {
     return RobotDB(`${HOME}/robot-server.db`, {
       operatorsAliases: false,
     }, async (err, db) => {
-      server.listen(config.port, () => console.log(`Example app listening on port ${config.port}!`))
+      server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
     })
   }
-  server.listen(config.port, () => console.log(`Example app listening on port ${config.port}!`))
+  server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
   return {}
 }
 

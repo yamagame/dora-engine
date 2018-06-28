@@ -28,8 +28,9 @@ const clients = [
 function ButtonClient() {
   var bright = 1;
   var buttons = {};
+  var clientSocket = {};
   var led_mode = 'blink';
-  var led_host = '';
+  var led_name = '';
   var blinkSpeed = 0.025;
   var theta = 0;
   
@@ -69,7 +70,7 @@ function ButtonClient() {
       Object.keys(buttons).forEach( key => {
         const button = buttons[key];
         if (button.socket && !button.localhost) {
-          if (button.host == led_host) {
+          if (button.name == led_name) {
             button.socket.emit('led-command', { action: 'on', value: bright });
           } else {
             button.socket.emit('led-command', { action: 'off', value: bright });
@@ -81,6 +82,10 @@ function ButtonClient() {
 
   clients.forEach( client => {
     const socket = io(client.host);
+    clientSocket[client.name] = {
+      ...client,
+      socket: socket,
+    }
     var id = null;
     socket.on('connect', function(){
       console.log('connect', socket.id, client.host);
@@ -122,7 +127,7 @@ function ButtonClient() {
   //一つだけオン
   t.on('one', (payload) => {
     led_mode = 'one';
-    led_host = payload.host;
+    led_name = payload.name;
     bright = (typeof payload.bright) ? payload.bright : bright;
   });
 
@@ -133,10 +138,20 @@ function ButtonClient() {
 
   //音再生
   t.on('sound', (payload) => {
-    Object.keys(buttons).forEach( key => {
-      const button = buttons[key];
-      if (buttons[key].socket) {
-        buttons[key].socket.emit('led-command', { action: 'sound', sound: payload.sound });
+    Object.keys(clientSocket).forEach( key => {
+      const button = clientSocket[key];
+      if (button.socket) {
+        button.socket.emit('sound-command', { sound: payload.sound });
+      }
+    });
+  });
+
+  //音声認識停止
+  t.on('stop-speech-to-text', () => {
+    Object.keys(clientSocket).forEach( key => {
+      const button = clientSocket[key];
+      if (button.socket && !button.localhost) {
+        button.socket.emit('stop-speech-to-text');
       }
     });
   });
@@ -152,6 +167,10 @@ function ButtonClient() {
   setInterval(() => {
     sendCommand();
   }, 200);
+
+  t.socket = function(name) {
+    return clientSocket[name].socket;
+  }
 
   return t;
 }
