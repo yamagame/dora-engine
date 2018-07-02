@@ -19,7 +19,7 @@
 
 ## 準備
 
-SDカードを作成します。OSイメージは(他のイメージだとボリュームコントロールがうまく行かなかったので)Google Voice Kitの2017/09/11バージョンを使用します。
+SDカードを作成します。ここでは、Google Voice Kitの2017/09/11バージョンを使用します。その他のバージョンで動作させる場合は、次のセクションをご覧ください。
 
 [https://dl.google.com/dl/aiyprojects/voice/aiyprojects-2017-09-11.img.xz](https://dl.google.com/dl/aiyprojects/voice/aiyprojects-2017-09-11.img.xz)
 
@@ -56,6 +56,83 @@ $ ./setup-autolaunch.sh
 ```
 
 再起動します。
+
+## aiyprojects-2017-09-11.img.xz 以外の Raspbian で動作させる方法
+
+NOOBS_v2_8_2 でのみ確認しています。
+
+### 8GByteのSDカードを使用している場合
+
+SDカードの容量が足りませんので、以下のコマンドで wolfram-engine を削除して空き容量を確保します。
+
+```
+$ sudo apt-get purge wolfram-engine -y
+```
+
+### /boot/config.txtを編集する
+
+以下の項目をコメントアウトして無効化します。
+
+```
+dtparam=audio=on
+```
+
+以下の３項目を記入して有効化します。
+
+```
+dtparam=i2s=on
+dtoverlay=i2s-mmap
+dtoverlay=googlevoicehat-soundcard
+```
+
+### /etc/asound.confを作成
+
+```
+options snd_rpi_googlemihat_soundcard index=0
+
+pcm.softvol {
+    type softvol
+    slave.pcm dmix
+    control {
+        name Master
+        card 0
+    }
+}
+
+pcm.micboost {
+    type route
+    slave.pcm dsnoop
+    ttable {
+        0.0 30.0
+        1.1 30.0
+    }
+}
+
+pcm.!default {
+    type asym
+    playback.pcm "plug:softvol"
+    capture.pcm "plug:micboost"
+}
+
+ctl.!default {
+    type hw
+    card 0
+}
+```
+
+## 録音再生をテストする
+
+### 録音する場合
+
+```
+arecord -Dplug:micboost -f S16_LE -r 16000 test.wav
+```
+
+### 再生する場合
+
+```
+aplay -Dplug:softvol test.wav
+```
 
 ## AquesTalk Piの準備
 

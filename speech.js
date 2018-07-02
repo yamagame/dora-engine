@@ -20,7 +20,7 @@ function Speech() {
   };
 
   if (config.voice_hat == true && config.usb_mic == false) {
-    var device = 'plughw:0,0';
+    var device = 'plug:micboost';
   } else {
     var device = 'plughw:1,0';
   }

@@ -224,6 +224,7 @@ let { students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt
 var saveDelay = false;
 var savedData = null;
 var saveWFlag = false;
+var quizAnswersCache = {};
 
 function writeRobotData() {
   saveWFlag = true;
@@ -699,8 +700,9 @@ function execSoundCommand(payload) {
     const p = path.normalize(path.join(base, sound));
     if (p.indexOf(base) == 0) {
       const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
+      const opt = (process.platform === 'darwin') ? [p] : ['-Dplug:softvol', p];
       console.log(`/usr/bin/${cmd} ${p}`);
-      _playone = spawn(`/usr/bin/${cmd}`, [p]);
+      _playone = spawn(`/usr/bin/${cmd}`, opt);
       _playone.on('close', function(code) {
         console.log('close', code);
       });
@@ -760,7 +762,8 @@ async function quizPacket(payload) {
         }
       }
       payload.quizStartTime = startTime;
-    } else {
+    }
+    {
       if (payload.quizId) {
         if (!robotData.quizList) {
           robotData.quizList = {};
@@ -784,9 +787,13 @@ async function quizPacket(payload) {
             }
           })
         }
-        writeRobotData();
+        if (!USE_DB) {
+          writeRobotData();
+        }
       }
-      payload.quizStartTime = new Date();
+      if (!USE_DB) {
+        payload.quizStartTime = new Date();
+      }
     }
   }
   if (payload.action === 'quiz-show') {
@@ -887,10 +894,31 @@ app.post('/result', async (req, res) => {
   if (req.body.type === 'answers') {
     if (req.body.quizId) {
       if (req.body.startTime) {
+        const showSum = (typeof req.body.showSum === 'undefined' || !req.body.showSum) ? false : true;
         //スタート時間が同じものだけを返す
         if (USE_DB) {
-          const retval = await db.findAnswers({ quizId: req.body.quizId, startTime: req.body.startTime });
-          res.send(retval);
+          if (showSum) {
+            const result = {};
+            const quizAnswers = quizAnswersCache[req.body.quizId];
+            Object.keys(quizAnswers).map( quiz => {
+              const qq = quizAnswers[quiz];
+              const tt = {};
+              Object.keys(qq).forEach( clientId => {
+                const answer = qq[clientId];
+                if (answer.quizStartTime === req.body.startTime) {
+                  tt[clientId] = answer;
+                }
+              });
+              if (Object.keys(tt).length > 0) {
+                result[quiz] = tt;
+              }
+            });
+            const question = (robotData.quizList) ? robotData.quizList[req.body.quizId] : null;
+            res.send({ answers: result, question: question });
+          } else {
+            const retval = await db.findAnswers({ quizId: req.body.quizId, startTime: req.body.startTime });
+            res.send(retval);
+          }
         } else {
           const result = {};
           const quizAnswers = robotData.quizAnswers[req.body.quizId];
@@ -1336,6 +1364,7 @@ io.on('connection', function (socket) {
       }
     } else {
       if (payload.name === quiz_master) return;
+      const showSum = (typeof payload.showSum === 'undefined' || !payload.showSum) ? false : true;
       if (USE_DB) {
         const a = {
           quizId: payload.quizId,
@@ -1347,6 +1376,19 @@ io.on('connection', function (socket) {
           startTime: payload.quizStartTime,
         }
         await db.update('updateAnswer', a);
+        if (showSum) {
+          const quizId = payload.quizId;
+          if (quizAnswersCache[quizId] == null) {
+            quizAnswersCache[quizId] = {};
+          }
+          if (quizAnswersCache[quizId][payload.question] == null) {
+            quizAnswersCache[quizId][payload.question] = {};
+          }
+          const p = { ...payload };
+          delete p.question
+          delete p.quizId
+          quizAnswersCache[quizId][payload.question][payload.clientId] = p;
+        }
       } else {
         const quizId = payload.quizId;
         if (robotData.quizAnswers[quizId] == null) {
