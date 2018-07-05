@@ -32,7 +32,7 @@ function MovieClient(host) {
     if (data.action === 'play') {
       const p = path.join(__dirname, '../Videos', data.movie);
       fs.stat(p, (err, stats) => {
-        if (stats.isFile()) {
+        if (!err && stats.isFile()) {
           player.play(p);
         } else {
           player.play(path.join(__dirname, '../Movie', data.movie));
