@@ -4,7 +4,7 @@ const raspi = require('raspi');
 const Servo = require('./action').Servo;
 const Action = require('./action').Action;
 const config = require('./config');
-const port = 3091;
+const port = config.gpio_port;
 const fs = require('fs');
 const path = require('path');
 

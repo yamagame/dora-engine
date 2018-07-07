@@ -317,6 +317,10 @@ function servoAction(action, payload, callback) {
     if (callback) callback();
     return;
   }
+  if (!gpioSocket.connected) {
+    if (callback) callback();
+    return;
+  }
   let done = false;
   gpioSocket.emit('message', { action, ...payload, }, (payload) => {
     if (done) return;
