@@ -1366,16 +1366,6 @@ io.on('connection', function (socket) {
       if (payload.name === quiz_master) return;
       const showSum = (typeof payload.showSum === 'undefined' || !payload.showSum) ? false : true;
       if (USE_DB) {
-        const a = {
-          quizId: payload.quizId,
-          quizTitle: payload.question,
-          clientId: payload.clientId,
-          username: payload.name,
-          answerString: payload.answer,
-          time: payload.time,
-          startTime: payload.quizStartTime,
-        }
-        await db.update('updateAnswer', a);
         if (showSum) {
           const quizId = payload.quizId;
           if (quizAnswersCache[quizId] == null) {
@@ -1389,6 +1379,16 @@ io.on('connection', function (socket) {
           delete p.quizId
           quizAnswersCache[quizId][payload.question][payload.clientId] = p;
         }
+        const a = {
+          quizId: payload.quizId,
+          quizTitle: payload.question,
+          clientId: payload.clientId,
+          username: payload.name,
+          answerString: payload.answer,
+          time: payload.time,
+          startTime: payload.quizStartTime,
+        }
+        await db.update('updateAnswer', a);
       } else {
         const quizId = payload.quizId;
         if (robotData.quizAnswers[quizId] == null) {
