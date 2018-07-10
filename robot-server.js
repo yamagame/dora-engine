@@ -258,49 +258,36 @@ function writeRobotData() {
 function chat(message, tone, callback) {
   var dt = new Date();
   var sendTime = dt.toFormat("YYYY-MM-DD HH24:MI:SS");
-  var recvTime = "1970-01-01 00:00:00";
 
-  fs.readFile('./last_chat.txt', 'utf8', function (err, data) {
-    if (err) {
-
-    }
-    if (data != undefined) {
-      recvTime = data;
-    }
-
-    const json = {
-      language: "ja-JP",
-      botId: "Chatting",
-      appId: APPID,
-      voiceText: message,
-      clientData: {
-        option: {
-          t: '',
-        },
+  const json = {
+    language: "ja-JP",
+    botId: "Chatting",
+    appId: APPID,
+    voiceText: message,
+    clientData: {
+      option: {
+        t: '',
       },
-      appRecvTime: recvTime,
-      appSendTime: sendTime,
-    }
+    },
+    appRecvTime: (robotData.chatRecvTime ?  robotData.chatRecvTime : sendTime),
+    appSendTime: sendTime,
+  }
 
-    if (tone) {
-      json.clientData.option.t = tone;
-    }
+  if (tone) {
+    json.clientData.option.t = tone;
+  }
 
-    request({
-      method: 'POST',
-      url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
-      json,
-    }).then((body) => {
-      callback(null, body);
-      fs.writeFile('./last_chat.txt', body.serverSendTime, function (err) {
-        if (err) {
-          throw err;
-        }
-      });
-    }).catch((err) => {
-      callback(err, null);
-    })
-  });
+  request({
+    method: 'POST',
+    url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
+    json,
+  }).then((body) => {
+    callback(null, body);
+    robotData.chatRecvTime = body.serverSendTime;
+    writeRobotData();
+  }).catch((err) => {
+    callback(err, null);
+  })
 }
 
 speech.recording = false;
