@@ -961,6 +961,8 @@ app.post('/result', async (req, res) => {
   res.send({ status: 'OK' });
 })
 
+let run_scenario = false;
+
 app.post('/command', async (req, res) => {
   if (req.body.type === 'quiz') {
     const payload = await quizPacket(req.body);
@@ -998,62 +1000,81 @@ app.post('/command', async (req, res) => {
   if (req.body.type === 'scenario') {
     const { action } = req.body;
     if (action == 'play') {
-      dora.stop();
-      function emitError(err) {
-        console.log(err);
-        console.log(dora.errorInfo());
-        err.info = dora.errorInfo();
-        if (!err.info.reason) {
-          err.info.reason = err.toString();
-        }
-        io.emit('scenario_status', {
-          err: err.toString(),
-          lineNumber: err.info.lineNumber,
-          code: err.info.code,
-          reason: err.info.reason,
-        });
-      }
-      try {
-        const { filename, range, name } = req.body;
-        const base = path.join(HOME, 'Documents');
-        const username = (name) ? path.basename(name) : null;
-        fs.readFile(path.join(base, username, filename), (err, data) => {
-          if (err) {
-            emitError(err);
-            return;
+      run_scenario = true;
+      const play = ({ filename, range, name }) => {
+        dora.stop();
+        function emitError(err) {
+          console.log(err);
+          console.log(dora.errorInfo());
+          err.info = dora.errorInfo();
+          if (!err.info.reason) {
+            err.info.reason = err.toString();
           }
-          dora.parse(data.toString(), function (filename, callback) {
-            fs.readFile(path.join(base, username, filename), (err, data) => {
-              if (err) {
-                emitError(err);
-                return;
-              }
-              callback(data.toString());
-            });
-          }).then(()=> {
-            dora.play({}, {
-              socket: localSocket,
-              range,
-            }, (err, msg) => {
-              if (err) {
-                emitError(err);
-                console.log(`${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
-              } else {
-                io.emit('scenario_status', {
-                  message: msg,
-                });
-                console.log(msg);
-              }
-            });
-          }).catch((err) => {
-            emitError(err);
+          io.emit('scenario_status', {
+            err: err.toString(),
+            lineNumber: err.info.lineNumber,
+            code: err.info.code,
+            reason: err.info.reason,
           });
-        });
-      } catch(err) {
-        emitError(err);
+          run_scenario = false;
+        }
+        try {
+          const base = path.join(HOME, 'Documents');
+          const username = (name) ? path.basename(name) : null;
+          fs.readFile(path.join(base, username, filename), (err, data) => {
+            if (err) {
+              emitError(err);
+              return;
+            }
+            dora.parse(data.toString(), function (filename, callback) {
+              fs.readFile(path.join(base, username, filename), (err, data) => {
+                if (err) {
+                  emitError(err);
+                  return;
+                }
+                callback(data.toString());
+              });
+            }).then(()=> {
+              dora.play({}, {
+                socket: localSocket,
+                range,
+              }, (err, msg) => {
+                if (err) {
+                  emitError(err);
+                  console.log(`${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
+                  run_scenario = false;
+                } else {
+                  io.emit('scenario_status', {
+                    message: msg,
+                  });
+                  buttonClient.emit('stop-speech-to-text');
+                  buttonClient.emit('all-blink', {});
+                  speech.emit('data', 'stoped');
+                  if (typeof msg._nextscript !== 'undefined') {
+                    console.log(`msg._nextscript ${msg._nextscript}`);
+                    if (run_scenario) {
+                      play({
+                        filename: msg._nextscript,
+                        range: { start: 0, },
+                        name: name,
+                      });
+                    }
+                  }
+                  console.log(msg);
+                }
+              });
+            }).catch((err) => {
+              emitError(err);
+            });
+          });
+        } catch(err) {
+          emitError(err);
+        }
       }
+      play(req.body);
     }
     if (action == 'stop') {
+      run_scenario = false;
       dora.stop();
       //talk.stop();
       //servoAction('idle');

@@ -1,21 +1,37 @@
 const io = require('socket.io-client');
 const EventEmitter = require('events');
+const ping = require('ping');
 
 const clients = [
   {
-    host:'http://button01.local:3090',
+    host:'button01.local',
+    port: 3090,
     name:'button01',
     team:'くまさん',
   },
   {
-    host:'http://button02.local:3090',
+    host:'button02.local',
+    port: 3090,
     name:'button02',
     team:'うさぎさん',
   },
   {
-    host:'http://button03.local:3090',
+    host:'button03.local',
+    port: 3090,
     name:'button03',
     team:'かめさん',
+  },
+  {
+    host:'button04.local',
+    port: 3090,
+    name:'button04',
+    team:'かえるさん',
+  },
+  {
+    host:'button05.local',
+    port: 3090,
+    name:'button05',
+    team:'きりんさん',
   },
   {
     host:'http://localhost:3090',
@@ -24,6 +40,22 @@ const clients = [
     localhost: true,
   },
 ]
+
+function ipResolver(host, callback) {
+  function _resolve() {
+    ping.promise.probe(host)
+    .then(function (res) {
+      if (res.alive) {
+        callback(res);
+      } else {
+        setTimeout(() => {
+          _resolve()
+        }, 1000);
+      }
+    });
+  }
+  _resolve();
+}
 
 function ButtonClient() {
   var bright = 1;
@@ -81,31 +113,40 @@ function ButtonClient() {
   }
 
   clients.forEach( client => {
-    const socket = io(client.host);
-    clientSocket[client.name] = {
-      ...client,
-      socket: socket,
+    const connect = (client) => {
+      ipResolver(client.host, (res) => {
+        console.log(`found button ${client.host} ${res.numeric_host}`);
+        const host = `http://${res.numeric_host}:${client.port}`;
+        const socket = io(host);
+        clientSocket[client.name] = {
+          ...client,
+          socket: socket,
+        }
+        var id = null;
+        socket.on('connect', function() {
+          console.log('connect', socket.id, host);
+          id = socket.id;
+          buttons[socket.id] = {
+            socket,
+            ...client,
+          }
+          sendCommand();
+        });
+        socket.on('button', function(data){
+          t.emit('button', { ...client, });
+        });
+        socket.on('speech', function(data){
+          t.emit('speech', { ...client, data });
+        });
+        socket.on('disconnect', function(){
+          console.log('disconnect', id);
+          delete buttons[id];
+          socket.close();
+          connect(client);
+        });
+      })
     }
-    var id = null;
-    socket.on('connect', function(){
-      console.log('connect', socket.id, client.host);
-      id = socket.id;
-      buttons[socket.id] = {
-        socket,
-        ...client,
-      }
-      sendCommand();
-    });
-    socket.on('button', function(data){
-      t.emit('button', { ...client, });
-    });
-    socket.on('speech', function(data){
-      t.emit('speech', { ...client, data });
-    });
-    socket.on('disconnect', function(){
-      console.log('disconnect', id);
-      delete buttons[id];
-    });
+    connect(client);
   });
 
   //全ボタン待機

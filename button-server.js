@@ -52,6 +52,11 @@ app.post('/command', (req, res) => {
   res.send('OK');
 })
 
+app.post('/speech', (req, res) => {
+  speech.emit('data', req.body.toString('utf-8'));
+  res.send('OK');
+});
+
 speech.on('data', function(data) {
   console.log(data);
 });

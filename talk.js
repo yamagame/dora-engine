@@ -14,6 +14,10 @@ function Talk() {
 	t.macvoice = false;
 
   t.say = function(words, params, callback) {
+    if (typeof words === 'undefined') {
+      callback();
+      return;
+    }
   	const voice = params.voice;
   	const speed = params.speed;
   	const volume = params.volume;
