@@ -1484,7 +1484,7 @@ gpioSocket.on('button', (payload) => {
         doShutdown = true;
         servoAction('stop');
         setTimeout(() => {
-          const _playone = spawn('/usr/bin/sudo', ['shutdown', 'now']);
+          const _playone = spawn('/usr/bin/sudo', ['shutdown', '-f', 'now']);
           _playone.on('close', function(code) {
             console.log('shutdown done');
           });
