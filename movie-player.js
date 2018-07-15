@@ -32,7 +32,7 @@ function Player() {
   t.state = 'idle';
   
   t.play = function(path) {
-		const _play = spawn('/usr/bin/omxplayer', [path]);
+		const _play = spawn('/usr/bin/omxplayer', ['--no-osd', path]);
 		t.state = 'play';
 		_play.on('close', function(code) {
   		t.state = 'idle';
