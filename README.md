@@ -3,7 +3,7 @@
 ラズベリーパイとVoiceKitで作るコミュニケーションロボットエンジンです。
 
 <p align="center">
-  <img src="./images/IMG_3140.jpg"/>
+  <img src="./images/IMG_6691.jpg"/>
 </p>
 
 ## 機能
@@ -16,6 +16,21 @@
 - 自動プレゼンテーション機能
 - 音声認識によるQ&A機能
 - [ドコモ雑談対話API](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=natural_dialogue&p_name=api_4_usage_scenario#tag01)に対応しています
+
+## ロボットの設計図
+
+設計図は1.5mm厚ダンボール用と3mm厚ダンボール用の２つがあります。
+ロボットは設計図の各ページをA4サイズで印刷して、ダンボールに貼り付けて切り取ります。
+
+- 3mm厚ダンボール用
+
+    [http://bit.ly/2LkGgn4](http://bit.ly/2LkGgn4)
+
+- 1.5mm厚ダンボール用
+
+    [http://bit.ly/2mmmfBG](http://bit.ly/2mmmfBG)
+
+設計図は[クリエイティブコモンズライセンス](https://creativecommons.org/)で公開しています。
 
 ## 準備
 
