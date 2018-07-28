@@ -983,6 +983,9 @@ app.post('/command', async (req, res) => {
   if (req.body.type === 'button') {
     buttonClient.doCommand(req.body);
   }
+  if (req.body.type === 'cancel') {
+    speech.emit('button', true);
+  }
   if (req.body.type === 'movie') {
     if (playerSocket) {
       playerSocket.emit('movie', req.body, (data) => {
