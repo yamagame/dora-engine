@@ -435,7 +435,7 @@ function text_to_speech(payload, callback) {
 function speech_to_text(payload, callback) {
   var done = false;
 
-  led_mode = 'auto';
+  //led_mode = 'auto';
 
   var threshold = payload.threshold;
   speech.emit('mic_threshold', threshold.toString());
@@ -1002,10 +1002,26 @@ app.post('/command', async (req, res) => {
   }
   if (req.body.type === 'scenario') {
     const { action } = req.body;
+    function stopAll() {
+      dora.stop();
+      //talk.stop();
+      //servoAction('idle');
+      execSoundCommand({ sound: 'stop' });
+      buttonClient.emit('stop-speech-to-text');
+      buttonClient.emit('all-blink', {});
+      speech.emit('data', 'stoped');
+      led_mode = 'auto';
+      servoAction('led-off');
+      last_led_action = 'led-off';
+      if (playerSocket) {
+        playerSocket.emit('movie', { action: 'cancel', }, (data) => {
+        });
+      }
+    }
     if (action == 'play') {
       run_scenario = true;
       const play = ({ filename, range, name }) => {
-        dora.stop();
+        stopAll();
         function emitError(err) {
           console.log(err);
           console.log(dora.errorInfo());
@@ -1078,17 +1094,7 @@ app.post('/command', async (req, res) => {
     }
     if (action == 'stop') {
       run_scenario = false;
-      dora.stop();
-      //talk.stop();
-      //servoAction('idle');
-      execSoundCommand({ sound: 'stop' });
-      buttonClient.emit('stop-speech-to-text');
-      buttonClient.emit('all-blink', {});
-      speech.emit('data', 'stoped');
-      if (playerSocket) {
-        playerSocket.emit('movie', { action: 'cancel', }, (data) => {
-        });
-      }
+      stopAll();
     }
   }
   res.send({ status: 'OK' });
