@@ -15,9 +15,47 @@ const buttonClient = require('./button-client')();
 const RobotDB = require('./robot-db');
 const USE_DB = config.use_db;
 const saveInterval = 1000;
+const URL = require('url');
 
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
+
+function isValidFilename(filename) {
+  if (filename) {
+    return (path.basename(filename) === filename && path.normalize(filename) === filename);
+  }
+  return false;
+}
+
+function readdirFileOnly(dirname, callback) {
+  fs.readdir(dirname, (err, items) => {
+    if (err) {
+      callback(err, []);
+      return;
+    }
+    const r = [];
+    const check = () => {
+      if (items.length <= 0) {
+        callback(null, r);
+        return;
+      }
+      const t = items.shift();
+      fs.stat(path.join(dirname, t), (err, stat) => {
+        if (err) {
+          callback(err, []);
+          return;
+        }
+        if (stat.isFile()) {
+          if (t.indexOf('.') !== 0) {
+            r.push(t);
+          }
+        }
+        check();
+      });
+    }
+    check();
+  });
+}
 
 /*
 {HOME}/robot-data.json
@@ -181,8 +219,7 @@ dora.request = async function(command, options, params) {
   const body = await request({
     uri: `http://localhost:${config.port}/${command}`,
     method: opt.method,
-    body: params,
-    json: true,
+    json: params,
   });
   console.log(body);
   return body;
@@ -442,7 +479,7 @@ function speech_to_text(payload, callback) {
 
   function removeListener() {
     buttonClient.removeListener('button', listenerButton);
-    speech.removeListener('data', listener);
+    speech.removeListener('data', dataListener);
     speech.removeListener('speech', speechListener);
     speech.removeListener('button', buttonListener);
     speech.removeListener('camera', cameraListener);
@@ -465,7 +502,7 @@ function speech_to_text(payload, callback) {
     speech.recording = true;
   }
 
-  function listener(data) {
+  function dataListener(data) {
     if (!done) {
       speech.recording = false;
       removeListener();
@@ -546,7 +583,7 @@ function speech_to_text(payload, callback) {
   }
 
   buttonClient.on('button', listenerButton);
-  speech.on('data', listener);
+  speech.on('data', dataListener);
   speech.on('speech', speechListener);
   speech.on('button', buttonListener);
   speech.on('camera', cameraListener);
@@ -891,21 +928,25 @@ app.post('/result', async (req, res) => {
           if (showSum) {
             const result = {};
             const quizAnswers = quizAnswersCache[req.body.quizId];
-            Object.keys(quizAnswers).map( quiz => {
-              const qq = quizAnswers[quiz];
-              const tt = {};
-              Object.keys(qq).forEach( clientId => {
-                const answer = qq[clientId];
-                if (answer.quizStartTime === req.body.startTime) {
-                  tt[clientId] = answer;
+            if (quizAnswers) {
+              Object.keys(quizAnswers).map( quiz => {
+                const qq = quizAnswers[quiz];
+                const tt = {};
+                Object.keys(qq).forEach( clientId => {
+                  const answer = qq[clientId];
+                  if (answer.quizStartTime === req.body.startTime) {
+                    tt[clientId] = answer;
+                  }
+                });
+                if (Object.keys(tt).length > 0) {
+                  result[quiz] = tt;
                 }
               });
-              if (Object.keys(tt).length > 0) {
-                result[quiz] = tt;
-              }
-            });
-            const question = (robotData.quizList) ? robotData.quizList[req.body.quizId] : null;
-            res.send({ answers: result, question: question });
+              const question = (robotData.quizList) ? robotData.quizList[req.body.quizId] : null;
+              res.send({ answers: result, question: question });
+            } else {
+              res.send({ answers: result, question: null });
+            }
           } else {
             const retval = await db.findAnswers({ quizId: req.body.quizId, startTime: req.body.startTime });
             res.send(retval);
@@ -963,7 +1004,7 @@ app.post('/result', async (req, res) => {
 
 let run_scenario = false;
 
-app.post('/command', async (req, res) => {
+const postCommand = async (req, res) => {
   if (req.body.type === 'quiz') {
     const payload = await quizPacket(req.body);
     storeQuizPayload(payload);
@@ -1054,13 +1095,21 @@ app.post('/command', async (req, res) => {
                 callback(data.toString());
               });
             }).then(()=> {
-              dora.play({}, {
+              dora.play({ username, }, {
                 socket: localSocket,
                 range,
               }, (err, msg) => {
                 if (err) {
                   emitError(err);
-                  console.log(`${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
+                  if (err.info) {
+                    if (err.info.lineNumber >= 1) {
+                      console.log(`${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
+                    } else {
+                      console.log(`エラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
+                    }
+                  } else {
+                    console.log(`エラーが発生しました。\n\n`);
+                  }
                   run_scenario = false;
                 } else {
                   io.emit('scenario_status', {
@@ -1096,8 +1145,68 @@ app.post('/command', async (req, res) => {
       run_scenario = false;
       stopAll();
     }
+    if (action == 'load') {
+      console.log(JSON.stringify(req.body));
+      console.log(JSON.stringify(req.params));
+      const username = ('username' in req.body) ? req.body.username : 'default-user';
+      const uri = ('uri' in req.body) ? req.body.uri : null;
+      const filename = ('filename' in req.body && req.body.filename !== null) ? req.body.filename : (('filename' in req.params) ? req.params.filename : null);
+      const base = path.join(HOME, 'Documents');
+      mkdirp(path.join(base, username, '.cache'), async function(err) {
+        if (uri) {
+          try {
+            const body = await request({
+              uri,
+              method: 'POST',
+              json: {
+                type: 'scenario',
+                action: 'load',
+                filename,
+                username,
+              },
+            });
+            if ('text' in body && 'filename' in body) {
+              fs.writeFile(path.join(base, username, '.cache', body.filename), body.text, (err) => {
+                if (err) console.log(err);
+                res.send({ status: (!err) ? 'OK' : err.code, next_script: `.cache/${body.filename}`, });
+              })
+            } else {
+              res.send({ status: 'Not found', });
+            }
+          } catch(err) {
+            console.log(err);
+            res.send({ status: 'Not found', });
+          }
+          return;
+        } else {
+          if (filename) {
+            const p = path.join(base, username, filename);
+            console.log(`load ${p}`);
+            fs.readFile(p, (err, data) => {
+              if (err) {
+                console.log(err);
+                res.send({ status: 'Err', });
+                return;
+              }
+              res.send({ status: 'OK', text: data.toString(), filename, });
+            });
+          } else {
+            res.send({ status: 'Invalid filename', });
+          }
+        }
+      })
+      return;
+    }
   }
   res.send({ status: 'OK' });
+}
+
+app.post('/command/:filename', async (req, res) => {
+  postCommand(req, res);
+})
+
+app.post('/command', async (req, res) => {
+  postCommand(req, res);
 })
 
 app.post('/scenario', (req, res) => {
@@ -1169,13 +1278,23 @@ app.post('/scenario', (req, res) => {
   } else
   if (students.some( m => m.name === username ) || config.free_editor)
   {
-    if (req.body.action == 'save') {
-      if (typeof req.body.text !== 'undefined') {
-        if (filename) {
+    if (req.body.action == 'save' || req.body.action == 'create') {
+      if (typeof req.body.text !== 'undefined' || req.body.action == 'create') {
+        if (isValidFilename(filename)) {
           mkdirp(path.join(base, username), function(err) {
-            fs.writeFile(path.join(base, username, filename), req.body.text, (err) => {
-              res.send({ status: (!err) ? 'OK' : err.code, });
-            });
+            if (req.body.action === 'create') {
+              console.log(`create ${path.join(base, username, filename)}`);
+              fs.open(path.join(base, username, filename), 'a', function (err, file) {
+                if (err) console.log(err);
+                res.send({ status: (!err) ? 'OK' : err.code, filename, });
+              });
+            } else {
+              console.log(`save ${path.join(base, username, filename)}`);
+              fs.writeFile(path.join(base, username, filename), req.body.text, (err) => {
+                if (err) console.log(err);
+                res.send({ status: (!err) ? 'OK' : err.code, });
+              });
+            }
           });
         } else {
           res.send({ status: 'Not found filename', });
@@ -1185,9 +1304,11 @@ app.post('/scenario', (req, res) => {
       }
     } else
     if (req.body.action == 'load') {
-      if (filename) {
+      if (isValidFilename(filename)) {
         mkdirp(path.join(base, username), function(err) {
+          console.log(`load ${path.join(base, username, filename)}`);
           fs.readFile(path.join(base, username, filename), (err, data) => {
+            if (err) console.log(err);
             res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
           });
         });
@@ -1195,17 +1316,30 @@ app.post('/scenario', (req, res) => {
         res.send({ status: 'Not found filename', });
       }
     } else
+    if (req.body.action == 'remove') {
+      if (isValidFilename(filename)) {
+        console.log(`unlink ${path.join(base, username, filename)}`);
+        fs.unlink(path.join(base, username, filename), function (err) {
+          if (err) console.log(err);
+          res.send({ status: (!err) ? 'OK' : err.code, });
+        });
+      } else {
+        res.send({ status: 'Not found filename', });
+      }
+    } else
     if (req.body.action == 'list') {
       mkdirp(path.join(base, username), function(err) {
-        fs.readdir(path.join(base, username), (err, items) => {
-          res.send({ status: (!err) ? 'OK' : err.code, items: items.filter( v => v.indexOf('.') !== 0 ), });
+        console.log(`list ${path.join(base, username)}`);
+        readdirFileOnly(path.join(base, username), (err, items) => {
+          if (err) console.log(err);
+          res.send({ status: (!err) ? 'OK' : err.code, items, });
         });
       });
     } else {
       res.send({ status: 'OK' });
     }
   } else {
-    res.send({ status: `No name: ${username}` });
+    res.send({ status: `Invalid username: ${username}` });
   }
 })
 
@@ -1386,6 +1520,8 @@ io.on('connection', function (socket) {
     } else {
       if (payload.name === quiz_master) return;
       const showSum = (typeof payload.showSum === 'undefined' || !payload.showSum) ? false : true;
+      const speechButton = (typeof payload.speechButton === 'undefined' || !payload.speechButton) ? false : true;
+      const noSave = (typeof payload.noSave === 'undefined' || !payload.noSave) ? false : true;
       if (USE_DB) {
         if (showSum) {
           const quizId = payload.quizId;
@@ -1409,7 +1545,7 @@ io.on('connection', function (socket) {
           time: payload.time,
           startTime: payload.quizStartTime,
         }
-        await db.update('updateAnswer', a);
+        if (!noSave) await db.update('updateAnswer', a);
       } else {
         const quizId = payload.quizId;
         if (robotData.quizAnswers[quizId] == null) {
@@ -1422,7 +1558,11 @@ io.on('connection', function (socket) {
         delete p.question
         delete p.quizId
         robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
-        writeRobotData();
+        if (!noSave) writeRobotData();
+      }
+      if (speechButton) {
+        console.log(`emit speech ${payload.answer}`);
+        speech.emit('speech', payload.answer);
       }
       Object.keys(quiz_masters).forEach( key => {
         quiz_masters[key].emit('quiz', {
@@ -1519,3 +1659,22 @@ const localSocket = ioClient(`http://localhost:${config.port}`);
 localSocket.on('connect', () => {
   console.log('connected');
 });
+
+if (false) {
+  setTimeout(() => {
+    console.log('request scenario');
+    request({
+      uri: `http://localhost:${config.port}/command`,
+      method: 'POST',
+      json: {
+        type: 'scenario',
+        action: 'play',
+        name: 'default-username',
+        filename: 'start.dora',
+        range: {
+          start: 0,
+        },
+      }
+    })
+  }, 5000)
+}
