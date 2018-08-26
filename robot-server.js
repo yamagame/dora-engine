@@ -1660,7 +1660,7 @@ localSocket.on('connect', () => {
   console.log('connected');
 });
 
-if (false) {
+if (false) {  //自動起動させる場合はここをtrueにする
   setTimeout(() => {
     console.log('request scenario');
     request({
@@ -1669,8 +1669,8 @@ if (false) {
       json: {
         type: 'scenario',
         action: 'play',
-        name: 'default-username',
-        filename: 'start.dora',
+        name: 'default-username', //ユーザー名
+        filename: 'start.dora',   //開始したいスクリプト
         range: {
           start: 0,
         },

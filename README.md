@@ -144,13 +144,27 @@ ctl.!default {
 ### 録音する場合
 
 ```
-arecord -Dplug:micboost -f S16_LE -r 16000 test.wav
+$ arecord -Dplug:micboost -f S16_LE -r 16000 test.wav
 ```
 
 ### 再生する場合
 
 ```
-aplay -Dplug:softvol test.wav
+$ aplay -Dplug:softvol test.wav
+```
+
+### うまく再生できない場合
+
+以下のコマンドを実行して、「ワン！」と犬の鳴き声が鳴るかを試してみてください。
+
+```
+$ aplay /usr/share/scratch/Media/Sounds/Animal/Dog1.wav
+```
+
+その後、以下のコマンドを実行するとうまくいく現象を確認しています。
+
+```
+$ aplay -Dplug:softvol /usr/share/scratch/Media/Sounds/Animal/Dog1.wav
 ```
 
 ## AquesTalk Piの準備
@@ -201,6 +215,12 @@ $ cd ~/dora-engine
 $ node speech.js
 ```
 
+うまくいかない場合は、grpcのバイナリがおかしいのかもしれません。以下のコマンドを実行して、ソースからビルドし直します。
+
+```
+$ npm rebuild grpc --build-from-source
+```
+
 ## docomo雑談対話APIの準備
 
 [docomo Developer support](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=natural_dialogue&p_name=api_4_usage_scenario#tag01) のページから、雑談対話のAPIキーを取得して、環境変数 DOCOMO_API_KEY に設定します。
@@ -222,6 +242,27 @@ appIdとして出力された文字列を、環境変数 DOCOMO_APP_ID に設定
 export DOCOMO_APP_ID=eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
+## サーボで頭を動かす
+
+```
+$ cd ~/dora-engine
+$ sudo node servo-head.js
+```
+
+servo-head.jsはGPIOを使う機能を制御するプログラムです。
+首のモーターや、お腹のボタンを制御します。
+
+## ロボットサーバーを動かす
+
+```
+$ cd ~/dora-engine
+$ node robot-server.js
+```
+
+robot-server.jsは、DoraEditor や Node-RED からの指示を受け付け、音声認識、音声合成を制御します。DoraEditorを使用するには、robot-server.jsが動いていないといけません。
+
+robot-server.jsを正常に動作させるには、Google Speech APIの設定が終わっていないといけません。
+
 ## DoraEditorの使い方
 
 ブラウザで以下のURLを開きます。
@@ -233,6 +274,8 @@ http://localhost:3090/scenario-editor/
 あなたのお名前のエリアに名前を入力します。名前はなんでもよいです。
 
 テキストエディターが開きますので、そこに適当に会話文書を入力します。
+
+会話文について詳しくは、[こちら](https://github.com/yamagame/dora)を参照。
 
 ## 関連プロジェクト
 
