@@ -41,6 +41,11 @@ function Speech() {
       micInputStream.changeSilentThreshold(threshold);
   });
 
+  // 言語を変更
+  t.on('languageCode', function (languageCode) {
+    requestOpts.config.languageCode = languageCode;
+  });
+
   micInputStream.on('data', function (data) {
     if (micInputStream.incrConsecSilenceCount() > micInputStream.getNumSilenceFramesExitThresh()) {
       if (recognizeStream) {

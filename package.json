@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "@google-cloud/speech": "^0.10.3",
+    "@google-cloud/text-to-speech": "^0.3.0",
     "aws-iot-device-sdk": "^2.1.0",
     "body-parser": "^1.18.2",
     "date-utils": "^1.2.21",

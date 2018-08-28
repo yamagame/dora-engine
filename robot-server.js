@@ -16,6 +16,7 @@ const RobotDB = require('./robot-db');
 const USE_DB = config.use_db;
 const saveInterval = 1000;
 const URL = require('url');
+const googleRouter = require('./google-router');
 
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
@@ -453,6 +454,7 @@ function text_to_speech(payload, callback) {
             speed: payload.speed,
             volume: payload.volume,
             voice: payload.voice,
+            language: payload.language,
           }, () => {
             // if (led_mode == 'auto') {
             //   servoAction('led-on');
@@ -476,6 +478,8 @@ function speech_to_text(payload, callback) {
 
   var threshold = payload.threshold;
   speech.emit('mic_threshold', threshold.toString());
+  var languageCode = payload.languageCode;
+  speech.emit('languageCode', languageCode);
 
   function removeListener() {
     buttonClient.removeListener('button', listenerButton);
@@ -641,6 +645,7 @@ app.post('/text-to-speech', (req, res) => {
     direction: req.body.direction || null,
     voice: req.body.voice || null,
     silence: req.body.silence || null,
+    language: payload.language || null,
   }, (err) => {
     res.send('OK');
   });
@@ -653,6 +658,7 @@ app.post('/speech-to-text', (req, res) => {
   speech_to_text({
     timeout: (typeof req.body.payload.timeout === 'undefined') ? 30000 : req.body.payload.timeout,
     threshold: (typeof req.body.payload.sensitivity === 'undefined') ? 2000 : req.body.payload.sensitivity,
+    languageCode: (typeof req.body.payload.languageCode === 'undefined') ? 'ja-JP' : req.body.payload.languageCode,
   }, (err, data) => {
     res.send(data);
   });
@@ -687,9 +693,16 @@ app.post('/mic-threshold', (req, res) => {
   res.send('OK');
 })
 
+app.post('/speech-language', (req, res) => {
+  speech.emit('languageCode', req.body.toString('utf-8'));
+  res.send('OK');
+})
+
 app.get('/health', (req, res) => {
   res.send(`${(new Date()).toLocaleString()}`);
 });
+
+app.use('/google', googleRouter);
 
 function changeLed(payload) {
   if (payload.action === 'auto') {
@@ -1424,6 +1437,7 @@ io.on('connection', function (socket) {
         direction: payload.direction || null,
         voice: payload.voice || null,
         silence: payload.silence || null,
+        language: payload.language || null,
       }, (err) => {
         if (callback) callback('OK');
       });
@@ -1440,6 +1454,7 @@ io.on('connection', function (socket) {
       speech_to_text({
         timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
         threshold: (typeof payload.sensitivity === 'undefined') ? 2000 : payload.sensitivity,
+        languageCode: (typeof payload.languageCode === 'undefined') ? 'ja-JP' : payload.languageCode,
       }, (err, data) => {
         if (callback) callback(data);
       });
