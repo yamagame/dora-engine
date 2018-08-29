@@ -5,22 +5,40 @@ const textToSpeech = require('@google-cloud/text-to-speech');
 const fs = require('fs');
 const client = new textToSpeech.TextToSpeechClient();
 
-router.post('text-to-speech', (req, res) => {
-  let languageCode = 'ja-JP';
-  let ssmlGender = 'NEUTRAL';
-  let audioEncoding = 'LINEAR16';
+router.post('/text-to-speech', (req, res) => {
   let text = 'こんにちは';
-  
+
+  let voice = {};
+  let audioConfig = {};
+
   if ('languageCode' in req.body) {
-    languageCode = req.body.languageCode;
+    voice.languageCode = req.body.languageCode;
+  } else {
+    voice.languageCode = 'ja-JP';
   }
 
   if ('ssmlGender' in req.body) {
-    ssmlGender = req.body.ssmlGender;
+    voice.ssmlGender = req.body.ssmlGender;
+  } else {
+    voice.ssmlGender = 'NEUTRAL';
   }
 
   if ('audioEncoding' in req.body) {
-    audioEncoding = req.body.audioEncoding;
+    audioConfig.audioEncoding = req.body.audioEncoding;
+  } else {
+    audioConfig.audioEncoding = 'LINEAR16';
+  }
+
+  if ('speakingRate' in req.body) {
+    audioConfig.speakingRate = req.body.speakingRate;
+  }
+
+  if ('pitch' in req.body) {
+    audioConfig.pitch = req.body.pitch;
+  }
+
+  if ('name' in req.body) {
+    voice.name = req.body.name;
   }
 
   if ('text' in req.body) {
@@ -31,9 +49,9 @@ router.post('text-to-speech', (req, res) => {
   const request = {
     input: { text },
     // Select the language and SSML Voice Gender (optional)
-    voice: { languageCode, ssmlGender, },
+    voice,
     // Select the type of audio encoding
-    audioConfig: { audioEncoding, },
+    audioConfig,
   };
   
   // Performs the Text-to-Speech request
@@ -44,7 +62,7 @@ router.post('text-to-speech', (req, res) => {
       return;
     }
 
-    const mp3filepath = '/tmp/output.mp3';
+    const mp3filepath = `/tmp/output.${(audioConfig.audioEncoding==='LINEAR16')?'wav':'mp3'}`;
   
     // Write the binary audio content to a local file
     fs.writeFile(mp3filepath, response.audioContent, 'binary', err => {
@@ -63,6 +81,6 @@ router.post('text-to-speech', (req, res) => {
       });
     });
   });
-}
+})
 
 module.exports = router;

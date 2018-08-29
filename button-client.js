@@ -2,48 +2,12 @@ const io = require('socket.io-client');
 const EventEmitter = require('events');
 const ping = require('ping');
 
-const clients = [
-  {
-    host:'button01.local',
-    port: 3090,
-    name:'button01',
-    team:'くまさん',
-  },
-  {
-    host:'button02.local',
-    port: 3090,
-    name:'button02',
-    team:'うさぎさん',
-  },
-  {
-    host:'button03.local',
-    port: 3090,
-    name:'button03',
-    team:'かめさん',
-  },
-  {
-    host:'button04.local',
-    port: 3090,
-    name:'button04',
-    team:'かえるさん',
-  },
-  {
-    host:'button05.local',
-    port: 3090,
-    name:'button05',
-    team:'きりんさん',
-  },
-  {
-    host:'http://localhost:3090',
-    name:'master',
-    team:'マスター',
-    localhost: true,
-  },
-]
+const clients = [];
 
-function ipResolver(host, callback) {
+function ipResolver(client, callback) {
   function _resolve() {
-    ping.promise.probe(host)
+    if (client.state !== 'open') return;
+    ping.promise.probe(client.host)
     .then(function (res) {
       if (res.alive) {
         callback(res);
@@ -57,96 +21,142 @@ function ipResolver(host, callback) {
   _resolve();
 }
 
-function ButtonClient() {
-  var bright = 1;
-  var buttons = {};
+let buttons = {};
+let bright = 1;
+let led_mode = 'blink';
+let led_name = '';
+let blinkSpeed = 0.025;
+let theta = 0;
+
+function sendCommand() {
+  if (led_mode == 'on') {
+    Object.keys(buttons).forEach( key => {
+      const button = buttons[key];
+      if (button.socket && !button.localhost) {
+        button.socket.emit('led-command', { action: 'on', value: bright });
+      }
+    });
+  } else
+  if (led_mode == 'off') {
+    Object.keys(buttons).forEach( key => {
+      const button = buttons[key];
+      if (buttons[key].socket && !button.localhost) {
+        buttons[key].socket.emit('led-command', { action: 'off', value: bright });
+      }
+    });
+  } else
+  if (led_mode == 'blink') {
+    bright = (Math.sin(theta)+1)/2;
+    theta += blinkSpeed*10;
+    if (theta >= Math.PI*2) {
+      theta -= Math.PI*2;
+    }
+    Object.keys(buttons).forEach( key => {
+      const button = buttons[key];
+      if (button.socket && !button.localhost) {
+        button.socket.emit('led-command', { action: 'on', value: bright });
+      }
+    });
+  } else
+  if (led_mode == 'one') {
+    Object.keys(buttons).forEach( key => {
+      const button = buttons[key];
+      if (button.socket && !button.localhost) {
+        if (button.name == led_name) {
+          button.socket.emit('led-command', { action: 'on', value: bright });
+        } else {
+          button.socket.emit('led-command', { action: 'off', value: bright });
+        }
+      }
+    });
+  }
+}
+
+function ButtonSocket(client, config, manager) {
+  var t = {};
+
+  t.host = client.host;
+  t.name = ('name' in client) ? client.name : client.host;
+  t.port = config.port;
+  t.team = ('team' in client) ? client.team : client.host;
+  t.state = 'open';
+
+  const connect = (client) => {
+    ipResolver(client, (res) => {
+      if (client.state !== 'open') return;
+      console.log(`found button ${client.host} ${res.numeric_host}`);
+      const host = `http://${res.numeric_host}:${client.port}`;
+      const socket = io(host);
+      t.socket_id = socket.id;
+      socket.on('connect', function() {
+        socket.emit('start-slave');
+        console.log('connect', socket.id, host);
+        t.socket_id = socket.id;
+        buttons[socket.id] = {
+          socket,
+        }
+        sendCommand();
+      });
+      socket.on('button', function(data){
+        manager.emit('button', { ...client, });
+      });
+      socket.on('speech', function(data){
+        manager.emit('speech', { ...client, data });
+      });
+      socket.on('disconnect', function(){
+        console.log('disconnect', t.socket_id);
+        delete buttons[t.socket_id];
+        socket.close();
+        connect(client);
+      });
+    })
+  }
+  connect(t);
+
+  return t;
+}
+
+function ButtonClient(config) {
   var clientSocket = {};
-  var led_mode = 'blink';
-  var led_name = '';
-  var blinkSpeed = 0.025;
-  var theta = 0;
   
   var t = new EventEmitter();
 
-  function sendCommand() {
-    if (led_mode == 'on') {
-      Object.keys(buttons).forEach( key => {
-        const button = buttons[key];
-        if (button.socket && !button.localhost) {
-          button.socket.emit('led-command', { action: 'on', value: bright });
-        }
-      });
-    } else
-    if (led_mode == 'off') {
-      Object.keys(buttons).forEach( key => {
-        const button = buttons[key];
-        if (buttons[key].socket && !button.localhost) {
-          buttons[key].socket.emit('led-command', { action: 'off', value: bright });
-        }
-      });
-    } else
-    if (led_mode == 'blink') {
-      bright = (Math.sin(theta)+1)/2;
-      theta += blinkSpeed*10;
-      if (theta >= Math.PI*2) {
-        theta -= Math.PI*2;
+  t.on('open-slave', (payload) => {
+    if ('host' in payload) {
+      if (!clientSocket[payload.host]) {
+        clientSocket[payload.host] = ButtonSocket(payload, config, t);
       }
-      Object.keys(buttons).forEach( key => {
-        const button = buttons[key];
-        if (button.socket && !button.localhost) {
-          button.socket.emit('led-command', { action: 'on', value: bright });
-        }
-      });
-    } else
-    if (led_mode == 'one') {
-      Object.keys(buttons).forEach( key => {
-        const button = buttons[key];
-        if (button.socket && !button.localhost) {
-          if (button.name == led_name) {
-            button.socket.emit('led-command', { action: 'on', value: bright });
-          } else {
-            button.socket.emit('led-command', { action: 'off', value: bright });
-          }
-        }
-      });
     }
-  }
+  });
 
-  clients.forEach( client => {
-    const connect = (client) => {
-      ipResolver(client.host, (res) => {
-        console.log(`found button ${client.host} ${res.numeric_host}`);
-        const host = `http://${res.numeric_host}:${client.port}`;
-        const socket = io(host);
-        clientSocket[client.name] = {
-          ...client,
-          socket: socket,
-        }
-        var id = null;
-        socket.on('connect', function() {
-          console.log('connect', socket.id, host);
-          id = socket.id;
-          buttons[socket.id] = {
-            socket,
-            ...client,
+  t.on('close-slave', (payload) => {
+    if ('host' in payload) {
+      const c = [];
+      clientSocket.forEach( client => {
+        if (clinet.host === payload.host) {
+          client.state = 'close';
+          if (client.socket_id && buttons[client.socket_id]) {
+            buttons[client.socket_id].socket.close();
           }
-          sendCommand();
-        });
-        socket.on('button', function(data){
-          t.emit('button', { ...client, });
-        });
-        socket.on('speech', function(data){
-          t.emit('speech', { ...client, data });
-        });
-        socket.on('disconnect', function(){
-          console.log('disconnect', id);
-          delete buttons[id];
-          socket.close();
-          connect(client);
-        });
+        } else {
+          c.push(client);
+        }
+      })
+      clientSocket.splice(0);
+      c.forEach( c => {
+        clientSocket.push(c);
       })
     }
-    connect(client);
+  });
+
+  t.on('close-all', () => {
+    clientSocket.forEach( client => {
+      client.state = 'close';
+      if (client.socket_id && buttons[client.socket_id]) {
+        buttons[client.socket_id].socket.close();
+      }
+    });
+    clientSocket.splice(0);
   });
 
   //全ボタン待機
@@ -180,9 +190,9 @@ function ButtonClient() {
   //音再生
   t.on('sound', (payload) => {
     Object.keys(clientSocket).forEach( key => {
-      const button = clientSocket[key];
-      if (button.socket) {
-        button.socket.emit('sound-command', { sound: payload.sound });
+      const socket_id = clientSocket[key].socket_id;
+      if (socket_id && buttons[socket_id]) {
+        buttons[socket_id].socket.emit('sound-command', { sound: payload.sound });
       }
     });
   });
@@ -190,9 +200,9 @@ function ButtonClient() {
   //音声認識停止
   t.on('stop-speech-to-text', () => {
     Object.keys(clientSocket).forEach( key => {
-      const button = clientSocket[key];
-      if (button.socket && !button.localhost) {
-        button.socket.emit('stop-speech-to-text');
+      const socket_id = clientSocket[key].socket_id;
+      if (socket_id && buttons[socket_id]) {
+        buttons[socket_id].socket.emit('stop-speech-to-text');
       }
     });
   });
@@ -210,7 +220,15 @@ function ButtonClient() {
   }, 200);
 
   t.socket = function(name) {
-    return clientSocket[name].socket;
+    for (key in clientSocket) {
+      if (clientSocket[key].name === name) {
+        const socket_id = clientSocket[key].socket_id;
+        if (socket_id && buttons[socket_id]) {
+          return buttons[socket_id].socket;
+        }
+      }
+    }
+    return null;
   }
 
   return t;

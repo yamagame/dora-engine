@@ -11,7 +11,7 @@ const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const workFolder = 'DoraEngine';  //for macOS(development)
-const buttonClient = require('./button-client')();
+const buttonClient = require('./button-client')(config);
 const RobotDB = require('./robot-db');
 const USE_DB = config.use_db;
 const saveInterval = 1000;
@@ -74,6 +74,34 @@ const utils = require('./utils');
 const dateutlis = require('date-utils');
 
 dora.loadModule('button', function(DORA, config) {
+  function connect(node, options) {
+    const params = options.split('/');
+    if (params.length < 1 || params === '') {
+      throw new Error('ホスト名がありません。');
+    }
+    node.on("input", async function(msg) {
+      const host = params[0];
+      const name = (params.length > 1) ? params[1] : null;
+      const team = (params.length > 2) ? params[2] : null;
+      buttonClient.emit('open-slave', { host, name, team, });
+      node.send(msg);
+    });
+  }
+  DORA.registerType('connect', connect);
+
+  function close(node, options) {
+    const params = options.split('/');
+    if (params.length < 1 || params === '') {
+      throw new Error('ホスト名がありません。');
+    }
+    node.on("input", async function(msg) {
+      const host = params[0];
+      buttonClient.emit('close-slave', { host });
+      node.send(msg);
+    });
+  }
+  DORA.registerType('close', close);
+
   function allBlink(node, options) {
     node.on("input", async function(msg) {
       buttonClient.emit('all-blink', {});
@@ -115,11 +143,13 @@ dora.loadModule('button', function(DORA, config) {
     var isTemplated = (options||"").indexOf("{{") != -1;
     node.on("input", async function(msg) {
       const socket = buttonClient.socket(msg.button.name);
-      let message = options;
-      if (isTemplated) {
-        message = DORA.utils.mustache.render(message, msg);
+      if (socket) {
+        let message = options;
+        if (isTemplated) {
+          message = DORA.utils.mustache.render(message, msg);
+        }
+        socket.emit('sound-command', { sound: message });
       }
-      socket.emit('sound-command', { sound: message });
       node.send(msg);
     });
   }
@@ -142,53 +172,58 @@ dora.loadModule('button', function(DORA, config) {
     node.nextLabel(options);
     node.on("input", async function(msg) {
       const socket = buttonClient.socket(msg.button.name);
-      const params = {
-        timeout: 30000,
-        sensitivity: 'keep',
-      };
-      if (typeof msg.timeout !== 'undefined') {
-        params.timeout = msg.timeout;
-      }
-      if (typeof msg.sensitivity !== 'undefined') {
-        params.sensitivity = msg.sensitivity;
-      }
-      node.recording = true;
-      socket.emit('speech-to-text', params, (res) => {
-        if (!node.recording) return;
-        node.recording = false;
-        if (res == '[timeout]') {
-          msg.payload = 'timeout';
-          node.send([msg, null]);
-        } else
-        if (res == '[canceled]') {
-          msg.payload = 'canceled';
-          node.send([msg, null]);
-        } else
-        if (res == '[camera]') {
-          msg.payload = 'camera';
-          node.send([msg, null]);
-        } else {
-          if (res.button) {
-            msg.payload = 'button';
-            msg.button = res;
-            delete res.button;
+      if (socket) {
+        const params = {
+          timeout: 30000,
+          sensitivity: 'keep',
+        };
+        if (typeof msg.timeout !== 'undefined') {
+          params.timeout = msg.timeout;
+        }
+        if (typeof msg.sensitivity !== 'undefined') {
+          params.sensitivity = msg.sensitivity;
+        }
+        node.recording = true;
+        socket.emit('speech-to-text', params, (res) => {
+          if (!node.recording) return;
+          node.recording = false;
+          if (res == '[timeout]') {
+            msg.payload = 'timeout';
             node.send([msg, null]);
           } else
-          if (res.speechRequest) {
-            msg.speechRequest = true;
-            msg.payload = res.payload;
-            msg.speechText = msg.payload;
-            msg.topicPriority = 0;
-            node.send([null, msg]);
+          if (res == '[canceled]') {
+            msg.payload = 'canceled';
+            node.send([msg, null]);
+          } else
+          if (res == '[camera]') {
+            msg.payload = 'camera';
+            node.send([msg, null]);
           } else {
-            msg.payload = res;
-            msg.speechText = msg.payload;
-            msg.topicPriority = 0;
-            delete msg.speechRequest;
-            node.send([null, msg]);
+            if (res.button) {
+              msg.payload = 'button';
+              msg.button = res;
+              delete res.button;
+              node.send([msg, null]);
+            } else
+            if (res.speechRequest) {
+              msg.speechRequest = true;
+              msg.payload = res.payload;
+              msg.speechText = msg.payload;
+              msg.topicPriority = 0;
+              node.send([null, msg]);
+            } else {
+              msg.payload = res;
+              msg.speechText = msg.payload;
+              msg.topicPriority = 0;
+              delete msg.speechRequest;
+              node.send([null, msg]);
+            }
           }
-        }
-      });
+        });
+      } else {
+        msg.payload = 'timeout';
+        node.send([msg, null]);
+      }
     });
   }
   DORA.registerType('speech-to-text', speechToText);
@@ -228,12 +263,13 @@ dora.request = async function(command, options, params) {
 
 const quiz_master = process.env.QUIZ_MASTER || '_quiz_master_';
 
-var led_mode = 'auto';
+let led_mode = 'auto';
+let mode_slave = false;
 
 talk.dummy = (process.env['SPEECH'] === 'off' && process.env['MACINTOSH'] !== 'on');
 talk.macvoice = (process.env['MACINTOSH'] === 'on');
 
-var robotDataPath = process.argv[2] || path.join(HOME, 'robot-data.json');
+let robotDataPath = process.argv[2] || path.join(HOME, 'robot-data.json');
 
 const m = function() {
   let res = {};
@@ -259,10 +295,10 @@ if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
 
 let { students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), null);
 
-var saveDelay = false;
-var savedData = null;
-var saveWFlag = false;
-var quizAnswersCache = {};
+let saveDelay = false;
+let savedData = null;
+let saveWFlag = false;
+let quizAnswersCache = {};
 
 function writeRobotData() {
   saveWFlag = true;
@@ -416,9 +452,7 @@ function docomo_chat(payload, callback) {
           servoAction('talk', {}, () => {
             talk.voice = payload.voice;
             talk.play(utt, {
-              speed: payload.speed,
-              volume: payload.volume,
-              voice: payload.voice,
+              ...payload,
             }, () => {
               // if (led_mode == 'auto') {
               //   servoAction('led-on');
@@ -451,10 +485,7 @@ function text_to_speech(payload, callback) {
       servoAction('centering', { direction: payload.direction, }, () => {
         servoAction('talk', {}, () => {
           talk.play(payload.message, {
-            speed: payload.speed,
-            volume: payload.volume,
-            voice: payload.voice,
-            language: payload.language,
+            ...payload,
           }, () => {
             // if (led_mode == 'auto') {
             //   servoAction('led-on');
@@ -639,13 +670,7 @@ app.post('/text-to-speech', (req, res) => {
   console.log(req.body);
 
   text_to_speech({
-    message: req.body.message,
-    speed: req.body.speed || null,
-    volume: req.body.volume || null,
-    direction: req.body.direction || null,
-    voice: req.body.voice || null,
-    silence: req.body.silence || null,
-    language: payload.language || null,
+    ...req.body,
   }, (err) => {
     res.send('OK');
   });
@@ -705,23 +730,27 @@ app.get('/health', (req, res) => {
 app.use('/google', googleRouter);
 
 function changeLed(payload) {
-  if (payload.action === 'auto') {
-    led_mode = 'auto';
-  }
-  if (payload.action === 'off') {
-    led_mode = 'manual';
-    servoAction('led-off');
-    last_led_action = 'led-off';
-  }
-  if (payload.action === 'on') {
-    led_mode = 'manual';
-    servoAction('led-on');
-    last_led_action = 'led-on';
-  }
-  if (payload.action === 'blink') {
-    led_mode = 'manual';
-    servoAction('led-blink');
-    last_led_action = 'led-blink';
+  if (mode_slave) {
+    gpioSocket.emit('led-command', payload);
+  } else {
+    if (payload.action === 'auto') {
+      led_mode = 'auto';
+    }
+    if (payload.action === 'off') {
+      led_mode = 'manual';
+      servoAction('led-off');
+      last_led_action = 'led-off';
+    }
+    if (payload.action === 'on') {
+      led_mode = 'manual';
+      servoAction('led-on');
+      last_led_action = 'led-on';
+    }
+    if (payload.action === 'blink') {
+      led_mode = 'manual';
+      servoAction('led-blink');
+      last_led_action = 'led-blink';
+    }
   }
 }
 
@@ -1063,6 +1092,7 @@ const postCommand = async (req, res) => {
       execSoundCommand({ sound: 'stop' });
       buttonClient.emit('stop-speech-to-text');
       buttonClient.emit('all-blink', {});
+      // buttonClient.emit('close-all', {});
       speech.emit('data', 'stoped');
       led_mode = 'auto';
       servoAction('led-off');
@@ -1130,6 +1160,7 @@ const postCommand = async (req, res) => {
                   });
                   buttonClient.emit('stop-speech-to-text');
                   buttonClient.emit('all-blink', {});
+                  // buttonClient.emit('close-all', {});
                   speech.emit('data', 'stoped');
                   if (typeof msg._nextscript !== 'undefined') {
                     console.log(`msg._nextscript ${msg._nextscript}`);
@@ -1406,10 +1437,14 @@ iop.on('connection', function (socket) {
 io.on('connection', function (socket) {
   console.log('connected io', socket.conn.remoteAddress);
   socket.on('disconnect', function () {
+    mode_slave = false;
     speech.recording = false;
     console.log('disconnect');
     delete quiz_masters[socket.id];
     console.log(Object.keys(quiz_masters));
+  });
+  socket.on('start-slave', function () {
+    mode_slave = true;
   });
   socket.on('docomo-chat', function (payload, callback) {
     try {
@@ -1431,13 +1466,7 @@ io.on('connection', function (socket) {
   socket.on('text-to-speech', function (payload, callback) {
     try {
       text_to_speech({
-        message: payload.message,
-        speed: payload.speed || null,
-        volume: payload.volume || null,
-        direction: payload.direction || null,
-        voice: payload.voice || null,
-        silence: payload.silence || null,
-        language: payload.language || null,
+        ...payload,
       }, (err) => {
         if (callback) callback('OK');
       });
@@ -1664,6 +1693,7 @@ gpioSocket.on('button', (payload) => {
     }
   }
   if (!doShutdown) {
+    io.emit('button', payload);
     speech.emit('button', payload.state);
   }
 });

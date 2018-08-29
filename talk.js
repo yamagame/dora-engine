@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 const spawn = require('child_process').spawn;
 const path = require('path');
 const macvoice_speedrate = 180 / 100;
-const config = reqire('config');
+const config = require('./config');
 const request = require('request');
 
 function Talk() {
@@ -14,7 +14,12 @@ function Talk() {
 	t.volume = 80;
 	t.dummy = false;
 	t.macvoice = false;
-	t.language = null;
+	t.languageCode = null;
+	t.audioEncoding = null;
+	t.ssmlGender = null;
+	t.speakingRate = null;
+	t.pitch = null;
+	t.name = null;
 
   t.say = function(words, params, callback) {
     if (typeof words === 'undefined') {
@@ -24,8 +29,13 @@ function Talk() {
   	const voice = params.voice;
   	const speed = params.speed;
   	const volume = params.volume;
-		const language = params.language;
-    const conts = words.split(/\n|,|、|。|@|＠|？|\s|\?/g);
+		const languageCode = params.languageCode;
+		const audioEncoding = params.audioEncoding;
+		const ssmlGender = params.ssmlGender;
+		const speakingRate = params.speakingRate;
+		const pitch = params.pitch;
+		const name = params.name;
+    const conts = (languageCode === 'default' || languageCode === null)?words.split(/\n|,|、|。|@|＠|？|\s|\?/g):[words];
     const playone = () => {
       if (conts.length <= 0 || this.playing === false) {
         callback();
@@ -37,7 +47,7 @@ function Talk() {
   			return;
   		}
       console.log(text);
-			if (language === 'default' || language === null) {
+			if (languageCode === 'default' || languageCode === null) {
 				if (this.dummy) {
 					playone();
 				} else if (this.macvoice) {
@@ -66,14 +76,20 @@ function Talk() {
 					}
 				}
 			} else
-			if (language) {
+			if (languageCode) {
+				const params = {
+					text,
+				}
+				if (languageCode) params.languageCode = languageCode;
+				if (audioEncoding) params.audioEncoding = audioEncoding;
+				if (ssmlGender) params.ssmlGender = ssmlGender;
+				if (speakingRate!==null) params.speakingRate = speakingRate;
+				if (pitch!==null) params.pitch = pitch;
+				if (name) params.name = name;
 				request({
 					uri: `http://localhost:${config.port}/google/text-to-speech`,
 					method: 'POST',
-					json: {
-						languageCode: language,
-						text,
-					},
+					json: params,
 				},
 				function (error, response, body) {
 			    playone();
@@ -94,10 +110,15 @@ function Talk() {
   }
 
 	t.play = function(sentence, params = {}, callback) {
-		if (!params.voice) params.voice = t.voice;
-		if (!params.speed) params.speed = t.speed;
-		if (!params.volume) params.volume = t.volume;
-		if (!params.language) params.language = t.language;
+		if (typeof params.voice === 'undefined') params.voice = t.voice;
+		if (typeof params.speed === 'undefined') params.speed = t.speed;
+		if (typeof params.volume === 'undefined') params.volume = t.volume;
+		if (typeof params.languageCode === 'undefined') params.languageCode = t.languageCode;
+		if (typeof params.audioEncoding === 'undefined') params.audioEncoding = t.audioEncoding;
+		if (typeof params.ssmlGender === 'undefined') params.ssmlGender = t.ssmlGender;
+		if (typeof params.speakingRate === 'undefined') params.speakingRate = t.speakingRate;
+		if (typeof params.pitch === 'undefined') params.pitch = t.pitch;
+		if (typeof params.name === 'undefined') params.name = t.name;
 		this.emit('talk');
 		if (!this.playing) {
 			this.playing = true;

@@ -65,7 +65,7 @@ function startServo() {
   })
   setInterval(() => {
     servoAction.idle(mode);
-    led.idle(led_mode);
+    led.idle(led_mode, led_bright);
   }, 20);
 }
 
@@ -89,7 +89,7 @@ function changeLed(payload) {
     led_mode = 'on';
   }
   led_bright = (typeof payload.value !== 'undefined') ? payload.value : led_bright;
-  console.log(`led_mode ${led_mode} led_bright ${led_bright} `);
+  //console.log(`led_mode ${led_mode} led_bright ${led_bright} `);
 }
 
 raspi.init(() => {
@@ -210,6 +210,7 @@ raspi.init(() => {
         } else
         if (action === 'led-on' || action === 'led-off' || action === 'led-blink') {
           led_mode = action.toString().split('-')[1];
+          led_bright = 1;
         }
         if (callback) {
           if (action === 'centering') {
