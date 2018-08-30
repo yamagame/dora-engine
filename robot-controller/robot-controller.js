@@ -730,6 +730,12 @@ module.exports = function(RED) {
             msg.speechRequest = true;
             msg.payload = res.payload;
             node.send([msg, null]);
+          } else
+          if (typeof res === 'object') {
+            msg.languageCode = res.languageCode,
+            msg.confidence = res.confidence;
+            msg.payload = res.transcript;
+            node.send([msg, null]);
           } else {
             msg.payload = res;
             delete msg.speechRequest;

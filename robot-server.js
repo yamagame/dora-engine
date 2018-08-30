@@ -211,6 +211,15 @@ dora.loadModule('button', function(DORA, config) {
               msg.speechText = msg.payload;
               msg.topicPriority = 0;
               node.send([null, msg]);
+            } else
+            if (typeof res === 'object') {
+              msg.languageCode = res.languageCode,
+              msg.confidence = res.confidence;
+              msg.payload = res.transcript;
+              msg.speechText = msg.payload;
+              msg.topicPriority = 0;
+              delete msg.speechRequest;
+              node.next(msg);
             } else {
               msg.payload = res;
               msg.speechText = msg.payload;
@@ -503,16 +512,27 @@ function text_to_speech(payload, callback) {
 }
 
 function speech_to_text(payload, callback) {
-  var done = false;
+  let done = false;
 
   //led_mode = 'auto';
 
-  var threshold = payload.threshold;
-  speech.emit('mic_threshold', threshold.toString());
-  var languageCode = payload.languageCode;
-  speech.emit('languageCode', languageCode);
+  const threshold = payload.threshold;
+  const languageCode = payload.languageCode;
 
-  function removeListener() {
+  const stopRecording = () => {
+    speech.recording = false;
+    speech.emit('stopRecording');
+  }
+
+  const startRecording = () => {
+    speech.recording = true;
+    speech.emit('startRecording', {
+      threshold,
+      languageCode,
+    });
+  }
+
+  const removeListener = () => {
     buttonClient.removeListener('button', listenerButton);
     speech.removeListener('data', dataListener);
     speech.removeListener('speech', speechListener);
@@ -523,7 +543,7 @@ function speech_to_text(payload, callback) {
   if (payload.timeout != 0) {
     setTimeout(() => {
       if (!done) {
-        speech.recording = false;
+        stopRecording();
         removeListener();
         if (callback) callback(null, '[timeout]');
         if (led_mode == 'auto') {
@@ -534,12 +554,12 @@ function speech_to_text(payload, callback) {
       done = true;
     }, payload.timeout);
 
-    speech.recording = true;
+    startRecording();
   }
 
-  function dataListener(data) {
+  const dataListener = (data) => {
     if (!done) {
-      speech.recording = false;
+      stopRecording();
       removeListener();
       if (callback) callback(null, data);
       if (led_mode == 'auto') {
@@ -550,13 +570,13 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
-  function speechListener(data) {
+  const speechListener = (data) => {
     if (!done) {
       var retval = {
         speechRequest: true,
         payload: data,
       }
-      speech.recording = false;
+      stopRecording();
       removeListener();
       if (callback) callback(null, retval);
       if (led_mode == 'auto') {
@@ -567,10 +587,10 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
-  function buttonListener(state) {
+  const buttonListener = (state) => {
     if (state) {
       if (!done) {
-        speech.recording = false;
+        stopRecording();
         removeListener();
         if (callback) callback(null, '[canceled]');
         if (led_mode == 'auto') {
@@ -582,9 +602,10 @@ function speech_to_text(payload, callback) {
     }
   }
 
-  function listenerButton(data) {
+  const listenerButton = (data) => {
     if (!done) {
       data.button = true;
+      stopRecording();
       removeListener();
       if (callback) callback(null, data);
       if (led_mode == 'auto') {
@@ -595,8 +616,9 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
-  function cameraListener(data) {
+  const cameraListener = (data) => {
     if (!done) {
+      stopRecording();
       removeListener();
       if (callback) callback(null, '[camera]');
       if (led_mode == 'auto') {

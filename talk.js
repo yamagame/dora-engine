@@ -47,6 +47,18 @@ function Talk() {
   			return;
   		}
       console.log(text);
+			if ('host' in params) {
+				const p = { ...params }
+				delete p.host;
+				request({
+					uri: `http://${params.host}:${config.port}/text-to-speech`,
+					method: 'POST',
+					json: p,
+				},
+				function (error, response, body) {
+			    playone();
+				});
+			} else
 			if (languageCode === 'default' || languageCode === null) {
 				if (this.dummy) {
 					playone();
@@ -110,15 +122,18 @@ function Talk() {
   }
 
 	t.play = function(sentence, params = {}, callback) {
-		if (typeof params.voice === 'undefined') params.voice = t.voice;
-		if (typeof params.speed === 'undefined') params.speed = t.speed;
-		if (typeof params.volume === 'undefined') params.volume = t.volume;
-		if (typeof params.languageCode === 'undefined') params.languageCode = t.languageCode;
-		if (typeof params.audioEncoding === 'undefined') params.audioEncoding = t.audioEncoding;
-		if (typeof params.ssmlGender === 'undefined') params.ssmlGender = t.ssmlGender;
-		if (typeof params.speakingRate === 'undefined') params.speakingRate = t.speakingRate;
-		if (typeof params.pitch === 'undefined') params.pitch = t.pitch;
-		if (typeof params.name === 'undefined') params.name = t.name;
+		//デフォルトパラメータの設定
+		{
+			if (typeof params.voice === 'undefined') params.voice = t.voice;
+			if (typeof params.speed === 'undefined') params.speed = t.speed;
+			if (typeof params.volume === 'undefined') params.volume = t.volume;
+			if (typeof params.languageCode === 'undefined') params.languageCode = t.languageCode;
+			if (typeof params.audioEncoding === 'undefined') params.audioEncoding = t.audioEncoding;
+			if (typeof params.ssmlGender === 'undefined') params.ssmlGender = t.ssmlGender;
+			if (typeof params.speakingRate === 'undefined') params.speakingRate = t.speakingRate;
+			if (typeof params.pitch === 'undefined') params.pitch = t.pitch;
+			if (typeof params.name === 'undefined') params.name = t.name;
+		}
 		this.emit('talk');
 		if (!this.playing) {
 			this.playing = true;
