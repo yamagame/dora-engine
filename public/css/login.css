@@ -1,0 +1,39 @@
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.loginContainer {
+  position: relative;
+  top: 30%;
+  margin-top: -50px;
+}
+
+.loginTitle {
+  text-align: center;
+  margin: auto;
+  margin-bottom: 10px;
+}
+
+.loginText {
+  display: block;
+  font-size: 2em;
+  margin: auto;
+  margin-bottom: 10px;
+}
+
+.loginButton {
+  display: block;
+  margin: auto;
+  margin-top: 20px;
+  border-radius: 15px;
+  border: 0;
+  width: 180px;
+  height: 60px;
+  font-size: 2em;
+  background: #CDF;
+}

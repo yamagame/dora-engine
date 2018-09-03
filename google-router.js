@@ -1,9 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const { spawn } = require('child_process');
-const textToSpeech = require('@google-cloud/text-to-speech');
 const fs = require('fs');
-const client = new textToSpeech.TextToSpeechClient();
+const client = (() => {
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    try {
+      const textToSpeech = require('@google-cloud/text-to-speech');
+      const ret = new textToSpeech.TextToSpeechClient();
+      console.log('google text-to-speech initialized.');
+      return ret;
+    } catch(err) {
+      console.error(err);
+    }
+  }
+  console.log('google text-to-speech is disabled.');
+  return null;
+})();
 
 router.post('/text-to-speech', (req, res) => {
   let text = 'こんにちは';
@@ -53,6 +65,12 @@ router.post('/text-to-speech', (req, res) => {
     // Select the type of audio encoding
     audioConfig,
   };
+
+  if (!client) {
+    console.error('ERROR:', 'TextToSpeechClient is disabled.');
+    res.send('NG');
+    return;
+  }
   
   // Performs the Text-to-Speech request
   client.synthesizeSpeech(request, (err, response) => {

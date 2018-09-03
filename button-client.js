@@ -1,6 +1,7 @@
 const io = require('socket.io-client');
 const EventEmitter = require('events');
 const ping = require('ping');
+const { createSignature } = require('./accessCheck');
 
 const clients = [];
 
@@ -89,13 +90,15 @@ function ButtonSocket(client, config, manager) {
       const socket = io(host);
       t.socket_id = socket.id;
       socket.on('connect', function() {
-        socket.emit('start-slave');
-        console.log('connect', socket.id, host);
-        t.socket_id = socket.id;
-        buttons[socket.id] = {
-          socket,
-        }
-        sendCommand();
+        createSignature(config.robot_secret_key, (signature) => {
+          socket.emit('start-slave', { signature, });
+          console.log('connect', socket.id, host);
+          t.socket_id = socket.id;
+          buttons[socket.id] = {
+            socket,
+          }
+          sendCommand();
+        });
       });
       socket.on('button', function(data){
         manager.emit('button', { ...client, });

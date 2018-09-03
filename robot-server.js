@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const express = require('express')
 const bodyParser = require('body-parser')
+const cookieParser = require('cookie-parser')
 const request = require('request-promise');
 const speech = (() => (process.env['SPEECH'] === 'off') ? (new EventEmitter()) : require('./speech'))();
 const talk = require('./talk');
@@ -17,9 +18,39 @@ const USE_DB = config.use_db;
 const saveInterval = 1000;
 const URL = require('url');
 const googleRouter = require('./google-router');
-
+const session = require('express-session');
+const MemoryStore = require('memorystore')(session);
+const passport = require("passport");
+const LocalStrategy = require('passport-local').Strategy;
+const {
+  createSignature,
+  localhostToken,
+  hasPermission,
+  checkPermission,
+} = require('./accessCheck');
+const csrf = require('csurf');
+const csrfProtection = csrf({ cookie: true });
+const bcrypt = (() => {
+  try { return require('bcrypt'); }
+  catch(e) { return equire('bcryptjs'); }
+})();
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
+const PART_LIST_FILE_PATH = path.join(HOME, 'quiz-student.txt');
+
+const isLogined = function(view) {
+  return function (req, res, next) {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    if (view) {
+      res.redirect(`/login/${view}`);
+    } else {
+      res.statusCode = 401;
+      res.end('Unauthorized');
+    }
+  };
+}
 
 function isValidFilename(filename) {
   if (filename) {
@@ -261,6 +292,7 @@ dora.request = async function(command, options, params) {
     if (options.method) opt.method = options.method;
     if (options.restype) opt.restype = options.restype;
   }
+  params.localhostToken = localhostToken();
   const body = await request({
     uri: `http://localhost:${config.port}/${command}`,
     method: opt.method,
@@ -302,7 +334,7 @@ if (typeof robotData.quizEntry === 'undefined') robotData.quizEntry = {};
 if (typeof robotData.quizPayload === 'undefined') robotData.quizPayload = {};
 if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
 
-let { students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), null);
+let { students } = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
 
 let saveDelay = false;
 let savedData = null;
@@ -426,11 +458,171 @@ app.use((req, res, next) => {
   next();
 });
 
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'pug');
+
+app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json({ type: 'application/json' }))
 app.use(bodyParser.raw({ type: 'application/*' }))
 
-app.use(express.static('public'))
+app.use(cookieParser())
+
 app.use('/images', express.static(PICT))
+
+const sessionStore = new MemoryStore();
+app.use(session({
+  store: sessionStore,
+  secret: config.session_secret,
+  resave: false,
+  proxy: true,
+  saveUninitialized: false,
+}));
+
+app.use((req, res, next) => {
+  console.log("SessionID: " + req.sessionID);
+  next();
+});
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.deserializeUser(function(user, done) {
+  done(null,user);
+});
+
+passport.use('local', new LocalStrategy({
+  passReqToCallback : true
+},
+function(req, name, password, done) {
+console.log(`name:${name} password:${password}`);
+  setTimeout(function() {
+    let auth = {};
+    const checkPass = () => {
+      return config.adminAuth.some( a => {
+        if (name === a.username && bcrypt.compareSync(password, a.password)) {
+          auth = a;
+          return true;
+        }
+        return false;
+      })
+    }
+    if (checkPass()) {
+      done(null,{ id: name, authInfo: { scope: auth.permissions, }, timestamp: new Date(), });
+    } else {
+      done(null,false, { message: 'Incorrect password.' });
+    }
+  },1000);
+}));
+
+passport.use('guest-client', new LocalStrategy({
+  passReqToCallback : true
+},
+function(req, name, password, done) {
+  setTimeout(function() {
+    let auth = {};
+    const checkPass = () => {
+      return config.adminAuth.some( a => {
+        if (a.guest) {
+          if (name === a.username && bcrypt.compareSync(password, a.password)) {
+            auth = a;
+            return true;
+          }
+        }
+        return false;
+      })
+    }
+    if (checkPass()) {
+      done(null,{ id: name, authInfo: { scope: auth.permissions, }, timestamp: new Date(), });
+    } else {
+console.log('Incorrect password');
+      done(null,false, { message: 'Incorrect password.' });
+    }
+  },1000);
+}));
+
+app.get('/admin-page', isLogined('admin'), function(req,res,next) {
+  fs.createReadStream(path.join(__dirname,'public/admin-page/index.html')).pipe(res);
+});
+
+app.get('/scenario-editor', isLogined('editor'), function(req,res,next) {
+  fs.createReadStream(path.join(__dirname,'public/scenario-editor/index.html')).pipe(res);
+});
+
+app.use((req, res, next) => {
+  if (req.url.indexOf('/admin-page') === 0) {
+    if (!req.isAuthenticated()) {
+      return res.redirect('/login/admin');
+    }
+  }
+  if (req.url.indexOf('/scenario-editor') === 0) {
+    if (!req.isAuthenticated()) {
+      return res.redirect('/login/scenario-editor');
+    }
+  }
+  next();
+}, express.static('public'))
+
+app.get('/login/:view', csrfProtection, function(req, res, next) {
+  res.render(`login-${req.params.view}`, { csrfToken: req.csrfToken() });
+});
+
+app.post('/login/:view', csrfProtection, function(req, res, next) {
+  passport.authenticate('local', {
+    successRedirect: (req.params.view=='admin')?'/admin-page':'/scenario-editor',
+    failureRedirect: `/login/${req.params.view}`,
+  })(req, res, next);
+});
+
+app.post('/login-quiz-player', function(req, res, next) {
+  req.body.username = 'player';
+  req.body.password = 'playernopass';
+  passport.authenticate('guest-client', (err, user, info) => {
+    if (err) {
+      res.statusCode = 401;
+      res.end('Unauthorized');
+    } else {
+      req.logIn(user, {}, function(err) {
+        if (err) { return next(err); }
+        res.send('OK\n');
+      });
+    }
+  })(req, res, next);
+});
+
+app.post('/login-guest-client', function(req, res, next) {
+  const { username } = req.body;
+  passport.authenticate('guest-client', (err, user, info) => {
+    if (err) {
+      res.statusCode = 401;
+      res.end('Unauthorized');
+    } else {
+      req.logIn(user, {}, function(err) {
+        if (err) { return next(err); }
+        createSignature(username, (signature) => {
+          res.send({
+            user_id: username,
+            signature,
+          });
+        });
+      });
+    }
+  })(req, res, next);
+});
+
+app.post('/access-token', isLogined(), function(req, res) {
+  createSignature(req.user.id, (signature) => {
+    res.json({ user_id: req.user.id, signature });
+  })
+});
+
+app.get('/logout/:view',function(req,res) {
+  req.logout();
+  res.redirect(`/login/${req.params.view}`);
+});
 
 function docomo_chat(payload, callback) {
   if (payload.tone == 'kansai_dialect') {
@@ -670,7 +862,11 @@ function quiz_button(payload, callback) {
   buttonClient.on('button', listener);
 }
 
-app.post('/docomo-chat', (req, res) => {
+app.get('/health', (req, res) => {
+  res.send(`${(new Date()).toLocaleString()}`);
+});
+
+app.post('/docomo-chat', hasPermission('control.write'), (req, res) => {
   console.log('/docomo-chat');
   console.log(req.body);
 
@@ -687,7 +883,7 @@ app.post('/docomo-chat', (req, res) => {
   });
 });
 
-app.post('/text-to-speech', (req, res) => {
+app.post('/text-to-speech', hasPermission('control.write'), (req, res) => {
   console.log('/text-to-speech');
   console.log(req.body);
 
@@ -698,7 +894,7 @@ app.post('/text-to-speech', (req, res) => {
   });
 });
 
-app.post('/speech-to-text', (req, res) => {
+app.post('/speech-to-text', hasPermission('control.write'), (req, res) => {
   console.log('/speech-to-text');
   console.log(req.body);
 
@@ -718,12 +914,12 @@ app.post('/speech-to-text', (req, res) => {
   curlコマンド使用例
   $ curl -X POST --data 'こんにちは' http://192.168.X.X:3090/debug-speech
 */
-app.post('/debug-speech', (req, res) => {
+app.post('/debug-speech', hasPermission('control.write'), (req, res) => {
   speech.emit('data', req.body.toString('utf-8'));
   res.send('OK');
 });
 
-app.post('/speech', (req, res) => {
+app.post('/speech', hasPermission('control.write'), (req, res) => {
   speech.emit('speech', req.body.toString('utf-8'));
   res.send('OK');
 });
@@ -735,21 +931,17 @@ app.post('/speech', (req, res) => {
   curlコマンド使用例
   $ curl -X POST --data '200' http://192.168.X.X:3090/mic-threshold
 */
-app.post('/mic-threshold', (req, res) => {
+app.post('/mic-threshold', hasPermission('control.write'), (req, res) => {
   speech.emit('mic_threshold', req.body.toString('utf-8'));
   res.send('OK');
 })
 
-app.post('/speech-language', (req, res) => {
+app.post('/speech-language', hasPermission('control.write'), (req, res) => {
   speech.emit('languageCode', req.body.toString('utf-8'));
   res.send('OK');
 })
 
-app.get('/health', (req, res) => {
-  res.send(`${(new Date()).toLocaleString()}`);
-});
-
-app.use('/google', googleRouter);
+app.use('/google', hasPermission('control.write'), googleRouter);
 
 function changeLed(payload) {
   if (mode_slave) {
@@ -982,7 +1174,7 @@ function loadQuizPayload(payload)
   return m(val, { initializeLoad: true, });
 }
 
-app.post('/result', async (req, res) => {
+app.post('/result', hasPermission('result.read'), async (req, res) => {
   if (req.body.type === 'answers') {
     if (req.body.quizId) {
       if (req.body.startTime) {
@@ -1068,7 +1260,7 @@ app.post('/result', async (req, res) => {
 
 let run_scenario = false;
 
-const postCommand = async (req, res) => {
+const postCommand = async (req, res, credential) => {
   if (req.body.type === 'quiz') {
     const payload = await quizPacket(req.body);
     storeQuizPayload(payload);
@@ -1160,6 +1352,7 @@ const postCommand = async (req, res) => {
                 callback(data.toString());
               });
             }).then(()=> {
+              dora.credential = credential;
               dora.play({ username, }, {
                 socket: localSocket,
                 range,
@@ -1267,15 +1460,27 @@ const postCommand = async (req, res) => {
   res.send({ status: 'OK' });
 }
 
-app.post('/command/:filename', async (req, res) => {
-  postCommand(req, res);
+app.post('/command/:filename', hasPermission('command.write'), async (req, res) => {
+  if (req.isAuthenticated()) {
+    createSignature(req.user.id, (signature) => {
+      postCommand(req, res, { user_id: req.user.id, signature });
+    })
+  } else {
+    postCommand(req, res, { localhostToken: localhostToken(), });
+  }
 })
 
-app.post('/command', async (req, res) => {
-  postCommand(req, res);
+app.post('/command', hasPermission('command.write'), async (req, res) => {
+  if (req.isAuthenticated()) {
+    createSignature(req.user.id, (signature) => {
+      postCommand(req, res, { user_id: req.user.id, signature });
+    })
+  } else {
+    postCommand(req, res, { localhostToken: localhostToken(), });
+  }
 })
 
-app.post('/scenario', (req, res) => {
+app.post('/scenario', hasPermission('scenario.write'), (req, res) => {
   const base = path.join(HOME, 'Documents');
   const username = (req.body.name) ? path.basename(req.body.name) : null;
   const filename = (req.body.filename) ? path.basename(req.body.filename) : null;
@@ -1285,8 +1490,8 @@ app.post('/scenario', (req, res) => {
         if (typeof req.body.text !== 'undefined') {
           if (filename) {
             mkdirp(HOME, function(err) {
-              fs.writeFile(path.join(HOME, 'quiz-student.txt'), req.body.text, (err) => {
-                let r = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), null);
+              fs.writeFile(PART_LIST_FILE_PATH, req.body.text, (err) => {
+                let r = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
                 if (typeof r.students !== 'undefined') students = r.students;
                 res.send({ status: (!err) ? 'OK' : err.code, });
               });
@@ -1319,11 +1524,11 @@ app.post('/scenario', (req, res) => {
     } else
     if (req.body.action == 'load') {
       if (filename === '生徒リスト') {
-        fs.readFile(path.join(HOME, 'quiz-student.txt'), (err, data) => {
+        fs.readFile(PART_LIST_FILE_PATH, (err, data) => {
           res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
         });
       } else if (filename === '出席CSV') {
-        const { dates, students } = utils.attendance.load(null, path.join(HOME, 'quiz-student.txt'), path.join(HOME, 'date-list.txt'));
+        const { dates, students } = utils.attendance.load(null, PART_LIST_FILE_PATH, path.join(HOME, 'date-list.txt'));
         if (USE_DB) {
           db.loadAttendance(dates).then( robotData => {
             res.send({ status: 'OK', text: utils.attendance.csv(robotData, dates,  students)});
@@ -1342,7 +1547,7 @@ app.post('/scenario', (req, res) => {
       res.send({ status: 'OK' });
     }
   } else
-  if (students.some( m => m.name === username ) || config.free_editor)
+  if (students.some( m => m.name === username ) || config.editor_full_access)
   {
     if (req.body.action == 'save' || req.body.action == 'create') {
       if (typeof req.body.text !== 'undefined' || req.body.action == 'create') {
@@ -1411,7 +1616,7 @@ app.post('/scenario', (req, res) => {
 
 const camera = new (require('./robot-camera'))();
 
-camera.on('change', (payload) => {
+camera.on('change', hasPermission('control.write'), (payload) => {
   console.log('camera changed');
   speech.emit('camera', payload);
 });
@@ -1422,7 +1627,7 @@ camera.on('change', (payload) => {
   curlコマンド使用例
   $ curl -X POST --data '[{"id":100, "area":200}]' --header "content-type:application/json" http://localhost:3090/camera
 */
-app.post('/camera', (req, res) => {
+app.post('/camera', hasPermission('control.write'), (req, res) => {
   camera.up(req.body);
   res.send({ status: 'OK' });
 });
@@ -1445,14 +1650,17 @@ iop.on('connection', function (socket) {
     delete imageServers[socket.id];
     io.emit('imageServers', imageServers);
   });
-  socket.on('notify', function(data) {
-    const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
-    if (ip != null && data.role === 'imageServer') {
-      data.host = ip[1];
-      console.log(data);
-      imageServers[socket.id] = data;
-      io.emit('imageServers', imageServers);
-    }
+  socket.on('notify', function(payload) {
+    checkPermission(payload, '', (verified) => {
+      if (verified) {
+        const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
+        if (ip != null && payload.role === 'imageServer') {
+          payload.host = ip[1];
+          imageServers[socket.id] = payload;
+          io.emit('imageServers', imageServers);
+        }
+      }
+    })
   });
 });
 
@@ -1465,194 +1673,266 @@ io.on('connection', function (socket) {
     delete quiz_masters[socket.id];
     console.log(Object.keys(quiz_masters));
   });
-  socket.on('start-slave', function () {
-    mode_slave = true;
+  socket.on('start-slave', function (payload) {
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        mode_slave = true;
+      }
+    })
   });
   socket.on('docomo-chat', function (payload, callback) {
-    try {
-      docomo_chat({
-        message: payload.message,
-        speed: payload.speed || null,
-        volume: payload.volume || null,
-        tone: payload.tone || null,
-        direction: payload.direction || null,
-        voice: payload.voice || null,
-        silence: payload.silence || null,
-      }, (err, data) => {
-        if (callback) callback(data);
-      });
-    } catch(err) {
-      console.error(err);
-    }
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        try {
+          docomo_chat({
+            message: payload.message,
+            speed: payload.speed || null,
+            volume: payload.volume || null,
+            tone: payload.tone || null,
+            direction: payload.direction || null,
+            voice: payload.voice || null,
+            silence: payload.silence || null,
+          }, (err, data) => {
+            if (callback) callback(data);
+          });
+          return;
+        } catch(err) {
+          console.error(err);
+        }
+      }
+      if (callback) callback({});
+    })
   });
   socket.on('text-to-speech', function (payload, callback) {
-    try {
-      text_to_speech({
-        ...payload,
-      }, (err) => {
-        if (callback) callback('OK');
-      });
-    } catch(err) {
-      console.error(err);
-    }
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        try {
+          text_to_speech({
+            ...payload,
+          }, (err) => {
+            if (callback) callback('OK');
+          });
+          return;
+        } catch(err) {
+          console.error(err);
+        }
+      }
+      if (callback) callback('NG');
+    })
   });
   socket.on('stop-text-to-speech', function (payload, callback) {
-    talk.flush();
-    if (callback) callback('OK');
-  });
-  socket.on('speech-to-text', function (payload, callback) {
-    try {
-      speech_to_text({
-        timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
-        threshold: (typeof payload.sensitivity === 'undefined') ? 2000 : payload.sensitivity,
-        languageCode: (typeof payload.languageCode === 'undefined') ? 'ja-JP' : payload.languageCode,
-      }, (err, data) => {
-        if (callback) callback(data);
-      });
-    } catch(err) {
-      console.error(err);
-    }
-  });
-  socket.on('stop-speech-to-text', function (payload, callback) {
-    speech.emit('data', 'stoped');
-    if (callback) callback('OK');
-  });
-  socket.on('command', function(payload, callback) {
-    try {
-      const base = path.join(__dirname, 'command');
-      const cmd = path.normalize(path.join(base, payload.command));
-      const args = payload.args || '';
-      if (cmd.indexOf(base) == 0) {
-      } else {
-        console.log('NG');
-        if (callback) callback();
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        talk.flush();
+        if (callback) callback('OK');
         return;
       }
-      exec(`${cmd} ${args}`, (err, stdout, stderr) => {
-        if (err) {
+      if (callback) callback('NG');
+    })
+  });
+  socket.on('speech-to-text', function (payload, callback) {
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        try {
+          speech_to_text({
+            timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
+            threshold: (typeof payload.sensitivity === 'undefined') ? 2000 : payload.sensitivity,
+            languageCode: (typeof payload.languageCode === 'undefined') ? 'ja-JP' : payload.languageCode,
+          }, (err, data) => {
+            if (callback) callback(data);
+          });
+          return;
+        } catch(err) {
           console.error(err);
+        }
+      }
+      if (callback) callback('NG');
+    })
+  });
+  socket.on('stop-speech-to-text', function (payload, callback) {
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        speech.emit('data', 'stoped');
+        if (callback) callback('OK');
+        return;
+      }
+      if (callback) callback('NG');
+    })
+  });
+  socket.on('command', function(payload, callback) {
+    checkPermission(payload, 'command.write', (verified) => {
+      try {
+        const base = path.join(__dirname, 'command');
+        const cmd = path.normalize(path.join(base, payload.command));
+        const args = payload.args || '';
+        if (cmd.indexOf(base) == 0) {
+        } else {
+          console.log('NG');
+          if (callback) callback();
           return;
         }
-        console.log(stdout);
-      });
+        exec(`${cmd} ${args}`, (err, stdout, stderr) => {
+          if (err) {
+            console.error(err);
+            return;
+          }
+          console.log(stdout);
+        });
+        if (callback) callback();
+        return;
+      } catch(err) {
+        console.error(err);
+      }
       if (callback) callback();
-    } catch(err) {
-      console.error(err);
-    }
+    })
   });
   socket.on('message', function(payload, callback) {
-    console.log('message', payload);
-    if (callback) callback();
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        console.log('message', payload);
+      }
+      if (callback) callback();
+    })
   });
-  socket.on('quiz-command', async function(payload, callback) {
-    const result = await quizPacket(payload);
-    storeQuizPayload(result);
-    io.emit('quiz', result);
-    if (callback) callback();
+  socket.on('quiz-command', function(payload, callback) {
+    checkPermission(payload, 'control.write', async (verified) => {
+      if (verified) {
+        const result = await quizPacket(payload);
+        storeQuizPayload(result);
+        io.emit('quiz', result);
+      }
+      if (callback) callback();
+    })
   });
   socket.on('led-command', function(payload, callback) {
-    changeLed(payload);
-    if (callback) callback();
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        changeLed(payload);
+      }
+      if (callback) callback();
+    })
   });
   socket.on('sound-command', (payload, callback) => {
-    execSoundCommand(payload);
-    if (callback) callback();
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        execSoundCommand(payload);
+      }
+      if (callback) callback();
+    })
   })
   socket.on('button-command', function(payload, callback) {
-    buttonClient.doCommand(payload);
-    if (callback) callback();
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        buttonClient.doCommand(payload);
+      }
+      if (callback) callback();
+    })
   });
-  socket.on('quiz', async function(payload, callback) {
-    payload.time = new Date();
-    if (typeof payload.question === 'undefined') {
-      //参加登録
-      if (typeof payload.clientId !== 'undefined') {
-        robotData.quizEntry[payload.clientId] = payload;
-        console.log(payload.name);
-        if (payload.name === quiz_master) {
-          quiz_masters[socket.id] = socket;
-        }
-        writeRobotData();
-        const quizPayload = await quizPacket({
-          action: 'entry',
-          name: quiz_master,
-        })
-        Object.keys(quiz_masters).forEach( key => {
-          quiz_masters[key].emit('quiz', quizPayload);
-        });
-        socket.emit('quiz', loadQuizPayload(payload));
-        socket.emit('imageServers', imageServers);
-      }
-    } else {
-      if (payload.name === quiz_master) return;
-      const showSum = (typeof payload.showSum === 'undefined' || !payload.showSum) ? false : true;
-      const speechButton = (typeof payload.speechButton === 'undefined' || !payload.speechButton) ? false : true;
-      const noSave = (typeof payload.noSave === 'undefined' || !payload.noSave) ? false : true;
-      if (USE_DB) {
-        if (showSum) {
-          const quizId = payload.quizId;
-          if (quizAnswersCache[quizId] == null) {
-            quizAnswersCache[quizId] = {};
+  socket.on('quiz', function(payload, callback) {
+    checkPermission(payload, '', async (verified) => {
+      if (verified) {
+        payload.time = new Date();
+        if (typeof payload.question === 'undefined') {
+          //参加登録
+          if (typeof payload.clientId !== 'undefined') {
+            robotData.quizEntry[payload.clientId] = payload;
+            console.log(payload.name);
+            if (payload.name === quiz_master) {
+              quiz_masters[socket.id] = socket;
+            }
+            writeRobotData();
+            const quizPayload = await quizPacket({
+              action: 'entry',
+              name: quiz_master,
+            })
+            Object.keys(quiz_masters).forEach( key => {
+              quiz_masters[key].emit('quiz', quizPayload);
+            });
+            socket.emit('quiz', loadQuizPayload(payload));
+            socket.emit('imageServers', imageServers);
           }
-          if (quizAnswersCache[quizId][payload.question] == null) {
-            quizAnswersCache[quizId][payload.question] = {};
+        } else {
+          const speechButton = (typeof payload.speechButton === 'undefined' || !payload.speechButton) ? false : true;
+          if (speechButton) {
+            console.log(`emit speech ${payload.answer}`);
+            speech.emit('speech', payload.answer);
           }
-          const p = { ...payload };
-          delete p.question
-          delete p.quizId
-          quizAnswersCache[quizId][payload.question][payload.clientId] = p;
+          if (payload.name === quiz_master) return;
+          const showSum = (typeof payload.showSum === 'undefined' || !payload.showSum) ? false : true;
+          const noSave = (typeof payload.noSave === 'undefined' || !payload.noSave) ? false : true;
+          if (USE_DB) {
+            if (showSum) {
+              const quizId = payload.quizId;
+              if (quizAnswersCache[quizId] == null) {
+                quizAnswersCache[quizId] = {};
+              }
+              if (quizAnswersCache[quizId][payload.question] == null) {
+                quizAnswersCache[quizId][payload.question] = {};
+              }
+              const p = { ...payload };
+              delete p.question
+              delete p.quizId
+              quizAnswersCache[quizId][payload.question][payload.clientId] = p;
+            }
+            const a = {
+              quizId: payload.quizId,
+              quizTitle: payload.question,
+              clientId: payload.clientId,
+              username: payload.name,
+              answerString: payload.answer,
+              time: payload.time,
+              startTime: payload.quizStartTime,
+            }
+            if (!noSave) await db.update('updateAnswer', a);
+          } else {
+            const quizId = payload.quizId;
+            if (robotData.quizAnswers[quizId] == null) {
+              robotData.quizAnswers[quizId] = {};
+            }
+            if (robotData.quizAnswers[quizId][payload.question] == null) {
+              robotData.quizAnswers[quizId][payload.question] = {};
+            }
+            const p = { ...payload };
+            delete p.question
+            delete p.quizId
+            robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
+            if (!noSave) writeRobotData();
+          }
+          Object.keys(quiz_masters).forEach( key => {
+            quiz_masters[key].emit('quiz', {
+              action: 'refresh',
+              name: quiz_master,
+            });
+          });
         }
-        const a = {
-          quizId: payload.quizId,
-          quizTitle: payload.question,
-          clientId: payload.clientId,
-          username: payload.name,
-          answerString: payload.answer,
-          time: payload.time,
-          startTime: payload.quizStartTime,
-        }
-        if (!noSave) await db.update('updateAnswer', a);
-      } else {
-        const quizId = payload.quizId;
-        if (robotData.quizAnswers[quizId] == null) {
-          robotData.quizAnswers[quizId] = {};
-        }
-        if (robotData.quizAnswers[quizId][payload.question] == null) {
-          robotData.quizAnswers[quizId][payload.question] = {};
-        }
-        const p = { ...payload };
-        delete p.question
-        delete p.quizId
-        robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
-        if (!noSave) writeRobotData();
       }
-      if (speechButton) {
-        console.log(`emit speech ${payload.answer}`);
-        speech.emit('speech', payload.answer);
-      }
-      Object.keys(quiz_masters).forEach( key => {
-        quiz_masters[key].emit('quiz', {
-          action: 'refresh',
-          name: quiz_master,
-        });
-      });
-    }
-    if (callback) callback();
+      if (callback) callback();
+    })
   });
   socket.on('quiz-button', function (payload, callback) {
-    try {
-      quiz_button({
-        timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
-      }, (err, data) => {
-        if (callback) callback(data);
-      });
-    } catch(err) {
-      console.error(err);
-    }
+    checkPermission(payload, 'quiz-button.write', (verified) => {
+      if (verified) {
+        try {
+          quiz_button({
+            timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
+          }, (err, data) => {
+            if (callback) callback(data);
+          });
+          return;
+        } catch(err) {
+          console.error(err);
+        }
+      }
+      if (callback) callback();
+    })
   });
   socket.on('stop-quiz-button', function (payload, callback) {
-    buttonClient.emit('button', 'stoped');
-    if (callback) callback('OK');
+    checkPermission(payload, 'quiz-button.write', (verified) => {
+      if (verified) {
+        buttonClient.emit('button', 'stoped');
+      }
+      if (callback) callback('OK');
+    })
   });
 });
 
@@ -1727,7 +2007,7 @@ localSocket.on('connect', () => {
   console.log('connected');
 });
 
-if (false) {  //自動起動させる場合はここをtrueにする
+if (config.startScript && config.startScript.auto) {
   setTimeout(() => {
     console.log('request scenario');
     request({
@@ -1736,8 +2016,9 @@ if (false) {  //自動起動させる場合はここをtrueにする
       json: {
         type: 'scenario',
         action: 'play',
-        name: 'default-username', //ユーザー名
-        filename: 'start.dora',   //開始したいスクリプト
+        name: config.startScript.username,
+        filename: config.startScript.filename,
+        localhostToken: localhostToken(),
         range: {
           start: 0,
         },
@@ -1745,3 +2026,45 @@ if (false) {  //自動起動させる場合はここをtrueにする
     })
   }, 5000)
 }
+
+/*
+  GET API
+
+    /health
+
+  POST API
+
+    /docomo-chat
+    /text-to-speech
+    /speech-to-text
+    /debug-speech
+    /speech
+    /mic-threshold
+    /speech-language
+    /google/text-to-speech
+    /result
+    /signature
+    /command/:filename
+    /command
+
+      type:
+        quiz
+        led
+        button
+        cancel
+        movie
+        sound
+        scenario
+
+    /scenario
+
+      action:
+        save
+        load
+        create
+        remove
+        list
+
+    /camera
+
+*/
