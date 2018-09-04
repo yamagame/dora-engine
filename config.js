@@ -58,6 +58,13 @@ module.exports = {
     //開始したいスクリプト
     filename: '最初のファイル.txt',
   },
+  //Google text-to-speech関連
+  synthesizeSpeech: {
+    //キャッシュする音声データを保存するディレクトリ
+    tempdir: '/tmp',
+    //キャッシュする音声データのトータルサイズ(MByte)
+    maxCacheSize: 3,
+  },
 }
 
 if (require.main === module) {
