@@ -1353,7 +1353,7 @@ const postCommand = async (req, res, credential) => {
               });
             }).then(()=> {
               dora.credential = credential;
-              dora.play({ username, }, {
+              dora.play({ username, dora: { host: 'localhost', port: config.port, } }, {
                 socket: localSocket,
                 range,
               }, (err, msg) => {

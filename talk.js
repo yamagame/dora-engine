@@ -4,6 +4,7 @@ const path = require('path');
 const macvoice_speedrate = 180 / 100;
 const config = require('./config');
 const request = require('request');
+const { localhostToken } = require('./accessCheck');
 
 function Talk() {
 	var t = new EventEmitter();
@@ -91,6 +92,7 @@ function Talk() {
 			if (languageCode) {
 				const params = {
 					text,
+					localhostToken: localhostToken(),
 				}
 				if (languageCode) params.languageCode = languageCode;
 				if (audioEncoding) params.audioEncoding = audioEncoding;

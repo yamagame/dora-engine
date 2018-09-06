@@ -16,6 +16,7 @@
     "dora": "git+https://github.com/yamagame/dora.git",
     "express": "^4.16.2",
     "express-session": "^1.15.6",
+    "googleapis": "^33.0.0",
     "grpc": "^1.14.1",
     "jws": "^3.1.5",
     "mecab-async": "^0.1.2",

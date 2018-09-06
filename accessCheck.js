@@ -51,9 +51,9 @@ function checkIPs(ips, mode='allow') {
 function createSignature(secretKey, callback) {
   if (privateKey) {
     jws.createSign({
-      header: { alg: 'HS256' },
+      header: { alg: 'RS256' },
       privateKey,
-      payload: { secretKey, },
+      payload: secretKey,
     }).on('done', function(signature) {
       callback(signature);
     })
@@ -62,20 +62,19 @@ function createSignature(secretKey, callback) {
   }
 }
 
-
 function verifySignature(secretKey, signature, callback) {
   if (publicKey) {
     jws.createVerify({
-      algorithm: 'HS256',
+      algorithm: 'RS256',
       publicKey,
       signature,
     }).on('done', function(verified, obj) {
       if (verified) {
-        callback(obj.secretKey === secretKey);
+        callback(obj.payload === secretKey);
         return;
       }
       callback(false);
-    });
+    })
   } else {
     callback(bcrypt.compareSync(secretKey, signature));
   }
@@ -145,8 +144,8 @@ function hasPermission(permission) {
         unauthorized();
       } else {
         //publicKeyで検証
-        if ('body' in req && 'signature' in req.body) {
-          verifySignature(config.robot_secret_key, req.body.signature, (verified) => {
+        if ('body' in req && 'user_id' in req.body && 'signature' in req.body) {
+          verifySignature(req.body.user_id, req.body.signature, (verified) => {
             if (verified) {
               if (testPermission('*', permission)) {
                 return next();
@@ -213,4 +212,9 @@ module.exports = {
 }
 
 if (require.main === module) {
+  createSignature('admin', (signature) => {
+    verifySignature('admin', signature, (verified) => {
+      console.log(`verified ${verified}`);
+    })
+  });
 }

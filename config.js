@@ -60,10 +60,21 @@ module.exports = {
   },
   //Google text-to-speech関連
   synthesizeSpeech: {
+    //認証ファイルへのパス
+    credentialPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
     //キャッシュする音声データを保存するディレクトリ
-    tempdir: '/tmp',
+    tempdir: process.env.ROBOT_GOOGLE_SPEECH_DATA_DIR || '/tmp',
     //キャッシュする音声データのトータルサイズ(MByte)
     maxCacheSize: 3,
+    //キャッシュファイルのDBファイル
+    cacheDBPath: process.env.ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH || '/tmp/robot-cacheDB.json',
+  },
+  //Google sheet API関連
+  googleSheet: {
+    //認証ファイルへのパス
+    credentialPath: process.env.ROBOT_GOOGLE_SHEET_CREDENTIAL_PATH || null,
+    //トークンファイルへのパス
+    tokenPath: process.env.ROBOT_GOOGLE_SHEET_TOKEN_PATH || null,
   },
 }
 
