@@ -50,12 +50,17 @@ function checkIPs(ips, mode='allow') {
 
 function createSignature(secretKey, callback) {
   if (privateKey) {
-    jws.createSign({
+    const stream = jws.createSign({
       header: { alg: 'RS256' },
       privateKey,
       payload: secretKey,
-    }).on('done', function(signature) {
+    })
+    stream.on('done', function(signature) {
       callback(signature);
+    })
+    stream.on('error', function(err) {
+      console.error(err);
+      callback(null);
     })
   } else {
     callback(bcrypt.hashSync(secretKey, 8));
@@ -64,15 +69,20 @@ function createSignature(secretKey, callback) {
 
 function verifySignature(secretKey, signature, callback) {
   if (publicKey) {
-    jws.createVerify({
+    const stream = jws.createVerify({
       algorithm: 'RS256',
       publicKey,
       signature,
-    }).on('done', function(verified, obj) {
+    })
+    stream.on('done', function(verified, obj) {
       if (verified) {
         callback(obj.payload === secretKey);
         return;
       }
+      callback(false);
+    })
+    stream.on('error', function(err) {
+      console.error(err);
       callback(false);
     })
   } else {

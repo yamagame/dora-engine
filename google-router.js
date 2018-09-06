@@ -28,7 +28,12 @@ const cacheDB = (() => {
   if (cacheDBPath) {
     try {
       const data = fs.readFileSync(cacheDBPath);
-      return JSON.parse(data);
+      const json = JSON.parse(data);
+      Object.keys(json).forEach( key => {
+        if ('atime' in json[key]) json[key].atime = new Date(json[key].atime);
+        if ('ctime' in json[key]) json[key].ctime = new Date(json[key].ctime);
+      })
+      return json;
     } catch(err) {
       console.error(err);
     }
