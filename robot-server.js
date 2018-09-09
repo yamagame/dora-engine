@@ -484,7 +484,9 @@ app.use(session({
   secret: config.sessionSecret,
   resave: false,
   proxy: true,
-  maxAge: 10*365*24*60*60*1000,
+  cookie: {
+    maxAge: 10*365*24*60*60*1000,
+  },
   saveUninitialized: false,
 }));
 
