@@ -4,7 +4,9 @@ const config = require('./config');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const client = (() => {
-  if ('synthesizeSpeech' in config && 'credentialPath' in config.synthesizeSpeech) {
+  if ('synthesizeSpeech' in config
+   && 'credentialPath' in config.synthesizeSpeech
+   && config.synthesizeSpeech.credentialPath) {
     try {
       const textToSpeech = require('@google-cloud/text-to-speech');
       const ret = new textToSpeech.TextToSpeechClient();

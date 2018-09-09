@@ -31,18 +31,22 @@ function Player() {
   
   t.state = 'idle';
   
-  t.play = function(path) {
-		const _play = spawn('/usr/bin/omxplayer', ['--no-osd', path]);
-		t.state = 'play';
-		_play.on('close', function(code) {
-  		t.state = 'idle';
-		  t.removeListener('cancel', cancel);
-		  t.emit('done');
-		});
+  t.play = function(moviefilepath) {
+    if (process.platform === 'darwin') {
+      var _play = spawn(path.join(__dirname, 'movie-play-mac.scpt'), [moviefilepath]);
+    } else {
+      var _play = spawn('/usr/bin/omxplayer', ['--no-osd', moviefilepath]);
+    }
+    t.state = 'play';
+    _play.on('close', function(code) {
+      t.state = 'idle';
+      t.removeListener('cancel', cancel);
+      t.emit('done');
+    });
     function cancel() {
       kill(_play.pid,'SIGTERM',function() {
       });
-		  t.removeListener('cancel', cancel);
+      t.removeListener('cancel', cancel);
     }
     t.on('cancel', cancel);
   }

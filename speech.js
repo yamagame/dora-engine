@@ -16,13 +16,13 @@ function Speech() {
       languageCode: 'ja-JP',
       maxAlternatives: 3,
     },
-    interimResults: false // If you want interim results, set this to true
+    interimResults: false,
   };
 
-  if (config.voice_hat == true && config.usb_mic == false) {
+  if (config.voiceHat == true && config.usbUSBMIC == false) {
     var device = 'plug:micboost';
   } else {
-    var device = 'plughw:1,0';
+    var device = config.usbUSBMICDevice;  //e.g. 'plughw:1,0';
   }
   var micInstance = mic({
     'device': device,
@@ -35,18 +35,14 @@ function Speech() {
 
   var recognizeStream = null;
   var recognizeStreams = null;
-  var requestOpts = null;
+  var requestOpts = [{ ...defaultRequestOpts }];
   var startTime = 0;
   var writingStep = 0;
+  var speechClients = [];
 
   // マイクの音声認識の閾値を変更
   t.on('mic_threshold', function (threshold) {
       micInputStream.changeSilentThreshold(threshold);
-  });
-
-  // 言語を変更
-  t.on('languageCode', function (languageCode) {
-    requestOpts.config.languageCode = languageCode;
   });
 
   // 音声解析開始
@@ -103,7 +99,12 @@ function Speech() {
         const rec_length = requestOpts.length;
         const results = [];
         requestOpts.forEach( (opts, i) => {
-          const client = new speech.SpeechClient();
+          const client = ((i) => {
+            if (speechClients[i] == null) {
+              speechClients[i] = new speech.SpeechClient();
+            }
+            return speechClients[i];
+          })(i);
           console.log('createStream');
           recognizeStreams.push(client.streamingRecognize(opts)
             .on('error', (err) => {
@@ -114,14 +115,13 @@ function Speech() {
               if (data.results[0] && data.results[0].alternatives[0]) {
                 const alternatives = data.results[0].alternatives.map(v => v);
                 const sentence = alternatives.shift();
-                //console.log(JSON.stringify(sentence, null, '  '))
+                console.log(JSON.stringify(data));
                 if (!t.recording) return;
                 const result = {
                   languageCode: opts.config.languageCode,
                   transcript: sentence.transcript,
                   confidence: sentence.confidence,
                 }
-                console.log(JSON.stringify(result, null, '  '));
                 const emitResult = (result) => {
                   console.log(`result ${JSON.stringify(result,null,'  ')}`);
                   t.emit('data', result);
@@ -220,7 +220,9 @@ const sp = Speech();
 module.exports = sp;
 
 if (require.main === module) {
+  sp.emit('startRecording', { languageCode: [ 'ja-JP', ] });
+  // sp.emit('startRecording', { languageCode: [ 'ja-JP', 'en-US' ] });
   sp.on('data', function (data) {
-    console.log(data);
+    //console.log(data);
   });
 }

@@ -9,9 +9,12 @@ const fs = require('fs');
 
 const workFolder = 'DoraEngine';  //for macOS(development)
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
-const PORT = process.argv[3] || config.server_port;
+const MOVIE = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Movies', workFolder) : path.join(process.env.HOME, 'Videos');
+const PORT = process.argv[3] || config.serverPort;
 
-const imageServer = true;  //画像サーバーとして機能させるときはここをtrueにする
+//true にすると画像サーバーとして機能する
+//同じPCで dora-engine が稼働しているときは false にする
+const imageServer = false;
 
 const express = require('express')
 const bodyParser = require('body-parser')
@@ -56,12 +59,19 @@ function MovieClient(host, callback) {
     });
     socket.on('movie', function(data, callback){
       if (data.action === 'play') {
-        const p = path.join(__dirname, '../Videos', data.movie);
+        const p = path.join(MOVIE, data.movie);
         fs.stat(p, (err, stats) => {
           if (!err && stats.isFile()) {
             player.play(p);
           } else {
-            player.play(path.join(__dirname, '../Movie', data.movie));
+            const q = path.join(__dirname, '../Movie', data.movie);
+            fs.stat(q, (err, stats) => {
+              if (!err && stats.isFile()) {
+                player.play(q);
+              } else {
+                console.error(`file not exist ${data.movie}`);
+              }
+            });
           }
         });
       } else if (data.action === 'check') {

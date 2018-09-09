@@ -14,8 +14,23 @@ function getCredential(path) {
   return null;
 }
 
-const privateKey = getCredential(config.robot_private_key);
-const publicKey = getCredential(config.robot_public_key);
+const privateKey = getCredential(config.robotPrivateKey);
+const publicKey = getCredential(config.robotPublicKey);
+
+const localhostIPs = config.localhostIPs;
+
+function getClientIp(req) {
+  var ipAddress;
+  var forwardedIpsStr = req.headers['x-forwarded-for'];
+  if (forwardedIpsStr) {
+    var forwardedIps = forwardedIpsStr.split(',');
+    ipAddress = forwardedIps[0];
+  }
+  if (!ipAddress) {
+    ipAddress = req.connection.remoteAddress;
+  }
+  return ipAddress;
+}
 
 /*
 //使い方
@@ -23,18 +38,6 @@ const allowAddresses = [ '::1', ];
 app.use( checkIPs(allowAddresses, 'allow') );
 */
 function checkIPs(ips, mode='allow') {
-  function getClientIp(req) {
-    var ipAddress;
-    var forwardedIpsStr = req.headers['x-forwarded-for'];
-    if (forwardedIpsStr) {
-      var forwardedIps = forwardedIpsStr.split(',');
-      ipAddress = forwardedIps[0];
-    }
-    if (!ipAddress) {
-      ipAddress = req.connection.remoteAddress;
-    }
-    return ipAddress;
-  }
   return (req, res, next) => {
     const ipaddress = getClientIp(req);
     if (mode === 'allow') {
@@ -48,7 +51,15 @@ function checkIPs(ips, mode='allow') {
   }
 }
 
+const localIPCheck = (req) => {
+  const ipaddress = getClientIp(req);
+  return (localhostIPs.indexOf(ipaddress) !== -1);
+}
+
 function createSignature(secretKey, callback) {
+  if (!config.credentialAccessControl) {
+    return callback('');
+  }
   if (privateKey) {
     const stream = jws.createSign({
       header: { alg: 'RS256' },
@@ -68,6 +79,9 @@ function createSignature(secretKey, callback) {
 }
 
 function verifySignature(secretKey, signature, callback) {
+  if (!config.credentialAccessControl) {
+    return callback(true);
+  }
   if (publicKey) {
     const stream = jws.createVerify({
       algorithm: 'RS256',
@@ -124,6 +138,12 @@ function testPermission(scope, permission) {
 
 function hasPermission(permission) {
   return (req, res, next ) => {
+    if (!config.credentialAccessControl) {
+      return next();
+    }
+    if (config.allowLocalhostAccess && localIPCheck(req)) {
+      return next();
+    }
     const hasLocalhostToken = (req) => {
       if ('body' in req && 'localhostToken' in req.body) {
         return (req.body.localhostToken === localhostToken());
@@ -174,6 +194,9 @@ function hasPermission(permission) {
 }
 
 function checkPermission(payload, permission, callback) {
+  if (!config.credentialAccessControl) {
+    return callback(true);
+  }
   const { user_id, signature, } = payload;
   const hasLocalhostToken = (payload) => {
     if ('localhostToken' in payload) {
@@ -194,7 +217,7 @@ function checkPermission(payload, permission, callback) {
   }
   if (hasLocalhostToken(payload)) {
     if (testPermission('*', permission)) {
-     callback(true);
+      callback(true);
       return;
     }
   }
@@ -212,7 +235,9 @@ function checkPermission(payload, permission, callback) {
 }
 
 module.exports = {
+  localhostIPs,
   checkIPs,
+  localIPCheck,
   createSignature,
   verifySignature,
   localhostToken,

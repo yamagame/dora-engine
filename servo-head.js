@@ -4,7 +4,7 @@ const raspi = require('raspi');
 const Servo = require('./action').Servo;
 const Action = require('./action').Action;
 const config = require('./config');
-const port = config.gpio_port;
+const port = config.gpioPort;
 const fs = require('fs');
 const path = require('path');
 
@@ -31,7 +31,7 @@ function saveSetting(servo0, servo1) {
 }
 const setting = loadSetting();
 
-if (config.voice_hat) {
+if (config.voiceHat) {
   pigpio.configureClock(5, 0);
 }
 
@@ -185,7 +185,14 @@ raspi.init(() => {
   });
 
   io.on('connection', function(socket) {
-    console.log('connected', socket.id);
+    console.log('connected', socket.id, socket.handshake.address);
+    if (config.credentialAccessControl) {
+      if (config.localhostIPs.indexOf(socket.handshake.address) === -1) {
+        console.log('permission denied');
+        return;
+      }
+    }
+    console.log('start action');
     
     socket.on('led-command', (payload, callback) => {
       changeLed(payload);
@@ -227,6 +234,7 @@ raspi.init(() => {
           }
         }
       } catch(err) {
+        if (callback) callback();
       }
     });
   });

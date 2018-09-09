@@ -215,7 +215,7 @@ $ cd ~/dora-engine
 $ node speech.js
 ```
 
-うまくいかない場合は、grpcのバイナリがおかしいのかもしれません。以下のコマンドを実行して、ソースからビルドし直します。
+うまくいかない場合は、node-grpcのバイナリがおかしいのかもしれません。以下のコマンドを実行して、ソースからビルドし直します。
 
 ```
 $ npm rebuild grpc --build-from-source

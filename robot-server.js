@@ -14,7 +14,7 @@ const fs = require('fs');
 const workFolder = 'DoraEngine';  //for macOS(development)
 const buttonClient = require('./button-client')(config);
 const RobotDB = require('./robot-db');
-const USE_DB = config.use_db;
+const USE_DB = config.useDB;
 const saveInterval = 1000;
 const URL = require('url');
 const googleRouter = require('./google-router');
@@ -23,6 +23,8 @@ const MemoryStore = require('memorystore')(session);
 const passport = require("passport");
 const LocalStrategy = require('passport-local').Strategy;
 const {
+  localhostIPs,
+  localIPCheck,
   createSignature,
   localhostToken,
   hasPermission,
@@ -40,8 +42,14 @@ const PART_LIST_FILE_PATH = path.join(HOME, 'quiz-student.txt');
 
 const isLogined = function(view) {
   return function (req, res, next) {
+    if (!config.credentialAccessControl) {
+      return next();
+    }
+    if (config.allowLocalhostAccess && localIPCheck(req)) {
+      return next();
+    }
     if (req.isAuthenticated()) {
-        return next();
+      return next();
     }
     if (view) {
       res.redirect(`/login/${view}`);
@@ -411,7 +419,7 @@ var last_led_action = 'led-off';
 
 const gpioSocket = (function() {
   const io = require('socket.io-client');
-  return io(`http://localhost:${config.gpio_port}`);
+  return io(`http://localhost:${config.gpioPort}`);
 })();
 
 function servoAction(action, payload, callback) {
@@ -455,6 +463,7 @@ const app = express()
 
 app.use((req, res, next) => {
   console.log(`# ${(new Date()).toLocaleString()} ${req.ip} ${req.url}`);
+  console.log(`${JSON.stringify(req.headers)}`);
   next();
 });
 
@@ -472,14 +481,16 @@ app.use('/images', express.static(PICT))
 const sessionStore = new MemoryStore();
 app.use(session({
   store: sessionStore,
-  secret: config.session_secret,
+  secret: config.sessionSecret,
   resave: false,
   proxy: true,
+  maxAge: 10*365*24*60*60*1000,
   saveUninitialized: false,
 }));
 
 app.use((req, res, next) => {
   console.log("SessionID: " + req.sessionID);
+  console.log("session: " + JSON.stringify(req.session));
   next();
 });
 
@@ -553,17 +564,22 @@ app.get('/scenario-editor', isLogined('editor'), function(req,res,next) {
 });
 
 app.use((req, res, next) => {
-  if (req.url.indexOf('/admin-page') === 0) {
-    if (!req.isAuthenticated()) {
-      return res.redirect('/login/admin');
+  if (config.credentialAccessControl) {
+    if (config.allowLocalhostAccess && localIPCheck(req)) {
+      return next();
+    }
+    if (req.url.indexOf('/admin-page') === 0) {
+      if (!req.isAuthenticated()) {
+        return res.redirect('/login/admin');
+      }
+    }
+    if (req.url.indexOf('/scenario-editor') === 0) {
+      if (!req.isAuthenticated()) {
+        return res.redirect('/login/editor');
+      }
     }
   }
-  if (req.url.indexOf('/scenario-editor') === 0) {
-    if (!req.isAuthenticated()) {
-      return res.redirect('/login/scenario-editor');
-    }
-  }
-  next();
+  return next();
 }, express.static('public'))
 
 app.get('/login/:view', csrfProtection, function(req, res, next) {
@@ -586,6 +602,7 @@ app.post('/login-quiz-player', function(req, res, next) {
       res.end('Unauthorized');
     } else {
       req.logIn(user, {}, function(err) {
+console.log(`${Object.keys(res)}`);
         if (err) { return next(err); }
         res.send('OK\n');
       });
@@ -933,11 +950,6 @@ app.post('/speech', hasPermission('control.write'), (req, res) => {
 */
 app.post('/mic-threshold', hasPermission('control.write'), (req, res) => {
   speech.emit('mic_threshold', req.body.toString('utf-8'));
-  res.send('OK');
-})
-
-app.post('/speech-language', hasPermission('control.write'), (req, res) => {
-  speech.emit('languageCode', req.body.toString('utf-8'));
   res.send('OK');
 })
 
@@ -1547,7 +1559,7 @@ app.post('/scenario', hasPermission('scenario.write'), (req, res) => {
       res.send({ status: 'OK' });
     }
   } else
-  if (students.some( m => m.name === username ) || config.editor_full_access)
+  if (students.some( m => m.name === username ) || config.editorAccessControl)
   {
     if (req.body.action == 'save' || req.body.action == 'create') {
       if (typeof req.body.text !== 'undefined' || req.body.action == 'create') {
@@ -1644,6 +1656,11 @@ const imageServers = {};
 iop.on('connection', function (socket) {
   console.log('connected iop', socket.conn.remoteAddress);
   playerSocket = socket;
+  const localhostCheck = (payload) => {
+    if (localhostIPs.indexOf(socket.handshake.address) === -1) {
+      payload.localhostToken = localhostToken();
+    }
+  }
   socket.on('disconnect', function () {
     playerSocket = null;
     console.log('disconnect iop');
@@ -1651,6 +1668,7 @@ iop.on('connection', function (socket) {
     io.emit('imageServers', imageServers);
   });
   socket.on('notify', function(payload) {
+    localhostCheck(payload);
     checkPermission(payload, '', (verified) => {
       if (verified) {
         const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
@@ -1666,6 +1684,11 @@ iop.on('connection', function (socket) {
 
 io.on('connection', function (socket) {
   console.log('connected io', socket.conn.remoteAddress);
+  const localhostCheck = (payload) => {
+    if (localhostIPs.indexOf(socket.handshake.address) === -1) {
+      payload.localhostToken = localhostToken();
+    }
+  }
   socket.on('disconnect', function () {
     mode_slave = false;
     speech.recording = false;
@@ -1674,6 +1697,7 @@ io.on('connection', function (socket) {
     console.log(Object.keys(quiz_masters));
   });
   socket.on('start-slave', function (payload) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         mode_slave = true;
@@ -1681,6 +1705,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('docomo-chat', function (payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         try {
@@ -1704,6 +1729,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('text-to-speech', function (payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         try {
@@ -1721,6 +1747,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('stop-text-to-speech', function (payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         talk.flush();
@@ -1731,6 +1758,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('speech-to-text', function (payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         try {
@@ -1750,6 +1778,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('stop-speech-to-text', function (payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         speech.emit('data', 'stoped');
@@ -1760,6 +1789,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('command', function(payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'command.write', (verified) => {
       try {
         const base = path.join(__dirname, 'command');
@@ -1787,6 +1817,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('message', function(payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         console.log('message', payload);
@@ -1795,6 +1826,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('quiz-command', function(payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', async (verified) => {
       if (verified) {
         const result = await quizPacket(payload);
@@ -1805,6 +1837,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('led-command', function(payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         changeLed(payload);
@@ -1813,6 +1846,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('sound-command', (payload, callback) => {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         execSoundCommand(payload);
@@ -1821,6 +1855,7 @@ io.on('connection', function (socket) {
     })
   })
   socket.on('button-command', function(payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         buttonClient.doCommand(payload);
@@ -1829,6 +1864,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('quiz', function(payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, '', async (verified) => {
       if (verified) {
         payload.time = new Date();
@@ -1910,6 +1946,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('quiz-button', function (payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'quiz-button.write', (verified) => {
       if (verified) {
         try {
@@ -1927,6 +1964,7 @@ io.on('connection', function (socket) {
     })
   });
   socket.on('stop-quiz-button', function (payload, callback) {
+    localhostCheck(payload);
     checkPermission(payload, 'quiz-button.write', (verified) => {
       if (verified) {
         buttonClient.emit('button', 'stoped');

@@ -90,7 +90,7 @@ function ButtonSocket(client, config, manager) {
       const socket = io(host);
       t.socket_id = socket.id;
       socket.on('connect', function() {
-        createSignature(config.robot_secret_key, (signature) => {
+        createSignature(config.robotSecretKey, (signature) => {
           socket.emit('start-slave', { signature, });
           console.log('connect', socket.id, host);
           t.socket_id = socket.id;
