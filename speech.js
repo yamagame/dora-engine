@@ -40,6 +40,8 @@ function Speech() {
   var writingStep = 0;
   var speechClients = [];
 
+  speechClients[0] = new speech.SpeechClient();
+
   // マイクの音声認識の閾値を変更
   t.on('mic_threshold', function (threshold) {
       micInputStream.changeSilentThreshold(threshold);
