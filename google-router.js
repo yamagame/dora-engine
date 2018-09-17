@@ -23,6 +23,7 @@ const crypto = require('crypto');
 const path = require('path');
 const readline = require('readline');
 const {google} = require('googleapis');
+const utils = require('./utils');
 
 const cacheDBPath = ('synthesizeSpeech' in config && 'cacheDBPath' in config.synthesizeSpeech)?config.synthesizeSpeech.cacheDBPath:null;
 
@@ -83,11 +84,29 @@ router.get('/health', (req, res) => {
   res.send('OK\n');
 })
 
+let text_to_speech = {
+  playone: null,
+}
+
 router.post('/text-to-speech', (req, res) => {
   let text = 'こんにちは';
 
   let voice = {};
   let audioConfig = {};
+  let action = 'play';
+
+  if ('action' in req.body) {
+    action = req.body.action;
+  }
+
+  if (action === 'stop') {
+    if (text_to_speech.playone) {
+      utils.kill(text_to_speech.playone.pid, 'SIGTERM', function () {
+      });
+      text_to_speech.playone = null;
+    }
+    return res.send('OK\n');
+  }
 
   if ('languageCode' in req.body) {
     voice.languageCode = req.body.languageCode;
@@ -146,8 +165,9 @@ router.post('/text-to-speech', (req, res) => {
     const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
     const opt = (process.platform === 'darwin') ? [sndfilepath] : ['-Dplug:softvol', sndfilepath];
     console.log(`/usr/bin/${cmd} ${sndfilepath}`);
-    const playone = spawn(`/usr/bin/${cmd}`, opt);
-    playone.on('close', function(code) {
+    text_to_speech.playone = spawn(`/usr/bin/${cmd}`, opt);
+    text_to_speech.playone.on('close', function(code) {
+      text_to_speech.playone = null;
       callback(null, code);
     });
   }
@@ -325,17 +345,37 @@ const getToken = (oAuth2Client, callback) => {
 }
 
 function apeendToSheet({ sheetId, payload, }, callback) {
-  const appendData = (auth, values, callback) => {
+  const appendData = (sheets, title, values, callback) => {
     console.log(`append-to-sheet ${sheetId}, ${JSON.stringify(values)}`);
-    const sheets = google.sheets({version: 'v4', auth});
     sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: 'Sheet1!A1',
+      range: `${title}!A1`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values,
       },
     }, callback)
+  }
+  const addSheet = (sheets, title, callback) => {
+    sheets.spreadsheets.batchUpdate({
+      spreadsheetId: sheetId,
+      resource: {
+        requests: [
+          {
+            addSheet: {
+              properties: {
+                title,
+              },
+            },
+          }
+        ],
+      },
+    }, callback);
+  }
+  const getSheetList = (sheets, callback) => {
+    sheets.spreadsheets.get({
+      spreadsheetId: sheetId,
+    }, callback);
   }
   loadCredential((err, credentials) => {
     if (err) {
@@ -344,11 +384,38 @@ function apeendToSheet({ sheetId, payload, }, callback) {
     const {client_secret, client_id, redirect_uris} = credentials.installed;
     const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
     getToken(oAuth2Client, (err, token) => {
-      if (err) {
-        return callback(err);
-      }
+      if (err) return callback(err);
       oAuth2Client.setCredentials(token);
-      appendData(oAuth2Client, payload, (err, result) => {
+      const sheets = google.sheets({version: 'v4', auth: oAuth2Client});
+      const today = new Date();
+      const title = `${today.getFullYear()}-${('00'+(today.getMonth()+1)).slice(-2)}`;
+      //データを追加
+      appendData(sheets, title, payload, (err, result) => {
+        if (err) {
+          //追加できない、エラー
+          if (err.code === 400) {
+            return getSheetList(sheets, (err, result) => {
+              if (err) return callback(err);
+              //シートがあるか調べる
+              if (!result.data.sheets.some( v => {
+                return (v.properties.title === title);
+              })) {
+                //シートを追加
+                addSheet(sheets, title, (err, result) => {
+                  if (err) return callback(err);
+                  //データを追加
+                  appendData(sheets, title, payload, (err, result) => {
+                    if (err) return callback(err);
+                    callback(err, result);
+                  })
+                })
+              } else {
+                //シートはあるのになぜかエラー
+                callback(new Error('operation error'));
+              }
+            })
+          }
+        }
         callback(err, result);
       });
     })

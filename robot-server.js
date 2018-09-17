@@ -1315,7 +1315,7 @@ const postCommand = async (req, res, credential) => {
     const { action } = req.body;
     function stopAll() {
       dora.stop();
-      //talk.stop();
+      talk.stop();
       //servoAction('idle');
       execSoundCommand({ sound: 'stop' });
       buttonClient.emit('stop-speech-to-text');

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const psTree = require('ps-tree');
 
-var kill = function (pid, signal, callback) {
+function kill(pid, signal, callback) {
   signal   = signal || 'SIGKILL';
   callback = callback || function () {};
   var killTree = true;
