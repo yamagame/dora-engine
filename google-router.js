@@ -382,11 +382,11 @@ function apeendToSheet({ sheetId, payload, }, callback) {
       return callback(err);
     }
     const {client_secret, client_id, redirect_uris} = credentials.installed;
-    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-    getToken(oAuth2Client, (err, token) => {
+    const auth = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+    getToken(auth, (err, token) => {
       if (err) return callback(err);
-      oAuth2Client.setCredentials(token);
-      const sheets = google.sheets({version: 'v4', auth: oAuth2Client});
+      auth.setCredentials(token);
+      const sheets = google.sheets({version: 'v4', auth});
       const today = new Date();
       const title = `${today.getFullYear()}-${('00'+(today.getMonth()+1)).slice(-2)}`;
       //データを追加

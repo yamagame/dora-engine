@@ -484,9 +484,9 @@ app.use(session({
   secret: config.sessionSecret,
   resave: false,
   proxy: true,
-  cookie: {
-    maxAge: 10*365*24*60*60*1000,
-  },
+  // cookie: {
+  //   maxAge: 10*365*24*60*60*1000,
+  // },
   saveUninitialized: false,
 }));
 
@@ -596,6 +596,10 @@ app.post('/login/:view', csrfProtection, function(req, res, next) {
 });
 
 app.post('/login-quiz-player', function(req, res, next) {
+  if (req.isAuthenticated()) {
+    res.send('OK\n');
+    return;
+  }
   req.body.username = 'player';
   req.body.password = 'playernopass';
   passport.authenticate('guest-client', (err, user, info) => {
@@ -604,7 +608,6 @@ app.post('/login-quiz-player', function(req, res, next) {
       res.end('Unauthorized');
     } else {
       req.logIn(user, {}, function(err) {
-console.log(`${Object.keys(res)}`);
         if (err) { return next(err); }
         res.send('OK\n');
       });
