@@ -1360,7 +1360,7 @@ const postCommand = async (req, res, credential) => {
               emitError(err);
               return;
             }
-            dora.parse(data.toString(), function (filename, callback) {
+            dora.parse(data.toString(), filename, function (filename, callback) {
               fs.readFile(path.join(base, username, filename), (err, data) => {
                 if (err) {
                   emitError(err);
@@ -1973,6 +1973,21 @@ io.on('connection', function (socket) {
     checkPermission(payload, 'quiz-button.write', (verified) => {
       if (verified) {
         buttonClient.emit('button', 'stoped');
+      }
+      if (callback) callback('OK');
+    })
+  });
+  socket.on('dora-event', function (payload, callback) {
+    localhostCheck(payload);
+    checkPermission(payload, 'control.write', (verified) => {
+      if ('action' in payload) {
+        if (payload.action === 'log') {
+          io.emit('scenario_log', {
+            message: payload.message,
+            lineNumber: payload.lineNumber,
+            filename: payload.filename,
+          });
+        }
       }
       if (callback) callback('OK');
     })
