@@ -28,7 +28,7 @@ const config = {
   robotPrivateKey: process.env.ROBOT_PRIVATE_KEY || null,
   robotPublicKey: process.env.ROBOT_PUBLIC_KEY || null,
   //認証処理を有効化
-  credentialAccessControl: (process.env.ROBOT_CREDENTIAL_ACCESS_CONTROL || 'true') === 'true',
+  credentialAccessControl: (process.env.ROBOT_CREDENTIAL_ACCESS_CONTROL || 'false') === 'true',
   //localhostアクセスを有効化
   allowLocalhostAccess: (process.env.ROBOT_ALLOW_LOCALHOST_ACCESS || 'true') === 'true',
   localhostIPs: [ '::1', '::ffff:127.0.0.1', ],
