@@ -9,5 +9,5 @@ sudo npm install npm@latest -g
 cd dora-engine
 npm i
 
-# Raspberr Pi Zero Wの場合は，以下のコメントアウトを外すこと
+# 実行するとgrpcがエラーになる場合は，以下のコマンドを実行する
 # npm rebuild --build-from-source grpc
