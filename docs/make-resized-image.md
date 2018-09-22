@@ -135,3 +135,21 @@ $ sudo dcfldd if=/dev/sda of=~/Documents/cardbot-os.img count=187136 bs=32k
 
 ifで読み込み元を、ofで書き出し先を指定します。
 countは読み書きするブロック数です。bsは1ブロックのブロックサイズです。
+
+### ディスクイメージをmicroSDカードに書き込む
+
+フォーマットされたmicroSDカードを、カードリーダーで Raspberry Pi に接続します。
+
+microSDカードのドライブを以下のコマンドで調べます。
+
+```bash
+$ sudo fdisk -l
+```
+
+以下のコマンドでイメージを書き込みます。
+
+```bash
+$ sudo dcfldd if=~/Documents/cardbot-os.img of=/dev/sda
+```
+
+ifで読み込み元を、ofで書き出し先を指定します。
