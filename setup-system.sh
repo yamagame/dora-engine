@@ -2,7 +2,7 @@
 cd ~
 
 #sudo apt-get remove --purge wolfram-engine oracle-java8-jdk openjdk-8-jre gcj-6-jre -y
-#sudo apt autoremove
+#sudo apt autoremove -y
 
 sudo apt-get update
 sudo apt-get upgrade -y
