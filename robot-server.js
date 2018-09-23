@@ -754,7 +754,7 @@ function speech_to_text(payload, callback) {
     speech.removeListener('camera', cameraListener);
   }
 
-  if (payload.timeout != 0) {
+  if (payload.timeout != 0 && payload.recording) {
     setTimeout(() => {
       if (!done) {
         stopRecording();
@@ -844,7 +844,7 @@ function speech_to_text(payload, callback) {
   }
 
   if (led_mode == 'auto') {
-    if (payload.timeout > 0) {
+    if (payload.timeout > 0 && payload.recording) {
         servoAction('led-on');
         last_led_action = 'led-on';
     } else {
@@ -924,6 +924,7 @@ app.post('/speech-to-text', hasPermission('control.write'), (req, res) => {
     timeout: (typeof req.body.payload.timeout === 'undefined') ? 30000 : req.body.payload.timeout,
     threshold: (typeof req.body.payload.sensitivity === 'undefined') ? 2000 : req.body.payload.sensitivity,
     languageCode: (typeof req.body.payload.languageCode === 'undefined') ? 'ja-JP' : req.body.payload.languageCode,
+    recording: (typeof req.body.payload.recording === 'undefined') ? true : req.body.payload.recording,
   }, (err, data) => {
     res.send(data);
   });
