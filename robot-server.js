@@ -754,7 +754,7 @@ function speech_to_text(payload, callback) {
     speech.removeListener('camera', cameraListener);
   }
 
-  if (payload.timeout != 0 && payload.recording) {
+  if (payload.timeout != 0) {
     setTimeout(() => {
       if (!done) {
         stopRecording();
@@ -768,7 +768,9 @@ function speech_to_text(payload, callback) {
       done = true;
     }, payload.timeout);
 
-    startRecording();
+    if (payload.recording) {
+      startRecording();
+    }
   }
 
   const dataListener = (data) => {
@@ -1772,6 +1774,7 @@ io.on('connection', function (socket) {
             timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
             threshold: (typeof payload.sensitivity === 'undefined') ? 2000 : payload.sensitivity,
             languageCode: (typeof payload.languageCode === 'undefined') ? 'ja-JP' : payload.languageCode,
+            recording: (typeof payload.recording === 'undefined') ? true : payload.recording,
           }, (err, data) => {
             if (callback) callback(data);
           });
