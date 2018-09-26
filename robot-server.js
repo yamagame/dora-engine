@@ -341,6 +341,7 @@ if (typeof robotData.quizAnswers === 'undefined') robotData.quizAnswers = {};
 if (typeof robotData.quizEntry === 'undefined') robotData.quizEntry = {};
 if (typeof robotData.quizPayload === 'undefined') robotData.quizPayload = {};
 if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
+if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parseInt(robotData.recordingTime);
 
 let { students } = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
 
@@ -736,6 +737,8 @@ function speech_to_text(payload, callback) {
   const stopRecording = () => {
     speech.recording = false;
     speech.emit('stopRecording');
+    robotData.recordingTime = speech.recordingTime;
+    writeRobotData()
   }
 
   const startRecording = () => {
@@ -888,6 +891,10 @@ function quiz_button(payload, callback) {
 
 app.get('/health', (req, res) => {
   res.send(`${(new Date()).toLocaleString()}`);
+});
+
+app.get('/recordingTime', (req, res) => {
+  res.send(`${speech.recordingTime}`);
 });
 
 app.post('/docomo-chat', hasPermission('control.write'), (req, res) => {
