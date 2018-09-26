@@ -3,6 +3,8 @@ const speech = require('@google-cloud/speech');
 const mic = require('mic');
 const config = require('./config');
 
+const PRELOAD_COUNT = 10;
+
 function Speech() {
   var t = new EventEmitter();
   t.recording = true;
@@ -39,6 +41,7 @@ function Speech() {
   var startTime = 0;
   var writingStep = 0;
   var speechClients = [];
+  var streamQue = [];
 
   speechClients[0] = new speech.SpeechClient();
 
@@ -80,6 +83,8 @@ function Speech() {
 
   micInputStream.on('data', function (data) {
     if (micInputStream.incrConsecSilenceCount() > micInputStream.getNumSilenceFramesExitThresh()) {
+      streamQue.push(data);
+      streamQue = streamQue.slice(-PRELOAD_COUNT);
       if (writingStep == 1) {
         console.log('end writing');
         writingStep = 0;
@@ -158,8 +163,16 @@ function Speech() {
           console.log('start writing');
           writingStep = 1;
         }
+        if (streamQue.length > 0) {
+          streamQue.forEach( data => {
+            recognizeStreams.forEach( stream => stream.write(data) );
+          })
+          streamQue = [];
+        }
         recognizeStreams.forEach( stream => stream.write(data) );
       } else {
+        streamQue.push(data);
+        streamQue = streamQue.slice(-PRELOAD_COUNT);
         if (writingStep == 1) {
           console.log('end writing');
           writingStep = 0;
