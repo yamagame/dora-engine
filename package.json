@@ -39,13 +39,15 @@
     "socket.io": "^2.0.4",
     "sqlite3": "^4.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  },
   "scripts": {
     "robot": "node robot-server.js",
     "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node robot-server.js",
     "servo": "sudo node servo-head.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "keywords": [],
   "author": "",
