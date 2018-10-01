@@ -90,7 +90,7 @@ const config = {
 module.exports = config;
 
 if (require.main === module) {
-  //bcryptを使ってパスワードのハッシュを作ってadminAuto.passwordに設定する
+  //bcrypt を使ってパスワードのハッシュを作って adminAuth の password に設定する
   console.log(bcrypt.hashSync('robotnopass', 8));
   console.log(bcrypt.hashSync('playernopass', 8));
   console.log(bcrypt.hashSync('guestclientnopass', 8));
