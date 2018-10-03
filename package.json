@@ -43,6 +43,7 @@
     "mocha": "^5.2.0"
   },
   "scripts": {
+    "start": "SPEECH=off node robot-server.js",
     "robot": "node robot-server.js",
     "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node robot-server.js",

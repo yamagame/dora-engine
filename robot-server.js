@@ -1047,6 +1047,16 @@ async function quizPacket(payload) {
     }, 3000);
     return result;
   }
+  if (payload.action === 'quiz-entry') {
+    const params = {}
+    if ('backgroundImage' in payload) {
+      params.backgroundImage = payload.backgroundImage;
+    }
+    if ('backgroundColor' in payload) {
+      params.backgroundColor = payload.backgroundColor;
+    }
+    storeQuizPayload(params);
+  }
   if (payload.action === 'quiz-init') {
     //クイズデータの保存
     if (USE_DB) {
@@ -1183,6 +1193,7 @@ async function quizPacket(payload) {
 
 function storeQuizPayload(payload)
 {
+console.log(`storeQuizPayload`,payload);
   if (payload.name !== quiz_master) {
     robotData.quizPayload['others'] = m(robotData.quizPayload['others'], payload);
   }
@@ -1198,6 +1209,7 @@ function loadQuizPayload(payload)
     var val = robotData.quizPayload['others'] || {};
   }
   val.members = students.map( v => v.name );
+console.log(`loadQuizPayload`,val);
   return m(val, { initializeLoad: true, });
 }
 

@@ -96,6 +96,7 @@ function ButtonSocket(client, config, manager) {
           t.socket_id = socket.id;
           buttons[socket.id] = {
             socket,
+            name: client.name,
           }
           sendCommand();
         });
