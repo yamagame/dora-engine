@@ -3,7 +3,7 @@ const speech = require('@google-cloud/speech');
 const mic = require('mic');
 const config = require('./config');
 
-const PRELOAD_COUNT = 10;
+const PRELOAD_COUNT = 3;
 
 function Speech() {
   var t = new EventEmitter();
