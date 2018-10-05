@@ -18,7 +18,7 @@ const config = {
     app_id:  process.env.DOCOMO_APP_ID  || '',
   },
   voiceHat: (process.env.ROBOT_USB_VOICE_HAT || 'true') === 'true',
-  usbUSBMIC: process.env.ROBOT_USB_MIC_DEVICE || false,
+  usbUSBMIC: (process.env.ROBOT_USB_MIC_DEVICE || 'false') !== 'false',
   usbUSBMICDevice: process.env.ROBOT_USB_MIC_DEVICE || 'plughw:1,0',
   editorAccessControl: (process.env.ROBOT_EDITORL_ACCESS_CONTROL || 'true') === 'true',
   home: process.env.HOME,
