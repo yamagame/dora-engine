@@ -2091,19 +2091,26 @@ localSocket.on('connect', () => {
 if (config.startScript && config.startScript.auto) {
   setTimeout(() => {
     console.log('request scenario');
-    request({
-      uri: `http://localhost:${config.port}/command`,
-      method: 'POST',
-      json: {
-        type: 'scenario',
-        action: 'play',
-        name: config.startScript.username,
-        filename: config.startScript.filename,
-        localhostToken: localhostToken(),
-        range: {
-          start: 0,
+    const username = config.startScript.username;
+    const filename = config.startScript.filename;
+    createSignature(username, (signature) => {
+      postCommand(
+        {
+          body: {
+            type: 'scenario',
+            action: 'play',
+            filename,
+            range: {
+              start: 0,
+            },
+            name: username,
+          },
         },
-      }
+        {
+          send: () => {},
+        },
+        { user_id: username, signature }
+      );
     })
   }, 5000)
 }
