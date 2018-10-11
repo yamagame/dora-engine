@@ -2,7 +2,7 @@ const port = 3090;
 const gpioPort = 3091;
 const bcrypt = (() => {
   try { return require('bcrypt'); }
-  catch(e) { return equire('bcryptjs'); }
+  catch(e) { return require('bcryptjs'); }
 })();
 
 const config = {
