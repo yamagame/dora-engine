@@ -6,10 +6,37 @@ const config = require('./config');
 const PRELOAD_COUNT = 3;
 
 function Speech() {
+  let waveSkip = 80;
+
+  function uint8toint16(buffer) {
+    function abs(a) { return (a>0)?a:(-a); };
+    const a = [];
+    for (var i=0;i<buffer.length;i+=waveSkip*2) {
+      let maxSample = 0;
+      for (var j=i;j<i+waveSkip*2;j+=2) {
+        let sample = 0;
+        if(buffer[j+1] > 128) {
+            sample = (buffer[j+1] - 256) * 256;
+        } else {
+            sample = buffer[j+1] * 256;
+        }
+        sample += buffer[j];
+        if (abs(maxSample) < abs(sample)) {
+          maxSample = sample;
+        }
+      }
+      a.push({
+        y: maxSample,
+      });
+    }
+    return a;
+  }
+
   var t = new EventEmitter();
-  t.recording = true;
+  t.recording = false;
   t.writing = true;
   t.recordingTime = 0;
+  t.state = 'recoding-stop';
 
   const defaultRequestOpts = {
     config: {
@@ -34,6 +61,7 @@ function Speech() {
     'exitOnSilence': 6,
   });
   var micInputStream = micInstance.getAudioStream();
+  t.stream = micInputStream
 
   var recognizeStream = null;
   var recognizeStreams = null;
@@ -42,18 +70,43 @@ function Speech() {
   var writingStep = 0;
   var speechClients = [];
   var streamQue = [];
+  var streamDataReuest = false;
 
   speechClients[0] = new speech.SpeechClient();
 
   // マイクの音声認識の閾値を変更
   t.on('mic_threshold', function (threshold) {
-      micInputStream.changeSilentThreshold(threshold);
+    if (threshold !== 'keep') {
+      if (micInputStream.changeParameters) {
+        micInputStream.changeParameters({ threshold, });
+      } else
+      if (micInputStream.changeSilentThreshold) {
+        micInputStream.changeSilentThreshold(threshold);
+      }
+    }
   });
 
   // 音声解析開始
   t.on('startRecording', function (params) {
-    if ('threshold' in params) {
-      micInputStream.changeSilentThreshold(params.threshold);
+    if (micInputStream.changeParameters) {
+      if ('threshold' in params) {
+        if (params.threshold !== 'keep') {
+          delete params.threshold;
+        }
+      }
+      if ('level' in params) {
+        if (params.level !== 'keep') {
+          delete params.level;
+        }
+      }
+      micInputStream.changeParameters(params);
+    } else
+    if (micInputStream.changeSilentThreshold) {
+      if ('threshold' in params) {
+        if (params.threshold !== 'keep') {
+          micInputStream.changeSilentThreshold(params.threshold);
+        }
+      }
     }
     requestOpts = [];
     if ('languageCode' in params) {
@@ -81,7 +134,25 @@ function Speech() {
     console.log('stopRecording');
   });
 
+  //解析用ストリームデータを送信開始
+  t.on('startStreamData', function() {
+    streamDataReuest = true;
+  });
+
+  //解析用ストリームデータを送信停止
+  t.on('stopStreamData', function() {
+    streamDataReuest = false;
+  });
+
   micInputStream.on('data', function (data) {
+    if (streamDataReuest) {
+      t.emit('wave-data', {
+        state: t.state,
+        wave: uint8toint16(data),
+        threshold: micInputStream.silent_threshold,
+        level: micInputStream.mic_level,
+      });
+    }
     if (micInputStream.incrConsecSilenceCount() > micInputStream.getNumSilenceFramesExitThresh()) {
       streamQue.push(data);
       streamQue = streamQue.slice(-PRELOAD_COUNT);
@@ -219,11 +290,21 @@ function Speech() {
   });
 
   micInputStream.on('silence', function () {
-    console.log("Got SIGNAL silence");
+    //console.log("Got SIGNAL silence");
   });
 
   micInputStream.on('processExitComplete', function () {
     console.log("Got SIGNAL processExitComplete");
+  });
+
+  micInputStream.on('speech-start', function () {
+    console.log("Got SIGNAL speech-start");
+    t.state = 'recoding-start';
+  });
+
+  micInputStream.on('speech-stop', function () {
+    console.log("Got SIGNAL speech-stop");
+    t.state = 'recoding-stop';
   });
 
   micInstance.start();
@@ -235,9 +316,51 @@ const sp = Speech();
 module.exports = sp;
 
 if (require.main === module) {
+
+  const express = require('express')
+  const socketIO = require('socket.io');
+  const PORT = 4300;
+
+  const app = express()
+
+  app.post('/access-token', function(req, res) {
+    res.json({ user_id: 'no-name', signature: 'dummy', });
+  });
+
+  const server = require('http').Server(app);
+  server.listen(PORT, () => console.log(`server listening on port ${PORT}!`))
+
+  const io = new socketIO(server);
+  const ioa = io.of('audio');
+
+  const clients = {};
+
+  ioa.on('connection', (socket) => {
+    console.log('connected')
+    socket.on('start-stream-data', (payload) => {
+      console.log('startStreamData', JSON.stringify(payload));
+      if (Object.keys(clients).length == 0) {
+        sp.emit('startStreamData');
+      }
+      clients[socket.id] = socket;
+    })
+    socket.on('speech-config', (params) => {
+      console.log(params);
+      sp.stream.changeParameters(params);
+    })
+    socket.on('disconnect', () => {
+      delete clients[socket.id];
+      if (clients.length == 0) {
+        sp.emit('stopStreamData');
+      }
+    })
+  })
+
+  sp.recording = true;
   sp.emit('startRecording', { languageCode: [ 'ja-JP', ] });
   // sp.emit('startRecording', { languageCode: [ 'ja-JP', 'en-US' ] });
-  sp.on('data', function (data) {
-    //console.log(data);
+  sp.on('wave-data', function (data) {
+    ioa.emit('wave-data', data);
   });
+
 }

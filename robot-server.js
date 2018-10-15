@@ -330,11 +330,8 @@ const m = function() {
 
 try {
 var robotJson = fs.readFileSync(robotDataPath);
+var robotData = JSON.parse(robotJson);
 } catch(err) {
-}
-if (robotJson) {
-  var robotData = JSON.parse(robotJson);
-} else {
   var robotData = {};
 }
 if (typeof robotData.quizAnswers === 'undefined') robotData.quizAnswers = {};
@@ -342,6 +339,7 @@ if (typeof robotData.quizEntry === 'undefined') robotData.quizEntry = {};
 if (typeof robotData.quizPayload === 'undefined') robotData.quizPayload = {};
 if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
 if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parseInt(robotData.recordingTime);
+if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
 
 let { students } = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
 
@@ -458,6 +456,17 @@ talk.on('talk', function() {
 
 speech.on('data', function(data) {
   console.log(data);
+  Object.keys(soundAnalyzer).forEach( key => {
+    const socket = soundAnalyzer[key];
+    socket.emit('speech-data', data);
+  });
+});
+
+speech.on('wave-data', function(data) {
+  Object.keys(soundAnalyzer).forEach( key => {
+    const socket = soundAnalyzer[key];
+    socket.emit('wave-data', data);
+  });
 });
 
 const app = express()
@@ -637,9 +646,13 @@ app.post('/login-guest-client', function(req, res, next) {
 });
 
 app.post('/access-token', isLogined(), function(req, res) {
-  createSignature(req.user.id, (signature) => {
-    res.json({ user_id: req.user.id, signature });
-  })
+  if (req.user) {
+    createSignature(req.user.id, (signature) => {
+      res.json({ user_id: req.user.id, signature });
+    })
+  } else {
+    res.json({ user_id: 'none-user', signature: 'dummy', });
+  }
 });
 
 app.get('/logout/:view',function(req,res) {
@@ -732,6 +745,7 @@ function speech_to_text(payload, callback) {
   //led_mode = 'auto';
 
   const threshold = payload.threshold;
+  const level = payload.level;
   const languageCode = payload.languageCode;
 
   const stopRecording = () => {
@@ -746,6 +760,7 @@ function speech_to_text(payload, callback) {
     speech.emit('startRecording', {
       threshold,
       languageCode,
+      level,
     });
   }
 
@@ -1392,7 +1407,18 @@ const postCommand = async (req, res, credential) => {
               });
             }).then(()=> {
               dora.credential = credential;
-              dora.play({ username, dora: { host: 'localhost', port: config.port, } }, {
+console.log(robotData.voice);
+              dora.play({
+                username,
+                voice: {
+                  sensitivity: robotData.voice.threshold,
+                  level: robotData.voice.level,
+                },
+                dora: {
+                  host: 'localhost',
+                  port: config.port,
+                },
+              }, {
                 socket: localSocket,
                 range,
               }, (err, msg) => {
@@ -1673,15 +1699,16 @@ app.post('/camera', hasPermission('control.write'), (req, res) => {
 
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
-
+const ioa = io.of('audio');
 const iop = io.of('player');
 var playerSocket = null;
 
 const quiz_masters = {};
+const soundAnalyzer = {};
 const imageServers = {};
 
 iop.on('connection', function (socket) {
-  console.log('connected iop', socket.conn.remoteAddress);
+  console.log('connected io player', socket.conn.remoteAddress);
   playerSocket = socket;
   const localhostCheck = (payload) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
@@ -1690,7 +1717,7 @@ iop.on('connection', function (socket) {
   }
   socket.on('disconnect', function () {
     playerSocket = null;
-    console.log('disconnect iop');
+    console.log('disconnect io player');
     delete imageServers[socket.id];
     io.emit('imageServers', imageServers);
   });
@@ -1707,6 +1734,54 @@ iop.on('connection', function (socket) {
       }
     })
   });
+});
+
+ioa.on('connection', function (socket) {
+  console.log('connected io audio', socket.conn.remoteAddress);
+  const localhostCheck = (payload) => {
+    if (localhostIPs.indexOf(socket.handshake.address) === -1) {
+      payload.localhostToken = localhostToken();
+    }
+  }
+  socket.on('disconnect', function () {
+    console.log('disconnect io audio');
+    delete soundAnalyzer[socket.id];
+    if (Object.keys(soundAnalyzer).length == 0) {
+      //停止
+      speech.emit('stopStreamData');
+    }
+  });
+  socket.on('speech-config', (payload) => {
+    localhostCheck(payload);
+    checkPermission(payload, '', (verified) => {
+      if (verified) {
+        const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
+        if (ip != null && payload.role === 'waveAnalyzer') {
+          ['level', 'threshold'].forEach( key => {
+            if (typeof payload[key] !== 'undefined') {
+              robotData.voice[key] = payload[key];
+            }
+          })
+          writeRobotData()
+          if (speech.stream) speech.stream.changeParameters(payload);
+        }
+      }
+    })
+  })
+  socket.on('start-stream-data', (payload) => {
+    localhostCheck(payload);
+    checkPermission(payload, '', (verified) => {
+      if (verified) {
+        const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
+        if (ip != null && payload.role === 'waveAnalyzer') {
+          if (Object.keys(soundAnalyzer).length == 0) {
+            speech.emit('startStreamData');
+          }
+          soundAnalyzer[socket.id] = socket;
+        }
+      }
+    })
+  })
 });
 
 io.on('connection', function (socket) {

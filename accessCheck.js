@@ -222,6 +222,10 @@ function checkPermission(payload, permission, callback) {
     }
   }
   try {
+    if (typeof user_id === 'undefined' || typeof signature === 'undefined') {
+      callback(false);
+      return;
+    }
     verifySignature(user_id, signature, (verified) => {
       if (verified) {
         return authSuccess();
