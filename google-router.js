@@ -38,7 +38,11 @@ const cacheDB = (() => {
       })
       return json;
     } catch(err) {
-      console.error(err);
+      if (err.code === 'ENOENT') {
+        console.log(`no such file or directory, open '${cacheDBPath}'`);
+      } else {
+        console.error(err);
+      }
     }
   }
   return {};
