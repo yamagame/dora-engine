@@ -119,10 +119,16 @@ dora.loadModule('button', function(DORA, config) {
       throw new Error('ホスト名がありません。');
     }
     node.on("input", async function(msg) {
-      const host = params[0];
+      let host = params[0];
+      let port = null;
+      if (host.indexOf(':') > 0) {
+        const h = host.split(':');
+        host = h[0];
+        port = h[1];
+      }
       const name = (params.length > 1) ? params[1] : null;
       const team = (params.length > 2) ? params[2] : null;
-      buttonClient.emit('open-slave', { host, name, team, });
+      buttonClient.emit('open-slave', { host, name, team, port, });
       node.send(msg);
     });
   }
@@ -766,6 +772,7 @@ function speech_to_text(payload, callback) {
 
   const removeListener = () => {
     buttonClient.removeListener('button', listenerButton);
+    buttonClient.removeListener('speech', listenerSpeech);
     speech.removeListener('data', dataListener);
     speech.removeListener('speech', speechListener);
     speech.removeListener('button', buttonListener);
@@ -850,6 +857,22 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
+  const listenerSpeech = (payload) => {
+    if (!done) {
+      const data = {};
+      data.speechRequest = true;
+      data.payload = payload.speech;
+      stopRecording();
+      removeListener();
+      if (callback) callback(null, data);
+      if (led_mode == 'auto') {
+        servoAction('led-off');
+        last_led_action = 'led-off';
+      }
+    }
+    done = true;
+  }
+
   const cameraListener = (data) => {
     if (!done) {
       stopRecording();
@@ -874,6 +897,7 @@ function speech_to_text(payload, callback) {
   }
 
   buttonClient.on('button', listenerButton);
+  buttonClient.on('speech', listenerSpeech);
   speech.on('data', dataListener);
   speech.on('speech', speechListener);
   speech.on('button', buttonListener);
@@ -1203,6 +1227,19 @@ async function quizPacket(payload) {
   if (payload.members) {
     payload.members = students.map( v => v.name );
   }
+  if (payload.area) {
+    const readFile = (path) => {
+      return new Promise( resolve => {
+        fs.readFile(path, (err, data) => {
+          resolve(data);
+        })
+      })
+    }
+    const photo = payload.photo.replace('images/', '/');
+    const data = JSON.parse(await readFile(path.join(PICT, photo)));
+    payload.photo = path.join(path.dirname(payload.photo), data.image);
+    payload.area = data.area;
+  }
   return payload;
 }
 
@@ -1327,6 +1364,9 @@ const postCommand = async (req, res, credential) => {
       res.send(payload.quizStartTime);
       return;
     }
+  }
+  if (req.body.type === 'speech') {
+    speech.emit('speech', req.body.speech);
   }
   if (req.body.type === 'led') {
     changeLed(req.body);

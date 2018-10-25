@@ -78,7 +78,7 @@ function ButtonSocket(client, config, manager) {
 
   t.host = client.host;
   t.name = ('name' in client) ? client.name : client.host;
-  t.port = config.port;
+  t.port = ('port' in client) ? client.port : config.port;
   t.team = ('team' in client) ? client.team : client.host;
   t.state = 'open';
 
@@ -86,7 +86,7 @@ function ButtonSocket(client, config, manager) {
     ipResolver(client, (res) => {
       if (client.state !== 'open') return;
       console.log(`found button ${client.host} ${res.numeric_host}`);
-      const host = `http://${res.numeric_host}:${client.port}`;
+      const host = `http://${res.numeric_host}:${t.port}`;
       const socket = io(host);
       t.socket_id = socket.id;
       socket.on('connect', function() {
@@ -104,8 +104,8 @@ function ButtonSocket(client, config, manager) {
       socket.on('button', function(data){
         manager.emit('button', { ...client, });
       });
-      socket.on('speech', function(data){
-        manager.emit('speech', { ...client, data });
+      socket.on('speech', function(payload){
+        manager.emit('speech', { ...client, speech: payload.speech });
       });
       socket.on('disconnect', function(){
         console.log('disconnect', t.socket_id);
