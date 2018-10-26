@@ -38,7 +38,7 @@ function Talk() {
     const speakingRate = params.speakingRate;
     const pitch = params.pitch;
     const name = params.name;
-    const conts = (languageCode === 'default' || languageCode === null) ? words.split(/\n|,|、|。|@|＠|？|\s|\?/g) : [words];
+    const conts = (['default', '', null].indexOf(languageCode)>=0) ? words.split(/\n|,|、|。|@|＠|？|\s|\?/g) : [words];
     const playone = () => {
       if (conts.length <= 0 || this.playing === false) {
         this._playone = null;
