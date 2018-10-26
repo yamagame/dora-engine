@@ -1091,7 +1091,7 @@ function execSoundCommand(payload) {
     const p = path.normalize(path.join(base, sound));
     if (p.indexOf(base) == 0) {
       const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
-      const opt = (process.platform === 'darwin') ? [p] : ['-Dplug:softvol', p];
+      const opt = (process.platform === 'darwin') ? [p] : ((config.voiceHat)?['-Dplug:softvol', p]:[p]);
       console.log(`/usr/bin/${cmd} ${p}`);
       _playone = spawn(`/usr/bin/${cmd}`, opt);
       _playone.on('close', function(code) {
