@@ -1,5 +1,6 @@
 const EventEmitter = require('events');
 const express = require('express')
+const router = require('express').Router()
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 const request = require('request-promise');
@@ -20,7 +21,8 @@ const URL = require('url');
 const googleRouter = require('./google-router');
 const session = require('express-session');
 const MemoryStore = require('memorystore')(session);
-const passport = require("passport");
+const passport = require('passport');
+const DoraChat = require('./doraChat');
 const LocalStrategy = require('passport-local').Strategy;
 const {
   localhostIPs,
@@ -713,6 +715,36 @@ function docomo_chat(payload, callback) {
 	})
 }
 
+const doraChat = DoraChat((function() {
+  const r = {
+    post: function(key, fn) {
+      r[key] = fn;
+    }
+  }
+  return r;
+})(), {
+  credentialPath: config.googleSheet.credentialPath,
+  tokenPath: config.googleSheet.tokenPath,
+  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+  cacheDir: config.doraChat.dataDir,
+  wikipedia: config.doraChat.wikipedia,
+  weather: config.doraChat.weather,
+})
+
+function dora_chat(payload, callback) {
+  const req = {
+    body: {
+      ...payload,
+    }
+  }
+  const res = {
+    send: function(res) {
+      callback(null, res);
+    }
+  }
+  doraChat[`/${payload.action}`](req, res);
+}
+
 var playing = false;
 
 function text_to_speech(payload, callback) {
@@ -994,6 +1026,15 @@ app.post('/speech', hasPermission('control.write'), (req, res) => {
   speech.emit('speech', req.body.toString('utf-8'));
   res.send('OK');
 });
+
+app.use('/dora-chat', hasPermission('control.write'), DoraChat(router, {
+  credentialPath: config.googleSheet.credentialPath,
+  tokenPath: config.googleSheet.tokenPath,
+  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+  cacheDir: config.doraChat.dataDir,
+  wikipedia: config.doraChat.wikipedia,
+  weather: config.doraChat.weather,
+}));
 
 /*
   マイクによる音声認識の閾値を変更する
@@ -1859,6 +1900,29 @@ io.on('connection', function (socket) {
             direction: payload.direction || null,
             voice: payload.voice || null,
             silence: payload.silence || null,
+          }, (err, data) => {
+            if (callback) callback(data);
+          });
+          return;
+        } catch(err) {
+          console.error(err);
+        }
+      }
+      if (callback) callback({});
+    })
+  });
+  socket.on('dora-chat', function (payload, callback) {
+    localhostCheck(payload);
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        try {
+          dora_chat({
+            message: payload.message,
+            action: payload.action || '',
+            sheetId: payload.sheetId || null,
+            sheetName: payload.sheetName || null,
+            download: payload.download || null,
+            useMecab: payload.useMecab || null,
           }, (err, data) => {
             if (callback) callback(data);
           });

@@ -48,9 +48,17 @@ if (raspiMode) {
   raspi.init(() => {
     const servo = require('./servo')();
     const led = require('./led-controller')();
-    servo.pwm2.write(led.now);
-    led.on('updated', () => {
+    if (config.voiceHat) {
       servo.pwm2.write(led.now);
+    } else {
+      servo.pwm2.write(led.max-led.now);
+    }
+    led.on('updated', () => {
+      if (config.voiceHat) {
+        servo.pwm2.write(led.now);
+      } else {
+        servo.pwm2.write(led.max-led.now);
+      }
     })
     setInterval(() => {
       led.idle(led_mode, led_bright);

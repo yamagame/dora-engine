@@ -1,9 +1,12 @@
+const path = require('path');
 const port = 3090;
 const gpioPort = 3091;
 const bcrypt = (() => {
   try { return require('bcrypt'); }
   catch(e) { return require('bcryptjs'); }
 })();
+const workFolder = 'DoraEngine';  //for macOS(development)
+const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 
 const config = {
   port: port,
@@ -84,6 +87,12 @@ const config = {
     credentialPath: process.env.ROBOT_GOOGLE_SHEET_CREDENTIAL_PATH || null,
     //トークンファイルへのパス
     tokenPath: process.env.ROBOT_GOOGLE_SHEET_TOKEN_PATH || null,
+  },
+  //対話関連
+  doraChat: {
+    dataDir: process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(HOME, 'ChatData'),
+    weather: (process.env.ROBOT_DORA_CHAT_WEATHER || 'false') === 'true',
+    wikipedia: (process.env.ROBOT_DORA_CHAT_WIKIPEDIA || 'true') === 'true',
   },
 }
 
