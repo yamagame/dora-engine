@@ -40,7 +40,7 @@ function changeLed(payload) {
   //console.log(`led_mode ${led_mode} led_bright ${led_bright} `);
 }
 
-if (config.voice_hat && raspiMode) {
+if (config.voiceHat && raspiMode) {
   pigpio.configureClock(5, 0);
 }
 
@@ -72,6 +72,7 @@ if (raspiMode) {
     })
     
     button.on('interrupt', function (level) {
+      if (!config.voiceHat) level = 1 - level;
       if (buttonLevel != level) {
         buttonLevel = level;
         io.emit('button', { level: level, state: (level==0) });
@@ -79,7 +80,8 @@ if (raspiMode) {
     });
     
     setInterval(() => {
-      const level = button.digitalRead();
+      let level = button.digitalRead();
+      if (!config.voiceHat) level = 1 - level;
       if (buttonLevel != level) {
         buttonLevel = level;
         io.emit('button', { level: level, state: (level==0) });

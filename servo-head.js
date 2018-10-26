@@ -53,7 +53,11 @@ function startServo() {
   const led = require('./led-controller')();
   servo.pwm0.write(servo0.now);	//UP DOWN
   servo.pwm1.write(servo1.now);	//LEFT RIGHT
-  servo.pwm2.write(led.now);
+  if (config.voiceHat) {
+    servo.pwm2.write(led.now);
+  } else {
+    servo.pwm2.write(led.max-led.now);
+  }
   servo0.on('updated', () => {
     servo.pwm0.write(roundParam(servo0.now));
   })
@@ -61,7 +65,11 @@ function startServo() {
     servo.pwm1.write(roundParam(servo1.now));
   })
   led.on('updated', () => {
-    servo.pwm2.write(led.now);
+    if (config.voiceHat) {
+      servo.pwm2.write(led.now);
+    } else {
+      servo.pwm2.write(led.max-led.now);
+    }
   })
   setInterval(() => {
     servoAction.idle(mode);
@@ -247,6 +255,7 @@ raspi.init(() => {
   })
   
   button.on('interrupt', function(level) {
+    if (!config.voiceHat) level = 1 - level;
     if (buttonLevel != level) {
       buttonLevel = level;
       io.emit('button', { level: level, state: (level==0) });
@@ -254,7 +263,8 @@ raspi.init(() => {
   });
 
   setInterval(() => {
-    const level = button.digitalRead();
+    let level = button.digitalRead();
+    if (!config.voiceHat) level = 1 - level;
     if (buttonLevel != level) {
       buttonLevel = level;
       io.emit('button', { level: level, state: (level==0) });
