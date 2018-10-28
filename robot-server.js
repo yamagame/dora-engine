@@ -1152,6 +1152,7 @@ async function quizPacket(payload) {
                 quizOrder: i,
                 choices: page.choices,
                 answers: page.answers,
+                category: page.category,
                 startTime,
               }
               if (payload.quizName) {
@@ -1184,6 +1185,7 @@ async function quizPacket(payload) {
               robotData.quizList[payload.quizId].quiz[page.question] = {
                 choices: page.choices,
                 answers: page.answers,
+                category: page.category,
               }
             }
           })
