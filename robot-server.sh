@@ -1,5 +1,6 @@
 #!/bin/bash
 cd `dirname $0`
+#./talk-f1.sh 起動中です
 sudo /etc/init.d/ntp stop
 sudo ntpd -q -g
 sudo /etc/init.d/ntp start &

@@ -24,7 +24,7 @@ function Talk() {
   t.name = null;
   t._playone = null;
 
-  t.say = function (words, params, callback) {
+  t.say = function (words, params, callback, startCallback) {
     if (typeof words === 'undefined') {
       callback();
       return;
@@ -69,11 +69,13 @@ function Talk() {
             playone();
           } else if (this.macvoice) {
             if (voice == 'marisa') {
+              startCallback();
               this._playone = spawn(path.join(__dirname, 'talk-mac-Otoya.sh'), [`-r`, speed * macvoice_speedrate, `　${text}`]);
               this._playone.on('close', function (code) {
                 playone();
               });
             } else {
+              startCallback();
               this._playone = spawn(path.join(__dirname, 'talk-mac-Kyoko.sh'), [`-r`, speed * macvoice_speedrate, `　${text}`]);
               this._playone.on('close', function (code) {
                 playone();
@@ -81,11 +83,13 @@ function Talk() {
             }
           } else {
             if (voice == 'marisa') {
+              startCallback();
               this._playone = spawn(path.join(__dirname, 'talk-f2.sh'), [`-s`, speed, `-g`, volume, `　${text}`]);
               this._playone.on('close', function (code) {
                 playone();
               });
             } else {
+              startCallback();
               this._playone = spawn(path.join(__dirname, 'talk-f1.sh'), [`-s`, speed, `-g`, volume, `　${text}`]);
               this._playone.on('close', function (code) {
                 playone();
@@ -104,15 +108,29 @@ function Talk() {
             if (speakingRate !== null) params.speakingRate = speakingRate;
             if (pitch !== null) params.pitch = pitch;
             if (name) params.name = name;
-            this._playone = `http://localhost:${config.port}/google/text-to-speech`;
-            request({
-              uri: this._playone,
-              method: 'POST',
-              json: params,
-            },
-              function (error, response, body) {
-                playone();
-              });
+            this._playone = `http://localhost:${config.port}/google`;
+            //音声データのダウンロードのみ
+            request(
+              {
+                uri: `${this._playone}/init-text-to-speech`,
+                method: 'POST',
+                json: params,
+              },
+              (error, response, body) => {
+                startCallback();
+                //音声の再生
+                request(
+                  {
+                    uri: `${this._playone}/text-to-speech`,
+                    method: 'POST',
+                    json: params,
+                  },
+                  (error, response, body) => {
+                    playone();
+                  }
+                );
+              }
+            );
           } else {
             playone();
           }
@@ -120,10 +138,16 @@ function Talk() {
     playone();
   }
 
-  t.playAsync = function (speech, params) {
+  t.playAsync = function (speech, params, callback) {
     return new Promise((resolve) => {
+      let doneStart = false;
       this.say(speech, params, () => {
         resolve(null, 'OK');
+      }, () => {
+        if (!doneStart) {
+          if (callback) callback('talk');
+        }
+        doneStart = true;
       });
     });
   }
@@ -145,7 +169,7 @@ function Talk() {
     if (!this.playing) {
       this.playing = true;
       const _play = (sentence) => {
-        this.playAsync(sentence, params).then(() => {
+        this.playAsync(sentence, params, callback).then(() => {
           if (this.playQue.length > 0 && this.playing !== false) {
             const sentence = this.playQue.shift();
             _play(sentence);
@@ -153,7 +177,7 @@ function Talk() {
             this.playQue = [];
             this.playing = false;
             this.emit('idle');
-            if (callback) callback();
+            if (callback) callback('idle');
           }
         });
       }
@@ -168,7 +192,7 @@ function Talk() {
     if (this._playone) {
       if (typeof this._playone === 'string') {
         request({
-          uri: this._playone,
+          uri: `${this._playone}/text-to-speech`,
           method: 'POST',
           json: {
             action: 'stop',

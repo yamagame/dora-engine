@@ -92,7 +92,7 @@ let text_to_speech = {
   playone: null,
 }
 
-router.post('/text-to-speech', (req, res) => {
+function ReqTextToSpeech(req, res, mode='play') {
   let text = 'こんにちは';
 
   let voice = {};
@@ -166,6 +166,7 @@ router.post('/text-to-speech', (req, res) => {
   }
 
   const playone = (sndfilepath, callback) => {
+    if (mode === 'silence') return callback(null, 0);
     const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
     const opt = (process.platform === 'darwin') ? [sndfilepath] : ['-Dplug:softvol', sndfilepath];
     console.log(`/usr/bin/${cmd} ${sndfilepath}`);
@@ -283,7 +284,14 @@ router.post('/text-to-speech', (req, res) => {
       })
     }
   });
-  
+}
+
+router.post('/init-text-to-speech', (req, res) => {
+  ReqTextToSpeech(req, res, 'silence');
+})
+
+router.post('/text-to-speech', (req, res) => {
+  ReqTextToSpeech(req, res);
 })
 
 let google_sheet = {

@@ -463,7 +463,6 @@ talk.on('talk', function() {
 });
 
 speech.on('data', function(data) {
-  console.log(data);
   Object.keys(soundAnalyzer).forEach( key => {
     const socket = soundAnalyzer[key];
     socket.emit('speech-data', data);
@@ -694,17 +693,17 @@ function docomo_chat(payload, callback) {
           last_led_action = 'led-off';
         }
         servoAction('centering', { direction: payload.direction, }, () => {
-          servoAction('talk', {}, () => {
-            talk.voice = payload.voice;
-            talk.play(utt, {
-              ...payload,
-            }, () => {
-              // if (led_mode == 'auto') {
-              //   servoAction('led-on');
-              // }
+          talk.voice = payload.voice;
+          talk.play(utt, {
+            ...payload,
+          }, (mode) => {
+            if (mode === 'idle') {
               servoAction('idle');
               if (callback) callback(err, utt);
-            });
+            }
+            if (mode === 'talk') {
+              servoAction('talk');
+            }
           });
         })
       }
@@ -758,17 +757,17 @@ function text_to_speech(payload, callback) {
         last_led_action = 'led-off';
       }
       servoAction('centering', { direction: payload.direction, }, () => {
-        servoAction('talk', {}, () => {
-          talk.play(payload.message, {
-            ...payload,
-          }, () => {
-            // if (led_mode == 'auto') {
-            //   servoAction('led-on');
-            // }
+        talk.play(payload.message, {
+          ...payload,
+        }, (mode) => {
+          if (mode === 'idle') {
             servoAction('idle');
             playing = false;
             if (callback) callback();
-          });
+          }
+          if (mode === 'talk') {
+            servoAction('talk');
+          }
         });
       });
     }
@@ -1959,6 +1958,19 @@ io.on('connection', function (socket) {
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
         talk.flush();
+        if (callback) callback('OK');
+        return;
+      }
+      if (callback) callback('NG');
+    })
+  });
+  socket.on('stop-speech',  function (payload, callback) {
+    localhostCheck(payload);
+    checkPermission(payload, 'control.write', (verified) => {
+      if (verified) {
+        talk.stop();
+        buttonClient.emit('stop-speech-to-text');
+        speech.emit('data', 'stoped');
         if (callback) callback('OK');
         return;
       }
