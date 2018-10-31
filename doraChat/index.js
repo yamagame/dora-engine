@@ -107,7 +107,7 @@ const searchAnswer = async (sheetData, message, type='ngram') => {
       }
       //typeがsameの場合は、同じ単語が含まれていなければヒットしない
       if (type === 'same') {
-        if (message.trim().indexOf(v.ask.org.trim()) < 0) {
+        if (message.trim().toLowerCase().indexOf(v.ask.org.trim().toLowerCase()) < 0) {
           ignore = true;
         }
       }
