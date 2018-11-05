@@ -125,6 +125,7 @@ function Speech() {
     } else {
       requestOpts.push({ ...defaultRequestOpts, });
     }
+    streamQue = [];
     console.log('startRecording');
     console.log(JSON.stringify(requestOpts,null,'  '));
   });

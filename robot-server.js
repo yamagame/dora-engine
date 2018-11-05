@@ -1968,10 +1968,11 @@ io.on('connection', function (socket) {
     localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
-        talk.stop();
         buttonClient.emit('stop-speech-to-text');
         speech.emit('data', 'stoped');
-        if (callback) callback('OK');
+        talk.stop(() => {
+          if (callback) callback('OK');
+        });
         return;
       }
       if (callback) callback('NG');

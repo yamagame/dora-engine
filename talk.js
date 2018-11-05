@@ -187,7 +187,7 @@ function Talk() {
     }
   }
 
-  t.stop = function () {
+  t.stop = function (callback) {
     this.playing = false;
     if (this._playone) {
       if (typeof this._playone === 'string') {
@@ -199,14 +199,18 @@ function Talk() {
             localhostToken: localhostToken(),
           },
         },
-          function (error, response, body) {
-          });
+        function (error, response, body) {
+          if (callback) callback();
+        });
+        this._playone = null;
+        return;
       } else {
         utils.kill(this._playone.pid, 'SIGTERM', function () {
         });
       }
     }
     this._playone = null;
+    if (callback) callback();
   }
 
   t.flush = function () {
