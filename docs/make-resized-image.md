@@ -35,7 +35,7 @@ Device     Boot Start      End  Sectors  Size Id Type
 
 ### デバイスをアンマウントする。
 
-マウントされいたらアンマウントします。
+マウントされていたらアンマウントします。
 
 ```bash
 $ sudo umount /dev/sda1
