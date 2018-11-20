@@ -1,5 +1,5 @@
 #!/bin/sh
-TMP=/tmp/jsay.wav
+TMP="$3"
 VOICE_NAME="$1"
 ALL_VOICE_PATH=`find ~/ -name *"$VOICE_NAME"*.htsvoice`
 # echo $ALL_VOICE_PATH
@@ -12,6 +12,4 @@ done
 echo "$2" | open_jtalk \
 -m $VOICE_PATH \
 -x "/var/lib/mecab/dic/open-jtalk/naist-jdic/" \
--ow $TMP && \
-aplay --quiet $TMP
-rm -f $TMP
+-ow $TMP

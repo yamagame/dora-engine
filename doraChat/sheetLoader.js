@@ -39,7 +39,22 @@ module.exports = function(config) {
             return resolved([]);
           }
         }
-        if (!(config.credentialPath && config.tokenPath) || (!sheetId)) return resolved([]);
+        if (!(config.credentialPath && config.tokenPath) || (!sheetId)) {
+          if (config.cacheDir) {
+            fs.readFile(cachePath(), (err, data) => {
+              if (!err) {
+                try {
+                  this.sheets[sheetName] = JSON.parse(data);
+                  return resolved(this.sheets[sheetName]);
+                } catch(err) {
+                }
+              }
+              return resolved([]);
+            })
+          } else {
+            return resolved([]);
+          }
+        }
         loadSheet({
           ...config,
           sheetId,

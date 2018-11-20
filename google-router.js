@@ -13,7 +13,7 @@ const client = (() => {
       console.log('google text-to-speech initialized.');
       return ret;
     } catch(err) {
-      console.error(err);
+      console.log(err);
     }
   }
   console.log('google text-to-speech is disabled.');
@@ -41,7 +41,7 @@ const cacheDB = (() => {
       if (err.code === 'ENOENT') {
         console.log(`no such file or directory, open '${cacheDBPath}'`);
       } else {
-        console.error(err);
+        console.log(err);
       }
     }
   }
@@ -155,12 +155,6 @@ function ReqTextToSpeech(req, res, mode='play') {
     audioConfig,
   };
 
-  if (!client) {
-    console.error('ERROR:', 'TextToSpeechClient is disabled.');
-    res.send('NG');
-    return;
-  }
-
   const cacheFilePath = (filename) => {
     return path.join(config.synthesizeSpeech.tempdir, filename);
   }
@@ -215,19 +209,37 @@ function ReqTextToSpeech(req, res, mode='play') {
 
   const requestSynthesizeSpeech = (request, sndfilepath, callback) => {
     limitCacheFile(cacheDB, config.synthesizeSpeech.maxCacheSize, () => {
-      client.synthesizeSpeech(request, (err, response) => {
-        if (err) {
-          callback(err);
+      if (request.voice.languageCode === 'open-jTalk') {
+        const cmd = (process.platform === 'darwin') ? 'talk-open-jTalk-mac.sh' : 'talk-open-jTalk-raspi.sh';
+        const p = path.join(__dirname, cmd)
+        const opt = [
+          'mei_normal',
+          request.input.text,
+          sndfilepath,
+        ]
+        const recording = spawn(p, opt);
+        recording.on('close', function(code) {
+          callback(null, sndfilepath);
+        });
+      } else {
+        if (!client) {
+          callback(new Error('TextToSpeechClient is disabled.'));
           return;
         }
-        fs.writeFile(sndfilepath, response.audioContent, 'binary', err => {
+        client.synthesizeSpeech(request, (err, response) => {
           if (err) {
             callback(err);
             return;
           }
-          callback(null, sndfilepath);
+          fs.writeFile(sndfilepath, response.audioContent, 'binary', err => {
+            if (err) {
+              callback(err);
+              return;
+            }
+            callback(null, sndfilepath);
+          });
         });
-      });
+      }
     });
   }
 
@@ -238,19 +250,19 @@ function ReqTextToSpeech(req, res, mode='play') {
       //ファイルがないので作成
       requestSynthesizeSpeech(request, sndfilepath, (err) => {
         if (err) {
-          console.error('ERROR:', err);
+          console.log('ERROR:', err);
           res.send('NG\n');
           return;
         }
         fs.stat(sndfilepath, (err, stats) => {
           if (err) {
-            console.error('ERROR:', err);
+            console.log('ERROR:', err);
             res.send('NG\n');
             return;
           }
           playone(sndfilepath, (err, code) => {
             if (err) {
-              console.error('ERROR:', err);
+              console.log('ERROR:', err);
               res.send('NG\n');
               return;
             }
@@ -272,7 +284,7 @@ function ReqTextToSpeech(req, res, mode='play') {
       //ファイルがあるので再生
       playone(sndfilepath, (err, code) => {
         if (err) {
-          console.error('ERROR:', err);
+          console.log('ERROR:', err);
           res.send('NG\n');
           return;
         }
@@ -328,12 +340,12 @@ const getNewToken = (oAuth2Client, callback) => {
     rl.close();
     oAuth2Client.getToken(code, (err, token) => {
       if (err) {
-        console.error('Error while trying to retrieve access token', err);
+        console.log('Error while trying to retrieve access token', err);
         return callback(err);
       }
       fs.writeFile(config.googleSheet.tokenPath, JSON.stringify(token), (err) => {
         if (err) {
-          console.error(err);
+          console.log(err);
           return callback(err);
         }
         callback(err, token);
@@ -525,7 +537,7 @@ if (require.main === module) {
   if (config.googleSheet.credentialPath !== null && config.googleSheet.tokenPath !== null) {
     loadCredential((err, credentials) => {
       if (err) {
-        console.error(err);
+        console.log(err);
         return;
       }
       const {client_secret, client_id, redirect_uris} = credentials.installed;
@@ -534,7 +546,7 @@ if (require.main === module) {
         if (err) {
           getNewToken(oAuth2Client, (err, token) => {
             if (err) {
-              console.error(err);
+              console.log(err);
               return;
             }
             console.log('token saved');

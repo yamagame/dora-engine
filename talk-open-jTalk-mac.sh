@@ -1,5 +1,5 @@
 #!/bin/sh
-TMP=/tmp/jsay.wav
+TMP="$3"
 USER_NAME=`whoami`
 VOICE_NAME="$1"
 ALL_VOICE_PATH=`find ~/ -name *"$VOICE_NAME"*.htsvoice`
@@ -13,6 +13,4 @@ done
 echo "$2" | open_jtalk \
 -m $VOICE_PATH \
 -x /Users/$USER_NAME/Downloads/open_jtalk_dic_utf_8-1.10 \
--ow $TMP && \
-afplay $TMP
-rm -f $TMP
+-ow $TMP
