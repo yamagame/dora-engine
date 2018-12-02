@@ -64,36 +64,54 @@ function Talk() {
             playone();
           });
       } else
-        if (languageCode === 'default' || languageCode === null) {
+        if (languageCode === 'default'
+         //|| languageCode === 'open-jTalk'
+         || languageCode === null) {
           if (this.dummy) {
             playone();
           } else if (this.macvoice) {
-            if (voice == 'marisa') {
+            if (languageCode === 'open-jTalk') {
               startCallback();
-              this._playone = spawn(path.join(__dirname, 'talk-mac-Otoya.sh'), [`-r`, speed * macvoice_speedrate, `　${text}`]);
+              this._playone = spawn(path.join(__dirname, 'talk-open-jTalk-mac.sh'), [voice === 'reimu' ? 'mei_normal' : voice , `${text}`]);
               this._playone.on('close', function (code) {
                 playone();
               });
             } else {
-              startCallback();
-              this._playone = spawn(path.join(__dirname, 'talk-mac-Kyoko.sh'), [`-r`, speed * macvoice_speedrate, `　${text}`]);
-              this._playone.on('close', function (code) {
-                playone();
-              });
+              if (voice == 'marisa') {
+                startCallback();
+                this._playone = spawn(path.join(__dirname, 'talk-mac-Otoya.sh'), [`-r`, speed * macvoice_speedrate, `　${text}`]);
+                this._playone.on('close', function (code) {
+                  playone();
+                });
+              } else {
+                startCallback();
+                this._playone = spawn(path.join(__dirname, 'talk-mac-Kyoko.sh'), [`-r`, speed * macvoice_speedrate, `　${text}`]);
+                this._playone.on('close', function (code) {
+                  playone();
+                });
+              }
             }
           } else {
-            if (voice == 'marisa') {
+            if (languageCode === 'open-jTalk') {
               startCallback();
-              this._playone = spawn(path.join(__dirname, 'talk-f2.sh'), [`-s`, speed, `-g`, volume, `　${text}`]);
+              this._playone = spawn(path.join(__dirname, 'talk-open-jTalk-raspi.sh'), [voice === 'reimu' ? 'mei_normal' : voice , `${text}`]);
               this._playone.on('close', function (code) {
                 playone();
               });
             } else {
-              startCallback();
-              this._playone = spawn(path.join(__dirname, 'talk-f1.sh'), [`-s`, speed, `-g`, volume, `　${text}`]);
-              this._playone.on('close', function (code) {
-                playone();
-              });
+              if (voice == 'marisa') {
+                startCallback();
+                this._playone = spawn(path.join(__dirname, 'talk-f2.sh'), [`-s`, speed, `-g`, volume, `　${text}`]);
+                this._playone.on('close', function (code) {
+                  playone();
+                });
+              } else {
+                startCallback();
+                this._playone = spawn(path.join(__dirname, 'talk-f1.sh'), [`-s`, speed, `-g`, volume, `　${text}`]);
+                this._playone.on('close', function (code) {
+                  playone();
+                });
+              }
             }
           }
         } else
