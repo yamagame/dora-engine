@@ -77,9 +77,9 @@ function ButtonSocket(client, config, manager) {
   var t = {};
 
   t.host = client.host;
-  t.name = ('name' in client) ? client.name : client.host;
-  t.port = ('port' in client) ? client.port : config.port;
-  t.team = ('team' in client) ? client.team : client.host;
+  t.name = ('name' in client && client.name !== null) ? client.name : client.host;
+  t.port = ('port' in client && client.port !== null) ? client.port : config.port;
+  t.team = ('team' in client && client.team !== null) ? client.team : client.host;
   t.state = 'open';
 
   const connect = (client) => {
