@@ -430,7 +430,7 @@ const gpioSocket = (function() {
 })();
 
 function servoAction(action, payload, callback) {
-  if (process.env['SPEECH'] === 'off') {
+  if (process.env['MACINTOSH'] === 'on') {
     if (callback) callback();
     return;
   }
