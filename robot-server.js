@@ -1277,10 +1277,21 @@ async function quizPacket(payload) {
         })
       })
     }
-    const photo = payload.photo.replace('images/', '/');
-    const data = JSON.parse(await readFile(path.join(PICT, photo)));
-    payload.photo = path.join(path.dirname(payload.photo), data.image);
-    payload.area = data.area;
+    const photo = payload.photo.replace('images/', '');
+    const json = await readFile(path.join(PICT, photo));
+    try {
+      const data = JSON.parse(json);
+      payload.photo = path.join(path.dirname(payload.photo), data.image);
+      if (path.extname(payload.photo) === '.json') {
+        payload.photo = payload.photo.replace(/.json$/, '');
+      }
+      payload.area = data.area;
+    } catch(err) {
+      if (path.extname(payload.photo) === '.json') {
+        payload.photo = payload.photo.replace(/.json$/, '');
+      }
+      payload.area = [];
+    }
   }
   return payload;
 }
@@ -1432,6 +1443,34 @@ const postCommand = async (req, res, credential) => {
   }
   if (req.body.type === 'sound') {
     execSoundCommand(req.body);
+  }
+  if (req.body.type === 'save') {
+    const { action, } = req.body;
+    if (action === 'imageMap') {
+      const { filename, imageMap, } = req.body;
+      if (filename && imageMap) {
+        let savefilePath = path.join(PICT, filename);
+        if (path.resolve(savefilePath) === savefilePath) {
+          if (path.extname(savefilePath.toLowerCase()) !== '.json') {
+            savefilePath = `${savefilePath}.json`
+          }
+          const writeFile = (path, data) => {
+            return new Promise( resolve => {
+              console.log(`write imageMap ${path}`);
+              fs.writeFile(path, data, err => {
+                console.log(err);
+                resolve();
+              })
+            })
+          }
+          await writeFile(savefilePath, imageMap);
+        } else {
+          console.log(`invalid filename ${filename}`)
+        }
+      } else {
+        console.log(`invalid 'imageMap' save command `)
+      }
+    }
   }
   if (req.body.type === 'scenario') {
     const { action } = req.body;
