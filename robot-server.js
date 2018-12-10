@@ -25,7 +25,7 @@ const MemoryStore = require('memorystore')(session);
 const passport = require('passport');
 const DoraChat = require('./doraChat');
 const LocalStrategy = require('passport-local').Strategy;
-const gamepad = require('./gamepad');
+// const gamepad = require('./gamepad');
 const {
   localhostIPs,
   localIPCheck,
@@ -2347,9 +2347,9 @@ gpioSocket.on('button', (payload) => {
   }
 });
 
-gamepad.on('event', event => {
-  speech.emit('gamepad', event);
-})
+// gamepad.on('event', event => {
+//   speech.emit('gamepad', event);
+// })
 
 const ioClient = require('socket.io-client');
 const localSocket = ioClient(`http://localhost:${config.port}`);
