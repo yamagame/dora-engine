@@ -726,6 +726,12 @@ module.exports = function(RED) {
             delete res.button;
             node.send([null, msg]);
           } else
+          if (res.gamepad) {
+            msg.payload = 'gamepad';
+            msg.gamepad = res;
+            delete res.gamepad;
+            node.send([null, msg]);
+          } else
           if (res.speechRequest) {
             msg.speechRequest = true;
             msg.payload = res.payload;

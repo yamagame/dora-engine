@@ -12,6 +12,7 @@ const config = {
   port: port,
   gpioPort: gpioPort,
   serverPort: 3092,
+  usePowerOffButton: (process.env.ROBOT_USB_POWER_OFF_BUTTON || 'true') === 'true',
   udp: {
     host: 'localhost',
     port: port,

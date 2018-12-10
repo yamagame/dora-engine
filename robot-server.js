@@ -1,4 +1,5 @@
 const EventEmitter = require('events');
+const ip = require('ip');
 const express = require('express')
 const router = require('express').Router()
 const bodyParser = require('body-parser')
@@ -24,6 +25,7 @@ const MemoryStore = require('memorystore')(session);
 const passport = require('passport');
 const DoraChat = require('./doraChat');
 const LocalStrategy = require('passport-local').Strategy;
+const gamepad = require('./gamepad');
 const {
   localhostIPs,
   localIPCheck,
@@ -251,6 +253,12 @@ dora.loadModule('button', function(DORA, config) {
               msg.button = res;
               delete res.button;
               node.send([msg, null]);
+            } else
+            if (res.gamepad) {
+              msg.payload = 'gamepad';
+              msg.gamepad = res;
+              delete res.gamepad;
+              node.send([null, msg]);
             } else
             if (res.speechRequest) {
               msg.speechRequest = true;
@@ -808,6 +816,7 @@ function speech_to_text(payload, callback) {
     speech.removeListener('speech', speechListener);
     speech.removeListener('button', buttonListener);
     speech.removeListener('camera', cameraListener);
+    speech.removeListener('gamepad', gamepadListener);
   }
 
   if (payload.timeout != 0) {
@@ -829,11 +838,11 @@ function speech_to_text(payload, callback) {
     }
   }
 
-  const dataListener = (data) => {
+  const dataListener = (payload) => {
     if (!done) {
       stopRecording();
       removeListener();
-      if (callback) callback(null, data);
+      if (callback) callback(null, payload);
       if (led_mode == 'auto') {
         servoAction('led-off');
         last_led_action = 'led-off';
@@ -842,11 +851,11 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
-  const speechListener = (data) => {
+  const speechListener = (payload) => {
     if (!done) {
       var retval = {
         speechRequest: true,
-        payload: data,
+        payload,
       }
       stopRecording();
       removeListener();
@@ -859,8 +868,8 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
-  const buttonListener = (state) => {
-    if (state) {
+  const buttonListener = (payload) => {
+    if (payload) {
       if (!done) {
         stopRecording();
         removeListener();
@@ -874,8 +883,11 @@ function speech_to_text(payload, callback) {
     }
   }
 
-  const listenerButton = (data) => {
+  const listenerButton = (payload) => {
     if (!done) {
+      const data = {
+        ...payload,
+      }
       data.button = true;
       stopRecording();
       removeListener();
@@ -904,11 +916,28 @@ function speech_to_text(payload, callback) {
     done = true;
   }
 
-  const cameraListener = (data) => {
+  const cameraListener = (payload) => {
     if (!done) {
       stopRecording();
       removeListener();
       if (callback) callback(null, '[camera]');
+      if (led_mode == 'auto') {
+        servoAction('led-off');
+        last_led_action = 'led-off';
+      }
+    }
+    done = true;
+  }
+
+  const gamepadListener = (payload) => {
+    if (!done) {
+      const data = {
+        gamepad: true,
+        ...payload,
+      };
+      stopRecording();
+      removeListener();
+      if (callback) callback(null, data);
       if (led_mode == 'auto') {
         servoAction('led-off');
         last_led_action = 'led-off';
@@ -933,6 +962,7 @@ function speech_to_text(payload, callback) {
   speech.on('speech', speechListener);
   speech.on('button', buttonListener);
   speech.on('camera', cameraListener);
+  speech.on('gamepad', gamepadListener);
 }
 
 function quiz_button(payload, callback) {
@@ -1531,6 +1561,7 @@ const postCommand = async (req, res, credential) => {
 console.log(robotData.voice);
               dora.play({
                 username,
+                ip_address: ip.address(),
                 voice: {
                   sensitivity: robotData.voice.threshold,
                   level: robotData.voice.level,
@@ -2279,28 +2310,30 @@ gpioSocket.on('button', (payload) => {
     shutdownLEDTimer = null;
   }
   if (payload.state) {
-    if (shutdownTimer) clearTimeout(shutdownTimer);
-    shutdownTimer = setTimeout(() => {
-      gpioSocket.emit('led-command', { action: 'power' });
-      //さらに５秒間押し続け
-      if (shutdownLEDTimer) {
-        clearTimeout(shutdownLEDTimer);
-        shutdownLEDTimer = null;
-      }
-      shutdownLEDTimer = setTimeout(() => {
-        gpioSocket.emit('led-command', { action: 'on' });
-        //シャットダウン
-        doShutdown = true;
-        servoAction('stop');
-        setTimeout(() => {
-          const _playone = spawn('/usr/bin/sudo', ['shutdown', '-f', 'now']);
-          _playone.on('close', function(code) {
-            console.log('shutdown done');
-          });
-          doShutdown = false;
-        }, 5000)
+    if (config.usePowerOffButton) {
+      if (shutdownTimer) clearTimeout(shutdownTimer);
+      shutdownTimer = setTimeout(() => {
+        gpioSocket.emit('led-command', { action: 'power' });
+        //さらに５秒間押し続け
+        if (shutdownLEDTimer) {
+          clearTimeout(shutdownLEDTimer);
+          shutdownLEDTimer = null;
+        }
+        shutdownLEDTimer = setTimeout(() => {
+          gpioSocket.emit('led-command', { action: 'on' });
+          //シャットダウン
+          doShutdown = true;
+          servoAction('stop');
+          setTimeout(() => {
+            const _playone = spawn('/usr/bin/sudo', ['shutdown', '-f', 'now']);
+            _playone.on('close', function(code) {
+              console.log('shutdown done');
+            });
+            doShutdown = false;
+          }, 5000)
+        }, 5*1000);
       }, 5*1000);
-    }, 5*1000);
+    }
   } else {
     if (!doShutdown) {
       if (last_led_action) {
@@ -2313,6 +2346,10 @@ gpioSocket.on('button', (payload) => {
     speech.emit('button', payload.state);
   }
 });
+
+gamepad.on('event', event => {
+  speech.emit('gamepad', event);
+})
 
 const ioClient = require('socket.io-client');
 const localSocket = ioClient(`http://localhost:${config.port}`);
