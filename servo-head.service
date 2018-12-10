@@ -6,7 +6,7 @@ Description=Cardboard Robot Head Service
 ExecStart=/bin/bash -c './servo-head.sh'
 WorkingDirectory=/home/pi/dora-engine
 Restart=always
-User=pi
+User=root
 
 [Install]
 WantedBy=multi-user.target
