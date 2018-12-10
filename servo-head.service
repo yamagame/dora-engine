@@ -2,6 +2,7 @@
 Description=Cardboard Robot Head Service
 
 [Service]
+#EnvironmentFile=/etc/default/servo-head
 ExecStart=/bin/bash -c './servo-head.sh'
 WorkingDirectory=/home/pi/dora-engine
 Restart=always

@@ -7,6 +7,7 @@ const config = require('./config');
 const port = config.gpioPort;
 const fs = require('fs');
 const path = require('path');
+const gamepad = (config.useGamePad) ? require('./gamepad') : null;
 
 function loadSetting() {
   try {
@@ -245,6 +246,20 @@ raspi.init(() => {
         if (callback) callback();
       }
     });
+
+    socket.on('gamepad', (payload, callback) => {
+      if (config.useGamePad) {
+        const { action, vendorId, productId, } = payload;
+        if (action === 'add') {
+          gamepad.add(vendorId, productId);
+        }
+        if (action === 'remove') {
+          gamepad.remove(vendorId, productId);
+        }
+      }
+      if (callback) callback();
+    });
+
   });
 
   var Gpio = require('pigpio').Gpio;
@@ -270,4 +285,10 @@ raspi.init(() => {
       io.emit('button', { level: level, state: (level==0) });
     }
   }, 1000)
+
+  if (config.useGamePad) {
+    gamepad.on('event', event => {
+      io.emit('gamepad', event);
+    })
+  }
 });

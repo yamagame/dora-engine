@@ -25,7 +25,6 @@ const MemoryStore = require('memorystore')(session);
 const passport = require('passport');
 const DoraChat = require('./doraChat');
 const LocalStrategy = require('passport-local').Strategy;
-// const gamepad = require('./gamepad');
 const {
   localhostIPs,
   localIPCheck,
@@ -137,6 +136,24 @@ dora.loadModule('button', function(DORA, config) {
     });
   }
   DORA.registerType('connect', connect);
+
+  function detect(node, options) {
+    const params = options.split('/');
+    if (params.length < 2 || params === '') {
+      throw new Error('ベンダーID/プロダクトIDがありません。');
+    }
+    node.on("input", async function(msg) {
+      let vendorId = params[0];
+      let productId = params[1];
+      gpioSocket.emit('gamepad', {
+        action: 'add',
+        vendorId,
+        productId,
+      });
+      node.send(msg);
+    });
+  }
+  DORA.registerType('gamepad', detect);
 
   function close(node, options) {
     const params = options.split('/');
@@ -2347,9 +2364,9 @@ gpioSocket.on('button', (payload) => {
   }
 });
 
-// gamepad.on('event', event => {
-//   speech.emit('gamepad', event);
-// })
+gpioSocket.on('gamepad', (payload) => {
+  speech.emit('gamepad', payload);
+});
 
 const ioClient = require('socket.io-client');
 const localSocket = ioClient(`http://localhost:${config.port}`);
