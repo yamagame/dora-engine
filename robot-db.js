@@ -1,6 +1,7 @@
 const RobotDB = function(databasePath, options, callback) {
   const Sequelize = require('sequelize');
   const sequelize = new Sequelize(`sqlite:${databasePath}`, options);
+  const Op = Sequelize.Op;
 
   const updateQUE = [];
   let updating = false;
@@ -133,6 +134,52 @@ const RobotDB = function(databasePath, options, callback) {
     indexes: [
       {
         fields: ['username'],
+      },
+    ],
+  });
+
+  const Bar = sequelize.define('bar', {
+    uuid: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      unique: true,
+    },
+    x: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
+    y: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
+    width: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
+    height: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
+    rgba: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    type: {
+      type: Sequelize.STRING,
+    },
+    title: {
+      type: Sequelize.TEXT,
+    },
+    text: {
+      type: Sequelize.TEXT,
+    },
+    info: {
+      type: Sequelize.JSON,
+    },
+  }, {
+    indexes: [
+      {
+        fields: ['uuid'],
       },
     ],
   });
@@ -353,6 +400,51 @@ const RobotDB = function(databasePath, options, callback) {
     };
   }
 
+  async function loadBars() {
+    return await Bar.findAll()
+  }
+
+  async function createBar(bar, defaultBarData) {
+    const barItem = await Bar.create({
+      ...defaultBarData,
+      ...bar
+    });
+    return barItem;
+  }
+
+  async function updateBar(bar, defaultBarData) {
+    if (bar.uuid) {
+      const barItem = await Bar.findOrCreate({
+        where: {
+          uuid: bar.uuid,
+        },
+        defaults: defaultBarData,
+      });
+      Object.keys(defaultBarData).forEach( key => {
+        if (typeof bar[key] !== 'undefined') {
+          barItem[0][key] = bar[key];
+        }
+      })
+      await barItem[0].save();
+    }
+  }
+
+  async function deleteBar(bar, defaultBarData) {
+    if (bar.uuid) {
+      await Bar.destroy({
+        where: {
+          uuid: bar.uuid,
+        },
+      });
+    }
+  }
+
+  async function findBars(where) {
+    return await Bar.findAll({
+      where,
+    })
+  }
+
   t = {
     Sequelize,
     sequelize,
@@ -367,10 +459,16 @@ const RobotDB = function(databasePath, options, callback) {
     quizIdList,
     loadAttendance,
     update,
+    loadBars,
+    createBar,
+    updateBar,
+    deleteBar,
+    findBars,
+    Op,
   }
 
   const a = [
-    Quiz, QuizItem, Answer, Attendance, User,
+    Quiz, QuizItem, Answer, Attendance, User, Bar,
   ];
   const sync = function() {
     if (a.length <= 0) {

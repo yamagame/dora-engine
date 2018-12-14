@@ -25,6 +25,7 @@ const MemoryStore = require('memorystore')(session);
 const passport = require('passport');
 const DoraChat = require('./doraChat');
 const LocalStrategy = require('passport-local').Strategy;
+const uuidv4 = require('uuid/v4');
 const {
   localhostIPs,
   localIPCheck,
@@ -42,6 +43,21 @@ const bcrypt = (() => {
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
 const PART_LIST_FILE_PATH = path.join(HOME, 'quiz-student.txt');
+
+const defaultBarData = {
+  uuid: '',
+  x: 0,
+  y: 0,
+  width: 24,
+  height: 24,
+  rgba: '#00FF00FF',
+  type: 'roundrect',
+  title: null,
+  text: null,
+  info: {
+    readOnly: false,
+  },
+}
 
 const isLogined = function(view) {
   return function (req, res, next) {
@@ -373,6 +389,7 @@ if (typeof robotData.quizPayload === 'undefined') robotData.quizPayload = {};
 if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
 if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parseInt(robotData.recordingTime);
 if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
+if (typeof robotData.barData === 'undefined') robotData.barData = [];
 
 let { students } = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
 
@@ -1866,9 +1883,194 @@ app.post('/camera', hasPermission('control.write'), (req, res) => {
   res.send({ status: 'OK' });
 });
 
+function nomalizeBar(bar) {
+  const b = {}
+  const barAttrMembers = [
+    "x", "y", "title", "uuid", "text", "width", "height", "info", "rgba", "type",
+  ]
+  barAttrMembers.forEach( key => {
+    if (typeof bar[key] !== 'undefined') {
+      b[key] = bar[key];
+    }
+  })
+  if (b.text == null) b.text = '';
+  if (b.title == null) b.title = '';
+  return b;
+}
+
+app.post('/bar/all', hasPermission('control.write'), async (req, res) => {
+  if (USE_DB) {
+    res.json(await db.loadBars());
+  } else {
+    res.json(robotData.barData);
+  }
+});
+
+app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
+  const bars = [ ...req.body.barData ];
+  const { saveOnly } = req.body;
+  if (USE_DB) {
+    bars.forEach( bar => {
+      if (bar) {
+        bar = nomalizeBar(bar);
+        if (!bar.uuid) {
+          bar.uuid = uuidv4();
+          Object.keys(defaultBarData).forEach( key => {
+            if (typeof bar[key] === 'undefined') {
+              bar[key] = defaultBarData[key];
+            }
+          })
+        }
+      }
+    })
+    for (var i=0;i<bars.length;i++) {
+      const bar = bars[i];
+      await db.updateBar(bar, defaultBarData);
+    }
+    if (!saveOnly) {
+      iob.emit('update-schedule');
+    }
+  } else {
+    const b = {}
+    robotData.barData.forEach( bar => {
+      b[bar.uuid] = bar;
+    })
+    bars.forEach( bar => {
+      if (bar) {
+        bar = nomalizeBar(bar);
+        if (!bar.uuid) {
+          bar.uuid = uuidv4();
+          Object.keys(defaultBarData).forEach( key => {
+            if (typeof bar[key] === 'undefined') {
+              bar[key] = defaultBarData[key];
+            }
+          })
+        }
+        const t = b[bar.uuid];
+        if (t) {
+          //更新
+          if (bar.y === 'auto') {
+            delete bar.y;
+          }
+          Object.keys(bar).forEach( key => {
+            t[key] = bar[key];
+          })
+        } else {
+          //追加
+          if (bar.y === 'auto') {
+            bar.y = 0;
+            const q = robotData.barData.filter( b => b.x == bar.x).sort((a, b) => {
+              if (a.y < b.y) return -1;
+              if (a.y > b.y) return  1;
+              return 0;
+            })
+            q.forEach( b => {
+              if (b.x === bar.x && b.y === bar.y) {
+                bar.y += 24;
+              }
+            })
+          }
+          robotData.barData.push(bar);
+        }
+      }
+    })
+    writeRobotData();
+    if (!saveOnly) {
+      iob.emit('update-schedule');
+    }
+  }
+  res.send({ status: 'OK' });
+});
+
+app.post('/bar/delete', hasPermission('control.write'), (req, res) => {
+  const bars = [ ...req.body.barData ];
+  const { saveOnly } = req.body;
+  if (USE_DB) {
+    bars.forEach( async (bar) => {
+      await db.deleteBar(bar);
+    })
+  } else {
+    const b = []
+    robotData.barData.forEach( bar => {
+      if (!bars.some( b => {
+        return b.uuid === bar.uuid;
+      })) {
+        b.push(bar);
+      }
+    })
+    robotData.barData = b;
+    writeRobotData();
+    if (!saveOnly) {
+      iob.emit('update-schedule');
+    }
+  }
+  res.send({ status: 'OK' });
+});
+
+app.post('/bar/findOne', hasPermission('control.write'), async (req, res) => {
+  const { x, y, title, } = req.body;
+  let cbar = [];
+  if (USE_DB) {
+    if (typeof title !== 'undefined' && title !== null) {
+      cbar = await db.findBars({
+        [db.Op.or]: [
+          { title, },
+          { uuid: title, },
+        ],
+      });
+    } else
+    if (typeof x !== 'undefined' && x !== null) {
+      cbar = await db.findBars({
+        x: {
+          [db.Op.lte]: x,
+        },
+      });
+    } else
+    if (typeof y !== 'undefined' && y !== null) {
+      cbar = await db.findBars({
+        y: {
+          [db.Op.lte]: y,
+        },
+      });
+    } else {
+      cbar = await db.loadBars();
+    }
+  } else {
+    cbar = [ ...robotData.barData ];
+  }
+  if (typeof x !== 'undefined' && x !== null) {
+    cbar = cbar.filter( b => {
+      return (b.x <= x && x < b.x+b.width);
+    })
+  }
+  if (typeof y !== 'undefined' && y !== null) {
+    cbar = cbar.filter( b => {
+      return (b.y <= y && y < b.y+b.height);
+    })
+  }
+  if (typeof title !== 'undefined' && title !== null) {
+    cbar = cbar.filter( b => {
+      return (b.title.indexOf(title) >= 0 || b.uuid.indexOf(title) >= 0);
+    })
+  }
+  cbar = cbar.sort( (a,b) => {
+    if (a.y < b.y) return -1;
+    if (a.y > b.y) return  1;
+    if (a.x < b.x) return -1;
+    if (a.x > b.x) return  1;
+    return 0;
+  })
+  if (cbar.length > 0) {
+    res.send({ ...nomalizeBar(cbar[0]), status: 'found' });
+  } else {
+    res.send({ status: 'not found', });
+  }
+});
+
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
 const ioa = io.of('audio');
+const iob = io.of('bar');
 const iop = io.of('player');
 var playerSocket = null;
 
