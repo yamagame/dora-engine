@@ -1909,6 +1909,7 @@ app.post('/bar/all', hasPermission('control.write'), async (req, res) => {
 app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
   const bars = [ ...req.body.barData ];
   const { saveOnly } = req.body;
+  const newBars = [];
   if (USE_DB) {
     bars.forEach( bar => {
       if (bar) {
@@ -1926,6 +1927,7 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
     for (var i=0;i<bars.length;i++) {
       const bar = bars[i];
       await db.updateBar(bar, defaultBarData);
+      newBars.push(bar);
     }
     if (!saveOnly) {
       iob.emit('update-schedule');
@@ -1955,6 +1957,7 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
           Object.keys(bar).forEach( key => {
             t[key] = bar[key];
           })
+          newBars.push(t);
         } else {
           //追加
           if (bar.y === 'auto') {
@@ -1971,6 +1974,7 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
             })
           }
           robotData.barData.push(bar);
+          newBars.push(bar);
         }
       }
     })
@@ -1979,7 +1983,7 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
       iob.emit('update-schedule');
     }
   }
-  res.send({ status: 'OK' });
+  res.send({ status: 'OK', bars: newBars, });
 });
 
 app.post('/bar/delete', hasPermission('control.write'), (req, res) => {
