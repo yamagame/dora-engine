@@ -2067,6 +2067,22 @@ app.post('/bar/findOne', hasPermission('control.write'), async (req, res) => {
   }
 });
 
+app.post('/bar/move-screen', hasPermission('control.write'), async (req, res) => {
+  const { time, uuid, } = req.body;
+  if (uuid) {
+    iob.emit('move-to-center', { uuid });
+  } else
+  if (time) {
+    iob.emit('move-to-day', { time });
+  } else {
+    function DayToString(d) {
+      return `${d.getFullYear()}-${('00'+(d.getMonth()+1)).slice(-2)}-${('00'+d.getDate()).slice(-2)}`;
+    }
+    iob.emit('move-to-day', { time: DayToString(new Date()), });
+  }
+  res.send({ status: 'OK' });
+});
+
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
 const ioa = io.of('audio');
