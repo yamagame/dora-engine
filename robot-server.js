@@ -1899,10 +1899,36 @@ function nomalizeBar(bar) {
 }
 
 app.post('/bar/all', hasPermission('control.write'), async (req, res) => {
-  if (USE_DB) {
-    res.json(await db.loadBars());
+  const { bars } = req.body;
+  if (bars) {
+    if (USE_DB) {
+      const barData = await db.loadBars();
+      const b = []
+      bars.forEach( d => {
+        barData.forEach( bar => {
+          if (bar.uuid === d.uuid) {
+            b.push(bar);
+          }
+        })
+      })
+      res.json(b);
+    } else {
+      const b = []
+      bars.forEach( d => {
+        robotData.barData.forEach( bar => {
+          if (bar.uuid === d.uuid) {
+            b.push(bar);
+          }
+        })
+      })
+      res.json(b);
+    }
   } else {
-    res.json(robotData.barData);
+    if (USE_DB) {
+      res.json(await db.loadBars());
+    } else {
+      res.json(robotData.barData);
+    }
   }
 });
 
@@ -1980,7 +2006,7 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
     })
     writeRobotData();
     if (!saveOnly) {
-      iob.emit('update-schedule');
+      iob.emit('update-schedule', { bars: newBars, } );
     }
   }
   res.send({ status: 'OK', bars: newBars, });
