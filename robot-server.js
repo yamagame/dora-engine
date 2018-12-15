@@ -1937,23 +1937,51 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
   const { saveOnly } = req.body;
   const newBars = [];
   if (USE_DB) {
+    const b = {}
+    const barData = await db.loadBars();
+    barData.forEach( bar => {
+      b[bar.uuid] = bar;
+    })
     bars.forEach( bar => {
       if (bar) {
         bar = nomalizeBar(bar);
         if (!bar.uuid) {
           bar.uuid = uuidv4();
-          Object.keys(defaultBarData).forEach( key => {
-            if (typeof bar[key] === 'undefined') {
-              bar[key] = defaultBarData[key];
-            }
-          })
         }
+        Object.keys(defaultBarData).forEach( key => {
+          if (typeof bar[key] === 'undefined') {
+            bar[key] = defaultBarData[key];
+          }
+        })
+        const t = b[bar.uuid];
+        if (t) {
+          //更新
+          if (bar.y === 'auto') {
+            delete bar.y;
+          }
+        } else {
+          //追加
+          if (bar.y === 'auto') {
+            bar.y = 0;
+            const q = barData.filter( b => b.x == bar.x).sort((a, b) => {
+              if (a.y < b.y) return -1;
+              if (a.y > b.y) return  1;
+              return 0;
+            })
+            q.forEach( b => {
+              if (b.x === bar.x && b.y === bar.y) {
+                bar.y += 24;
+              }
+            })
+          }
+        }
+        barData.push(bar);
+        newBars.push(bar);
       }
     })
-    for (var i=0;i<bars.length;i++) {
-      const bar = bars[i];
+    for (var i=0;i<newBars.length;i++) {
+      const bar = newBars[i];
       await db.updateBar(bar, defaultBarData);
-      newBars.push(bar);
     }
     if (!saveOnly) {
       iob.emit('update-schedule');
