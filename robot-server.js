@@ -1934,7 +1934,7 @@ app.post('/bar/all', hasPermission('control.write'), async (req, res) => {
 
 app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
   const bars = [ ...req.body.barData ];
-  const { saveOnly } = req.body;
+  const { saveOnly, create } = req.body;
   const newBars = [];
   if (USE_DB) {
     const b = {}
@@ -1944,9 +1944,13 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
     })
     bars.forEach( bar => {
       if (bar) {
-        bar = nomalizeBar(bar);
-        if (!bar.uuid) {
+        if (create) {
+          bar = nomalizeBar(bar);
           bar.uuid = uuidv4();
+        } else {
+          if (!bar.uuid) {
+            return;
+          }
         }
         Object.keys(defaultBarData).forEach( key => {
           if (typeof bar[key] === 'undefined') {
@@ -1959,7 +1963,10 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
           if (bar.y === 'auto') {
             delete bar.y;
           }
-        } else {
+          barData.push(bar);
+          newBars.push(bar);
+        } else
+        if (create) {
           //追加
           if (bar.y === 'auto') {
             bar.y = 0;
@@ -1974,9 +1981,9 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
               }
             })
           }
+          barData.push(bar);
+          newBars.push(bar);
         }
-        barData.push(bar);
-        newBars.push(bar);
       }
     })
     for (var i=0;i<newBars.length;i++) {
@@ -1993,14 +2000,18 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
     })
     bars.forEach( bar => {
       if (bar) {
-        bar = nomalizeBar(bar);
-        if (!bar.uuid) {
+        if (create) {
+          bar = nomalizeBar(bar);
           bar.uuid = uuidv4();
           Object.keys(defaultBarData).forEach( key => {
             if (typeof bar[key] === 'undefined') {
               bar[key] = defaultBarData[key];
             }
           })
+        } else {
+          if (!bar.uuid) {
+            return;
+          }
         }
         const t = b[bar.uuid];
         if (t) {
@@ -2012,7 +2023,8 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
             t[key] = bar[key];
           })
           newBars.push(t);
-        } else {
+        } else
+        if (create) {
           //追加
           if (bar.y === 'auto') {
             bar.y = 0;
@@ -2047,6 +2059,9 @@ app.post('/bar/delete', hasPermission('control.write'), (req, res) => {
     bars.forEach( async (bar) => {
       await db.deleteBar(bar);
     })
+    if (!saveOnly) {
+      iob.emit('update-schedule');
+    }
   } else {
     const b = []
     robotData.barData.forEach( bar => {
