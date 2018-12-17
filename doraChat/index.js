@@ -93,29 +93,31 @@ const searchAnswer = async (sheetData, message, type='ngram') => {
   let point = 0;
   let target = null;
   sheetData.forEach( v => {
-    const p = utils.nGramCheck( v.ask.morpho, ask );
-    if (point < p) {
-      let ignore = false;
-      if ('keyword' in v && v.keyword.length > 0) {
-        ignore = false;
-        if (v.keyword.some( k => {
-          // console.log(v.ask.org, k);
-          return message.indexOf(k) < 0
-        })) {
-          ignore = true;
+    if (v.ask) {
+      const p = utils.nGramCheck( v.ask.morpho, ask );
+      if (point < p) {
+        let ignore = false;
+        if ('keyword' in v && v.keyword.length > 0) {
+          ignore = false;
+          if (v.keyword.some( k => {
+            // console.log(v.ask.org, k);
+            return message.indexOf(k) < 0
+          })) {
+            ignore = true;
+          }
         }
-      }
-      //typeがsameの場合は、同じ単語が含まれていなければヒットしない
-      if (type === 'same') {
-        if (message.trim().toLowerCase().indexOf(v.ask.org.trim().toLowerCase()) < 0) {
-          ignore = true;
+        //typeがsameの場合は、同じ単語が含まれていなければヒットしない
+        if (type === 'same') {
+          if (message.trim().toLowerCase().indexOf(v.ask.org.trim().toLowerCase()) < 0) {
+            ignore = true;
+          }
         }
-      }
-      if (ignore) {
-        //console.log(`無視 ${ask} ${v.ask.org}`);
-      } else {
-        point = p;
-        target = v;
+        if (ignore) {
+          //console.log(`無視 ${ask} ${v.ask.org}`);
+        } else {
+          point = p;
+          target = v;
+        }
       }
     }
   })
@@ -268,7 +270,7 @@ module.exports = function(router, settings) {
   router.post(`/time`, (req, res) => {
     const now = new Date();
     const r = {
-      answer: `今は${now.getHours()}時${now.getMinutes()}分です。`,
+      answer: `${now.getHours()}時${now.getMinutes()}分です。`,
       message: getParam(req.body, 'message', ''),
     }
     res.send(r);
