@@ -265,10 +265,14 @@ robot-server.jsを正常に動作させるには、Google Speech APIの設定が
 
 ## DoraEditorの使い方
 
+<p align="center">
+  <img style="border:solid 1px lightgray;" src="./images/scenario-editor.png"/>
+</p>
+
 ブラウザで以下のURLを開きます。
 
 ```
-http://localhost:3090/scenario-editor/
+http://[dora-engineのIPアドレス]:3090/scenario-editor/
 ```
 
 あなたのお名前のエリアに名前を入力します。名前はなんでもよいです。
@@ -276,6 +280,36 @@ http://localhost:3090/scenario-editor/
 テキストエディターが開きますので、そこに適当に会話文書を入力します。
 
 会話文について詳しくは、[こちら](https://github.com/yamagame/dora)を参照。
+
+## DoraSchedulerの使い方
+
+<p align="center">
+  <img style="border:solid 1px lightgray;" src="./images/scheduler.png"/>
+</p>
+
+ブラウザで以下のURLを開きます。
+
+```
+http://[dora-engineのIPアドレス]:3090/scheduler/
+```
+
+マウスでドラッグすると画面が動きます。スクロールホイールで拡大縮小できます。
+
+クリックするとカーソルが表示されます。
+
+キーボードフォーカスが当たっている状態でスペースキーを押すとカーソル位置にバーを作成することができます。
+
+シフトキーを押しながらドラッグすると、選択エリアが表示され、バーをまとめて選択することができます。
+
+バーは、ドラッグすると位置を変更できます。バーの左右の端をドラッグするとサイズを変更できます。
+
+バーをダブルクリックすると、バーのタイトルや本文を変更することができます。
+
+スケジューラにキーボードフォーカスが当たっている状態で、以下のキー操作ができます。
+
+- Tキー  今日の日付に移動します
+- Gキー  バーを順に選択して選択したバーが画面の中央に表示されます。
+- DELキー 選択したバーを削除します。
 
 ## 関連プロジェクト
 
