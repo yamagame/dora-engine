@@ -25,17 +25,17 @@ class GamePad extends EventEmitter {
   }
 
   add(vendorId, productId) {
-    this.devices[`${Pad4(vendorId)}-${Pad4(productId)}`] = true;
+    this.devices[`${Pad4(vendorId)}/${Pad4(productId)}`] = true;
     this.change();
   }
 
   remove(vendorId, productId) {
-    delete this.devices[`${Pad4(vendorId)}-${Pad4(productId)}`];
+    delete this.devices[`${Pad4(vendorId)}/${Pad4(productId)}`];
     this.change();
   }
 
   checkId(dev) {
-    const d = `${Pad4(dev.vendorId)}-${Pad4(dev.productId)}`;
+    const d = `${Pad4(dev.vendorId)}/${Pad4(dev.productId)}`;
     return (this.devices[d])
   }
 
@@ -78,7 +78,7 @@ class GamePad extends EventEmitter {
 const gamepad = new GamePad();
 
 usbDetect.on('add', dev => {
-  const d = `${Pad4(dev.vendorId)}-${Pad4(dev.productId)}`;
+  const d = `${Pad4(dev.vendorId)}/${Pad4(dev.productId)}`;
   console.log(`ID:${d} vendorID:${Pad4(dev.vendorId)} productID:${Pad4(dev.productId)} deviceName:${dev.deviceName} manufacturer:${dev.manufacturer}`);
 })
 
@@ -95,7 +95,7 @@ if (require.main === module) {
     gamepad.devices[process.argv[2]] = true;
   }
   gamepad.on('event', event => {
-    const d = `${Pad4(event.vendorId)}-${Pad4(event.productId)}`;
+    const d = `${Pad4(event.vendorId)}/${Pad4(event.productId)}`;
     console.log(`ID:${d} data:${event.data}`);
   })
   gamepad.change();
