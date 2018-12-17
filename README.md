@@ -325,6 +325,12 @@ http://[dora-engineのIPアドレス]:3090/scheduler/
 ### Dora Quiz
 [https://github.com/yamagame/dora-quiz](https://github.com/yamagame/dora-quiz)
 
+### Dora Wave
+[https://github.com/yamagame/dora-wave](https://github.com/yamagame/dora-wave)
+
+### Dora Scheduler
+[https://github.com/yamagame/dora-scheduler](https://github.com/yamagame/dora-scheduler)
+
 ### Dora Script Sample
 [https://github.com/yamagame/dora-script-sample](https://github.com/yamagame/dora-script-sample)
 
