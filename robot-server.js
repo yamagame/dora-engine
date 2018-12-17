@@ -1528,6 +1528,11 @@ const postCommand = async (req, res, credential) => {
             })
           }
           await writeFile(savefilePath, imageMap);
+          try {
+            const { area } = JSON.parse(imageMap);
+            storeQuizPayload({ area });
+          } catch(err) {
+          }
         } else {
           console.log(`invalid filename ${filename}`)
         }
