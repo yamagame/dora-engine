@@ -78,7 +78,8 @@ class GamePad extends EventEmitter {
 const gamepad = new GamePad();
 
 usbDetect.on('add', dev => {
-  console.log(`vendorID:${Pad4(dev.vendorId)} productID:${Pad4(dev.productId)} deviceName:${dev.deviceName} manufacturer:${dev.manufacturer}`);
+  const d = `${Pad4(dev.vendorId)}-${Pad4(dev.productId)}`;
+  console.log(`ID:${d} vendorID:${Pad4(dev.vendorId)} productID:${Pad4(dev.productId)} deviceName:${dev.deviceName} manufacturer:${dev.manufacturer}`);
 })
 
 usbDetect.on('change', dev => {
@@ -90,7 +91,12 @@ usbDetect.on('change', dev => {
 module.exports = gamepad;
 
 if (require.main === module) {
+  if (process.argv.length > 2 && process.argv[2]) {
+    gamepad.devices[process.argv[2]] = true;
+  }
   gamepad.on('event', event => {
-    console.log(event);
+    const d = `${Pad4(event.vendorId)}-${Pad4(event.productId)}`;
+    console.log(`ID:${d} data:${event.data}`);
   })
+  gamepad.change();
 }
