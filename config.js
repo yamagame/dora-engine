@@ -79,7 +79,7 @@ const config = {
     //キャッシュする音声データを保存するディレクトリ
     tempdir: process.env.ROBOT_GOOGLE_SPEECH_DATA_DIR || '/tmp',
     //キャッシュする音声データのトータルサイズ(MByte)
-    maxCacheSize: 3,
+    maxCacheSize: process.env.ROBOT_GOOGLE_SPEECH_CACHE_SIZE || 300,
     //キャッシュファイルのDBファイル
     cacheDBPath: process.env.ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH || '/tmp/robot-cacheDB.json',
   },
@@ -102,7 +102,10 @@ module.exports = config;
 
 if (require.main === module) {
   //bcrypt を使ってパスワードのハッシュを作って adminAuth の password に設定する
-  console.log(bcrypt.hashSync('robotnopass', 8));
-  console.log(bcrypt.hashSync('playernopass', 8));
-  console.log(bcrypt.hashSync('guestclientnopass', 8));
+  // console.log(bcrypt.hashSync('robotnopass', 8));
+  // console.log(bcrypt.hashSync('playernopass', 8));
+  // console.log(bcrypt.hashSync('guestclientnopass', 8));
+  if (process.argv.length > 2 && process.argv[2]) {
+    console.log(bcrypt.hashSync(process.argv[2], 8));
+  }
 }
