@@ -263,11 +263,27 @@ robot-server.jsは、DoraEditor や Node-RED からの指示を受け付け、�
 
 robot-server.jsを正常に動作させるには、Google Speech APIの設定が終わっていないといけません。
 
-## DoraEditorの使い方
+## プレゼンテーション画面
+
+<p align="center">
+  <img style="border:solid 1px lightgray;" src="./images/presentation.png"/>
+</p>
+
+ブラウザで以下のURLを開きます。
+
+```
+http://[dora-engineのIPアドレス]:3090/
+```
+
+この画面にコマンドで指示したスライドなどが表示されます。シナリオを作ることでスライドと連動したプレゼンテーションロボットとして稼働させることができます。
+
+## シナリオエディター画面
 
 <p align="center">
   <img style="border:solid 1px lightgray;" src="./images/scenario-editor.png"/>
 </p>
+
+シナリオエディターを使ってロボットをコントロールすることができます。
 
 ブラウザで以下のURLを開きます。
 
@@ -281,7 +297,7 @@ http://[dora-engineのIPアドレス]:3090/scenario-editor/
 
 会話文について詳しくは、[こちら](https://github.com/yamagame/dora)を参照。
 
-## DoraSchedulerの使い方
+## スケジューラ画面
 
 <p align="center">
   <img style="border:solid 1px lightgray;" src="./images/scheduler.png"/>
@@ -333,6 +349,10 @@ http://[dora-engineのIPアドレス]:3090/scheduler/
 
 ### Dora Script Sample
 [https://github.com/yamagame/dora-script-sample](https://github.com/yamagame/dora-script-sample)
+
+### ドキュメント詳細
+[https://yamagame.github.io/dora-engine-doc/]
+(https://yamagame.github.io/dora-engine-doc/)
 
 ## ライセンス
 
