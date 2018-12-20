@@ -186,7 +186,7 @@ $ tar xvf aquestalkpi-20130827.tgz
 
 ```
 $ cd ~/dora-engine
-$ talk-f1.sh こんにちは
+$ ./talk-f1.sh こんにちは
 ```
 
 ## Google Speech APIの準備
