@@ -351,8 +351,7 @@ http://[dora-engineのIPアドレス]:3090/scheduler/
 [https://github.com/yamagame/dora-script-sample](https://github.com/yamagame/dora-script-sample)
 
 ### ドキュメント詳細
-[https://yamagame.github.io/dora-engine-doc/]
-(https://yamagame.github.io/dora-engine-doc/)
+[https://yamagame.github.io/dora-engine-doc/](https://yamagame.github.io/dora-engine-doc/)
 
 ## ライセンス
 
