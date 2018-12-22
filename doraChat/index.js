@@ -357,6 +357,23 @@ module.exports = function(router, settings) {
     })
   }
 
+  //ダウンロードのみ
+  router.post(`/download`, async (req, res) => {
+    const body = {
+      ...req.body,
+      download: 'force',
+    }
+    const p = await getParams(sheetLoader, body);
+    if (p == null) {
+      return res.send({
+        answer: 'not-found',
+      });
+    }
+    res.send({
+      answer: 'found',
+    });
+  })
+
   //ランダムな応答
   router.post(`/random`, async (req, res) => {
     try {
