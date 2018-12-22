@@ -26,6 +26,7 @@ const passport = require('passport');
 const DoraChat = require('./doraChat');
 const LocalStrategy = require('passport-local').Strategy;
 const uuidv4 = require('uuid/v4');
+const mkdirp = require('mkdirp');
 const {
   localhostIPs,
   localIPCheck,
@@ -43,6 +44,10 @@ const bcrypt = (() => {
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
 const PART_LIST_FILE_PATH = path.join(HOME, 'quiz-student.txt');
+
+mkdirp(config.doraChat.dataDir, async function(err) {
+  if (err) console.log(err);
+})
 
 const defaultBarData = {
   uuid: '',
@@ -125,7 +130,6 @@ function readdirFileOnly(dirname, callback) {
 {HOME}/Pictures/{slide image file}
 */
 
-const mkdirp = require('mkdirp');
 const Dora = require('dora');
 const dora = new Dora();
 const utils = require('./utils');
