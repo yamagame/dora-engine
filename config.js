@@ -5,8 +5,6 @@ const bcrypt = (() => {
   try { return require('bcrypt'); }
   catch(e) { return require('bcryptjs'); }
 })();
-const workFolder = 'DoraEngine';  //for macOS(development)
-const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 
 const config = {
   port: port,
@@ -92,7 +90,7 @@ const config = {
   },
   //対話関連
   doraChat: {
-    dataDir: process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(HOME, 'ChatData'),
+    dataDir: process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(__dirname, 'chatData'),
     weather: (process.env.ROBOT_DORA_CHAT_WEATHER || 'false') === 'true',
     wikipedia: (process.env.ROBOT_DORA_CHAT_WIKIPEDIA || 'true') === 'true',
   },
