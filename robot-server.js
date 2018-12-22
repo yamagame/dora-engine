@@ -1541,6 +1541,11 @@ const postCommand = async (req, res, credential) => {
       }
     }
   }
+  if (req.body.type === 'poweroff') {
+    execPowerOff();
+    res.send({ state: 'ok' });
+    return;
+  }
   if (req.body.type === 'scenario') {
     const { action } = req.body;
     function stopAll() {
@@ -2612,6 +2617,24 @@ var shutdownTimer = null;
 var shutdownLEDTimer = null;
 var doShutdown = false;
 
+function execPowerOff() {
+  gpioSocket.emit('led-command', { action: 'on' });
+  //シャットダウン
+  doShutdown = true;
+  servoAction('stop');
+  setTimeout(() => {
+    if (process.platform === 'darwin') {
+      process.exit(0);
+    } else {
+      const _playone = spawn('/usr/bin/sudo', ['shutdown', '-f', 'now']);
+      _playone.on('close', function(code) {
+        console.log('shutdown done');
+      });
+    }
+    doShutdown = false;
+  }, 5000)
+}
+
 gpioSocket.on('button', (payload) => {
   console.log(payload);
   if (shutdownTimer) {
@@ -2633,17 +2656,7 @@ gpioSocket.on('button', (payload) => {
           shutdownLEDTimer = null;
         }
         shutdownLEDTimer = setTimeout(() => {
-          gpioSocket.emit('led-command', { action: 'on' });
-          //シャットダウン
-          doShutdown = true;
-          servoAction('stop');
-          setTimeout(() => {
-            const _playone = spawn('/usr/bin/sudo', ['shutdown', '-f', 'now']);
-            _playone.on('close', function(code) {
-              console.log('shutdown done');
-            });
-            doShutdown = false;
-          }, 5000)
+          execPowerOff();
         }, 5*1000);
       }, 5*1000);
     }
