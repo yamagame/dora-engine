@@ -15,4 +15,4 @@ sudo apt-get update && sudo apt-get install google-cloud-sdk -y
 sudo apt-get install mecab libmecab-dev mecab-ipadic-utf8 -y
 sudo apt-get install ibus-anthy -y
 sudo apt-get install ntp -y
-sudo apt-get install sqlite3
+sudo apt-get install sqlite3 -y
