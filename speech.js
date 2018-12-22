@@ -188,7 +188,19 @@ function Speech() {
           recognizeStreams.push(client.streamingRecognize(opts)
             .on('error', (err) => {
               console.log('error' , JSON.stringify(opts));
-              console.error(err);
+              console.log(err);
+              // if (!t.recording) return;
+              // const result = {
+              //   languageCode: opts.config.languageCode,
+              //   errorString: err.toString(),
+              //   transcript: 'error',
+              //   confidence: 0,
+              //   payload: 'error',
+              // }
+              // t.emit('data', result);
+              // if (!t.writing) {
+              //   t.recording = false;
+              // }
             })
             .on('data', (data) => {
               if (data.results[0] && data.results[0].alternatives[0]) {
@@ -202,7 +214,7 @@ function Speech() {
                   confidence: sentence.confidence,
                 }
                 const emitResult = (result) => {
-                  console.log(`result ${JSON.stringify(result,null,'  ')}`);
+                  console.log(`result ${JSON.stringify(result, null, '  ')}`);
                   t.emit('data', result);
                   if (!t.writing) {
                     t.recording = false;
@@ -357,9 +369,22 @@ if (require.main === module) {
     })
   })
 
+  const threshold = (() => {
+    if (process.argv.length > 2 && process.argv[2]) {
+      return parseInt(process.argv[2])
+    }
+    return 4000;
+  })()
+
   sp.recording = true;
-  sp.emit('startRecording', { languageCode: [ 'ja-JP', ] });
-  // sp.emit('startRecording', { languageCode: [ 'ja-JP', 'en-US' ] });
+  sp.emit('startRecording', {
+    languageCode: [ 'ja-JP', ],
+    threshold,
+  });
+  // sp.emit('startRecording', {
+  //   languageCode: [ 'ja-JP', 'en-US' ]
+  //   threshold,
+  // });
   sp.on('wave-data', function (data) {
     ioa.emit('wave-data', data);
   });
