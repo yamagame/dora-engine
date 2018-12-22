@@ -359,19 +359,27 @@ module.exports = function(router, settings) {
 
   //ダウンロードのみ
   router.post(`/download`, async (req, res) => {
-    const body = {
-      ...req.body,
-      download: 'force',
-    }
-    const p = await getParams(sheetLoader, body);
-    if (p == null) {
+    try {
+      const body = {
+        ...req.body,
+        download: 'force',
+      }
+      const p = await getParams(sheetLoader, body);
+      if (p == null) {
+        return res.send({
+          answer: 'not-found',
+        });
+      }
+      res.send({
+        answer: 'found',
+      });
+    } catch(err) {
+      console.error(err);
       return res.send({
-        answer: 'not-found',
+        answer: 'error',
+        err: err.toString(),
       });
     }
-    res.send({
-      answer: 'found',
-    });
   })
 
   //ランダムな応答
