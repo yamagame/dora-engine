@@ -405,6 +405,9 @@ function apeendToSheet({ sheetId, payload, }, callback) {
     if (err) {
       return callback(err);
     }
+    if (credentials === null || (!credentials.installed)) {
+      return callback(new Error('Error: spread sheet credentials is null'));
+    }
     const {client_secret, client_id, redirect_uris} = credentials.installed;
     const auth = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
     getToken(auth, (err, token) => {
@@ -540,6 +543,10 @@ if (require.main === module) {
         console.log(err);
         return;
       }
+      if (credentials === null || (!credentials.installed)) {
+        console.log(new Error('Error: spread sheet credentials is null'));
+        return;
+      }
       const {client_secret, client_id, redirect_uris} = credentials.installed;
       const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
       getToken(oAuth2Client, (err, token) => {
@@ -550,9 +557,11 @@ if (require.main === module) {
               return;
             }
             console.log('token saved');
+            process.exit(0);
           });
         } else {
           console.log('already exist token.');
+          process.exit(0);
         }
       })
     })
