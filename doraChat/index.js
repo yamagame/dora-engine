@@ -116,7 +116,7 @@ const searchAnswer = async (sheetData, message, type='ngram') => {
           //console.log(`無視 ${ask} ${v.ask.org}`);
         } else {
           point = p;
-          target = v;
+          target = { ...v };
         }
       }
     }
