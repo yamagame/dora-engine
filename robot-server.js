@@ -395,6 +395,10 @@ if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parse
 if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
 if (typeof robotData.barData === 'undefined') robotData.barData = [];
 
+if (speech.setParams) {
+  speech.setParams(robotData.voice)
+}
+
 let { students } = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
 
 let saveDelay = false;

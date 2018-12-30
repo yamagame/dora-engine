@@ -11,9 +11,13 @@ function Speech() {
   function uint8toint16(buffer) {
     function abs(a) { return (a>0)?a:(-a); };
     const a = [];
-    for (var i=0;i<buffer.length;i+=waveSkip*2) {
-      let maxSample = 0;
-      for (var j=i;j<i+waveSkip*2;j+=2) {
+    let _waveSkip = waveSkip;
+    if (_waveSkip > buffer.length/2) _waveSkip = buffer.length/2;
+    for (var i=0;i<buffer.length;i+=_waveSkip*2) {
+      let maxSample = null;
+      let sum = 0;
+      let buff = [];
+      for (var j=i;j<i+_waveSkip*2;j+=2) {
         let sample = 0;
         if(buffer[j+1] > 128) {
             sample = (buffer[j+1] - 256) * 256;
@@ -21,10 +25,15 @@ function Speech() {
             sample = buffer[j+1] * 256;
         }
         sample += buffer[j];
-        if (abs(maxSample) < abs(sample)) {
-          maxSample = sample;
-        }
+        sum += sample;
+        buff.push(sample);
       }
+      const avg = sum / buff.length;
+      buff.forEach( sample => {
+        if (maxSample === null || abs(maxSample) < abs(sample-avg)) {
+          maxSample = sample-avg;
+        }
+      })
       a.push({
         y: maxSample,
       });
@@ -34,6 +43,9 @@ function Speech() {
 
   var t = new EventEmitter();
   t.recording = false;
+  t._recording = false;
+  t._preloadRecording = false;
+  // t._preloadRecordingTimeout = null;
   t.writing = true;
   t.recordingTime = 0;
   t.state = 'recoding-stop';
@@ -90,12 +102,12 @@ function Speech() {
   t.on('startRecording', function (params) {
     if (micInputStream.changeParameters) {
       if ('threshold' in params) {
-        if (params.threshold !== 'keep') {
+        if (params.threshold === 'keep') {
           delete params.threshold;
         }
       }
       if ('level' in params) {
-        if (params.level !== 'keep') {
+        if (params.level === 'keep') {
           delete params.level;
         }
       }
@@ -145,7 +157,36 @@ function Speech() {
     streamDataReuest = false;
   });
 
+  t.setParams = function(params) {
+    if (micInputStream.changeParameters) {
+      if ('threshold' in params) {
+        if (params.threshold === 'keep') {
+          delete params.threshold;
+        }
+      }
+      if ('level' in params) {
+        if (params.level === 'keep') {
+          delete params.level;
+        }
+      }
+      micInputStream.changeParameters(params);
+    }
+  }
+
   micInputStream.on('data', function (data) {
+    if (t.recording && !t._recording) {
+      streamQue = []
+      t._preloadRecording = true;
+      // if (t._preloadRecordingTimeout) clearTimeout(t._preloadRecordingTimeout);
+      // t._preloadRecordingTimeout = setTimeout(() => {
+      // }, 1000)
+    }
+    if (!t.recording) {
+      // if (t._preloadRecordingTimeout) clearTimeout(t._preloadRecordingTimeout);
+      // t._preloadRecordingTimeout = null;
+      t._preloadRecording = false;
+    }
+    t._recording = t.recording;
     if (streamDataReuest) {
       t.emit('wave-data', {
         state: t.state,
@@ -155,8 +196,10 @@ function Speech() {
       });
     }
     if (micInputStream.incrConsecSilenceCount() > micInputStream.getNumSilenceFramesExitThresh()) {
-      streamQue.push(data);
-      streamQue = streamQue.slice(-PRELOAD_COUNT);
+      if (t._preloadRecording) {
+        streamQue.push(data);
+        streamQue = streamQue.slice(-PRELOAD_COUNT);
+      }
       if (writingStep == 1) {
         console.log('end writing');
         writingStep = 0;
@@ -247,16 +290,20 @@ function Speech() {
           console.log('start writing');
           writingStep = 1;
         }
-        if (streamQue.length > 0) {
+        if (t._preloadRecording) {
           streamQue.forEach( data => {
             recognizeStreams.forEach( stream => stream.write(data) );
           })
+          recognizeStreams.forEach( stream => stream.write(data) );
           streamQue = [];
+        } else {
+          recognizeStreams.forEach( stream => stream.write(data) );
         }
-        recognizeStreams.forEach( stream => stream.write(data) );
       } else {
-        streamQue.push(data);
-        streamQue = streamQue.slice(-PRELOAD_COUNT);
+        if (t._preloadRecording) {
+          streamQue.push(data);
+          streamQue = streamQue.slice(-PRELOAD_COUNT);
+        }
         if (writingStep == 1) {
           console.log('end writing');
           writingStep = 0;
