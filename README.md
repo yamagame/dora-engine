@@ -122,8 +122,8 @@ pcm.micboost {
     type route
     slave.pcm dsnoop
     ttable {
-        0.0 30.0
-        1.1 30.0
+        0.0 10
+        1.1 10
     }
 }
 
