@@ -232,7 +232,7 @@ export DOCOMO_API_KEY=7570304351643...................
 以下のコマンドを実行して、雑談対話のappIdを取得します。
 
 ```
-$ ./setup_docomo_appid.sh
+$ ./setup-docomo-appid.sh
 {"appId":"eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}
 ```
 
