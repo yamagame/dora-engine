@@ -6,10 +6,14 @@ module.exports = function() {
   t.now = 0;
   t.max = 1;
   t.mode = 'off';
+  t.step = 0;
   t.blinkSpeed = 0.025;
   t.power_timer = 0;
   t.theta = 0;
+  t.idleCounter = 0;
   t.idle = function(mode, value = 1) {
+    t.idleCounter ++;
+    if (t.idleCounter > 60) t.idleCounter = 0;
     const now = t.now;
     if (t.mode !== mode) {
       if (mode == 'off') {
@@ -20,6 +24,11 @@ module.exports = function() {
       } else
       if (mode == 'blink') {
         t.mode = mode;
+      } else
+      if (mode == 'talk') {
+        t.mode = mode;
+        t.step = 0;
+        t.idleCounter = 0;
       }
       if (mode == 'power') {
         t.mode = mode;
@@ -49,6 +58,22 @@ module.exports = function() {
         t.theta -= Math.PI*2;
       }
     }
+    if (t.mode == 'talk') {
+      if (t.talk > 0 || t.step > 0) {
+        if (t.step == 0) {
+          t.idleCounter = 15;
+        }
+        t.step = 1;
+        t.idleCounter += Math.floor(Math.random() * Math.floor(5));
+        if ((t.idleCounter % 30) < 15) {
+          t.now = t.max;
+        } else {
+          t.now = 0;
+        }
+      } else {
+        t.now = 0;
+      }
+    }
     {
       t.max = value;
       if (t.now > t.max) t.now = t.max;
@@ -56,6 +81,18 @@ module.exports = function() {
     if (now != t.now) {
       t.emit('updated');
     }
+  }
+  
+  t.resetTalk = () => {
+    if (t.step !== 0) {
+      if (t.now !== 0) {
+        t.now = 0;
+        t.emit('updated');
+      }
+    }
+    t.step = 0;
+    t.idleCounter = 0;
+    t.talk = 0;
   }
 
   return t;

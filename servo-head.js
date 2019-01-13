@@ -49,6 +49,11 @@ function roundParam(p) {
   return parseInt(p*10000)/10000;
 }
 
+function abs(a) {
+  if (a < 0) return -a;
+  return a;
+}
+
 function startServo() {
   const servo = require('./servo')();
   const led = require('./led-controller')();
@@ -74,6 +79,10 @@ function startServo() {
   })
   setInterval(() => {
     servoAction.idle(mode);
+    if (mode !== 'talk') {
+      led.resetTalk();
+    }
+    led.talk = abs(servo0.target - servo0.center);
     led.idle(led_mode, led_bright);
   }, 20);
 }
@@ -87,6 +96,9 @@ function changeLed(payload) {
   }
   if (payload.action === 'blink') {
     led_mode = 'blink';
+  }
+  if (payload.action === 'talk') {
+    led_mode = 'talk';
   }
   if (payload.action === 'power') {
     led_mode = 'power';
@@ -224,7 +236,7 @@ raspi.init(() => {
             servoAction.idle(direction);
           }
         } else
-        if (action === 'led-on' || action === 'led-off' || action === 'led-blink') {
+        if (action === 'led-on' || action === 'led-off' || action === 'led-blink' || action === 'led-talk') {
           led_mode = action.toString().split('-')[1];
           led_bright = 1;
         }

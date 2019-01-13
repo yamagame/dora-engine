@@ -1143,6 +1143,11 @@ function changeLed(payload) {
       servoAction('led-blink');
       last_led_action = 'led-blink';
     }
+    if (payload.action === 'talk') {
+      led_mode = 'manual';
+      servoAction('led-talk');
+      last_led_action = 'led-talk';
+    }
   }
 }
 
