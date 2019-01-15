@@ -1969,7 +1969,9 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
       if (bar) {
         if (create) {
           bar = nomalizeBar(bar);
-          bar.uuid = uuidv4();
+          if (!bar.uuid) {
+            bar.uuid = uuidv4();
+          }
         } else {
           if (!bar.uuid) {
             return;
@@ -2025,7 +2027,9 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
       if (bar) {
         if (create) {
           bar = nomalizeBar(bar);
-          bar.uuid = uuidv4();
+          if (!bar.uuid) {
+            bar.uuid = uuidv4();
+          }
           Object.keys(defaultBarData).forEach( key => {
             if (typeof bar[key] === 'undefined') {
               bar[key] = defaultBarData[key];
