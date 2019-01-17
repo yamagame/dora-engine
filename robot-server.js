@@ -1376,6 +1376,14 @@ async function quizPacket(payload) {
       payload.area = [];
     }
   }
+  try {
+    payload.quizMode = robotData.quizPayload.others.quizMode;
+  } catch(err) {
+  }
+  try {
+    payload.closeButton = robotData.quizPayload.others.closeButton;
+  } catch(err) {
+  }
   return payload;
 }
 
