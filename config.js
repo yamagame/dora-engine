@@ -64,11 +64,11 @@ const config = {
   defualtUserPermissions: '*',
   startScript: {
     //自動起動させる場合はここをtrueにする
-    auto: false,
+    auto: true,
     //ユーザー名
-    username: 'raspberrypi',
+    username: 'dora-engine',
     //開始したいスクリプト
-    filename: '最初のファイル.txt',
+    filename: 'start.dora',
   },
   //Google text-to-speech関連
   synthesizeSpeech: {

@@ -1211,6 +1211,12 @@ async function quizPacket(payload) {
     if ('backgroundColor' in payload) {
       params.backgroundColor = payload.backgroundColor;
     }
+    if ('quizMode' in payload) {
+      params.quizMode = payload.quizMode;
+    }
+    if ('closeButton' in payload) {
+      params.closeButton = payload.closeButton;
+    }
     storeQuizPayload(params);
   }
   if (payload.action === 'quiz-init') {
@@ -2701,31 +2707,47 @@ localSocket.on('connect', () => {
   console.log('connected');
 });
 
+const checkScenarioFile = (name, filename, callback) => {
+  const base = path.join(HOME, 'Documents');
+  const username = (name) ? path.basename(name) : null;
+  const p = path.join(base, username, filename);
+  fs.stat(p, (err, stat) => {
+    if (err) {
+      return;
+    }
+    if (stat.isFile()) {
+      callback();
+    }
+  })
+}
+
 if (config.startScript && config.startScript.auto) {
-  setTimeout(() => {
-    console.log('request scenario');
-    const username = config.startScript.username;
-    const filename = config.startScript.filename;
-    createSignature(username, (signature) => {
-      postCommand(
-        {
-          body: {
-            type: 'scenario',
-            action: 'play',
-            filename,
-            range: {
-              start: 0,
+  const username = config.startScript.username;
+  const filename = config.startScript.filename;
+  checkScenarioFile(username, filename, () => {
+    setTimeout(() => {
+      console.log(`request scenario ${username}:${filename}`);
+      createSignature(username, (signature) => {
+        postCommand(
+          {
+            body: {
+              type: 'scenario',
+              action: 'play',
+              filename,
+              range: {
+                start: 0,
+              },
+              name: username,
             },
-            name: username,
           },
-        },
-        {
-          send: () => {},
-        },
-        { user_id: username, signature }
-      );
-    })
-  }, 5000)
+          {
+            send: () => {},
+          },
+          { user_id: username, signature }
+        );
+      })
+    }, 5000)
+  })
 }
 
 /*
