@@ -139,7 +139,7 @@ function Speech() {
     }
     streamQue = [];
     console.log('startRecording');
-    console.log(JSON.stringify(requestOpts,null,'  '));
+    console.log(JSON.stringify(requestOpts, null, '  '));
   });
 
   // 音声解析終了
@@ -195,7 +195,7 @@ function Speech() {
         level: micInputStream.mic_level,
       });
     }
-    if (micInputStream.incrConsecSilenceCount() > micInputStream.getNumSilenceFramesExitThresh()) {
+    if (micInputStream.incrConsecSilenceCount() >= micInputStream.getNumSilenceFramesExitThresh()) {
       if (t._preloadRecording) {
         streamQue.push(data);
         streamQue = streamQue.slice(-PRELOAD_COUNT);
@@ -249,7 +249,7 @@ function Speech() {
               if (data.results[0] && data.results[0].alternatives[0]) {
                 const alternatives = data.results[0].alternatives.map(v => v);
                 const sentence = alternatives.shift();
-                console.log(JSON.stringify(data));
+                console.log(JSON.stringify(data, null, '  '));
                 if (!t.recording) return;
                 const result = {
                   languageCode: opts.config.languageCode,
@@ -422,6 +422,8 @@ if (require.main === module) {
     }
     return 4000;
   })()
+
+  console.log(`threshold ${threshold}`);
 
   sp.recording = true;
   sp.emit('startRecording', {
