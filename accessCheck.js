@@ -193,7 +193,7 @@ function hasPermission(permission) {
   }
 }
 
-function checkPermission(payload, permission, callback) {
+function checkPermission(payload={}, permission, callback) {
   if (!config.credentialAccessControl) {
     return callback(true);
   }

@@ -492,7 +492,7 @@ function servoAction(action, payload, callback) {
   gpioSocket.emit('message', { action, ...payload, }, (payload) => {
     if (done) return;
     done = true;
-    console.log(payload);
+    //console.log(payload);
     if (callback) callback();
   });
   if (callback) {
@@ -1074,6 +1074,7 @@ app.post('/speech-to-text', hasPermission('control.write'), (req, res) => {
   speech_to_text({
     timeout: (typeof req.body.payload.timeout === 'undefined') ? 30000 : req.body.payload.timeout,
     threshold: (typeof req.body.payload.sensitivity === 'undefined') ? 2000 : req.body.payload.sensitivity,
+    level: (typeof req.body.payload.level === 'undefined') ? 100 : req.body.payload.level,
     languageCode: (typeof req.body.payload.languageCode === 'undefined') ? 'ja-JP' : req.body.payload.languageCode,
     recording: (typeof req.body.payload.recording === 'undefined') ? true : req.body.payload.recording,
   }, (err, data) => {
@@ -2211,7 +2212,7 @@ const imageServers = {};
 iop.on('connection', function (socket) {
   console.log('connected io player', socket.conn.remoteAddress);
   playerSocket = socket;
-  const localhostCheck = (payload) => {
+  const localhostCheck = (payload={}) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken();
     }
@@ -2405,6 +2406,7 @@ io.on('connection', function (socket) {
           speech_to_text({
             timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
             threshold: (typeof payload.sensitivity === 'undefined') ? 2000 : payload.sensitivity,
+            level: (typeof payload.level === 'undefined') ? 100 : payload.level,
             languageCode: (typeof payload.languageCode === 'undefined') ? 'ja-JP' : payload.languageCode,
             recording: (typeof payload.recording === 'undefined') ? true : payload.recording,
           }, (err, data) => {
@@ -2667,7 +2669,7 @@ function execPowerOff() {
 }
 
 gpioSocket.on('button', (payload) => {
-  console.log(payload);
+  // console.log(payload);
   if (shutdownTimer) {
     clearTimeout(shutdownTimer);
     shutdownTimer = null;
