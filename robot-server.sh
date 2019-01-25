@@ -9,9 +9,9 @@ sudo timedatectl set-ntp 1
 #export GOOGLE_APPLICATION_CREDENTIALS=~/.config/robot/google-text-to-speech-credentials.json
 #export ROBOT_GOOGLE_SHEET_CREDENTIAL_PATH=~/.config/robot/sheet-api-credentials.json
 #export ROBOT_GOOGLE_SHEET_TOKEN_PATH=~/.config/robot/sheet-api-token.json
-#export ROBOT_GOOGLE_SPEECH_DATA_DIR=~/Sound
-#export ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH=~/Sound/robot-cacheDB.json
+export ROBOT_GOOGLE_SPEECH_DATA_DIR=~/Sound
+export ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH=~/Sound/robot-cacheDB.json
 #export ROBOT_CREDENTIAL_ACCESS_CONTROL=true
 #export ROBOT_ALLOW_LOCALHOST_ACCESS=false
-#export SPEECH=off
+export SPEECH=off
 node robot-server.js > robot-server.log
