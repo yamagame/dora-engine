@@ -394,6 +394,7 @@ if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
 if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parseInt(robotData.recordingTime);
 if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
 if (typeof robotData.barData === 'undefined') robotData.barData = [];
+if (typeof robotData.calendarData === 'undefined') robotData.calendarData = {};
 
 if (speech.setParams) {
   speech.setParams(robotData.voice)
@@ -2196,6 +2197,19 @@ app.post('/bar/move-screen', hasPermission('control.write'), async (req, res) =>
     iob.emit('move-to-day', { time: DayToString(new Date()), });
   }
   res.send({ status: 'OK' });
+});
+
+app.post('/calendar', hasPermission('control.write'), async (req, res) => {
+  const calendarData = ('calendarData' in req.body) ? { ...req.body.calendarData } : null;
+  if (calendarData) {
+    robotData.calendarData = calendarData;
+    writeRobotData();
+  }
+  res.send({ status: 'OK' });
+});
+
+app.get('/calendar', async (req, res) => {
+  res.send(robotData.calendarData);
 });
 
 const server = require('http').Server(app);
