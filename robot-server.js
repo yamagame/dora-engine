@@ -1639,6 +1639,9 @@ console.log(robotData.voice);
                   sensitivity: robotData.voice.threshold,
                   level: robotData.voice.level,
                 },
+                speech: {
+                  languageCode: config.defaultVoice,
+                },
                 dora: {
                   host: 'localhost',
                   port: config.port,

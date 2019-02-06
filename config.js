@@ -35,6 +35,7 @@ const config = {
   //localhostアクセスを有効化
   allowLocalhostAccess: (process.env.ROBOT_ALLOW_LOCALHOST_ACCESS || 'true') === 'true',
   localhostIPs: [ '::1', '::ffff:127.0.0.1', ],
+  defaultVoice: process.env.ROBOT_DEFAULT_VOICE || 'default',
   adminAuth: [
     //管理者用
     {
