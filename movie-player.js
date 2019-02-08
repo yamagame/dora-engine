@@ -1,7 +1,7 @@
 const EventEmitter = require('events');
 const spawn = require('child_process').spawn;
 const path = require('path');
-const util = require('./util');
+const util = require('./utils');
 
 function Player() {
   var t = new EventEmitter();
