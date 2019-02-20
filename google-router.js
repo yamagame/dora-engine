@@ -529,13 +529,13 @@ router.post('/append-to-sheet', (req, res) => {
 module.exports = router;
 
 if (require.main === module) {
-  const PORT = process.env.PORT || 5000
-  const bodyParser = require('body-parser');
-  const app = express();
-  app.use(bodyParser.json({ type: 'application/json' }))
-  app.use(router);
-  const server = require('http').Server(app);
-  server.listen(PORT, () => console.log(`server listening on port ${PORT}!`))
+  // const PORT = process.env.PORT || 5000
+  // const bodyParser = require('body-parser');
+  // const app = express();
+  // app.use(bodyParser.json({ type: 'application/json' }))
+  // app.use(router);
+  // const server = require('http').Server(app);
+  // server.listen(PORT, () => console.log(`server listening on port ${PORT}!`))
 
   if (config.googleSheet.credentialPath !== null && config.googleSheet.tokenPath !== null) {
     loadCredential((err, credentials) => {
