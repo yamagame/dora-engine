@@ -92,7 +92,15 @@ const searchAnswer = async (sheetData, message, type='ngram') => {
   const ask = (await mecabAsync(message)).map( v => v[0] ).join(' ');
   let point = 0;
   let target = null;
-  sheetData.forEach( v => {
+  sheetData.some( v => {
+    if (type === 'check') {
+      if (v.check) {
+        if (message.trim().toLowerCase().indexOf(v.check.trim().toLowerCase()) >= 0) {
+          target = { ...v };
+          return true;
+        }
+      }
+    } else
     if (v.ask) {
       const p = utils.nGramCheck( v.ask.morpho, ask );
       if (point < p) {
@@ -120,6 +128,7 @@ const searchAnswer = async (sheetData, message, type='ngram') => {
         }
       }
     }
+    return false;
   })
   if (target) {
     const index = getRandomInt(target.answer.length);
@@ -398,6 +407,22 @@ module.exports = function(router, settings) {
       const p = await getParams(sheetLoader, req.body);
       if (p == null) return notfoundReplay(req, res);
       const r = await searchAnswer(p.sheetData, p.message, 'same');
+      if (r) {
+        res.send(r);
+        return
+      }
+    } catch(err) {
+      console.error(err);
+    }
+    notfoundReplay(req, res);
+  })
+
+  //一致する項目を検索
+  router.post(`/check`, async function(req, res) {
+    try {
+      const p = await getParams(sheetLoader, req.body);
+      if (p == null) return notfoundReplay(req, res);
+      const r = await searchAnswer(p.sheetData, p.message, 'check');
       if (r) {
         res.send(r);
         return

@@ -96,8 +96,22 @@ module.exports = function(config) {
                     morpho: v.ask,
                   }
                 }
+                if (v.check) {
+                  const ca = v.check.split('\n');
+                  ca.forEach( w => {
+                    if (w !== '') {
+                      const q = {}
+                      Object.keys(v).forEach( k => {
+                        q[k] = v[k];
+                      })
+                      q.check = w;
+                      r.push(q);
+                    }
+                  })
+                } else {
+                  r.push(v);
+                }
                 t = v;
-                r.push(v);
               }
             } else {
               r.push(v);
