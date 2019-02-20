@@ -1575,6 +1575,11 @@ const postCommand = async (req, res, credential) => {
     res.send({ state: 'ok' });
     return;
   }
+  if (req.body.type === 'reboot') {
+    execReboot();
+    res.send({ state: 'ok' });
+    return;
+  }
   if (req.body.type === 'scenario') {
     const { action } = req.body;
     function stopAll() {
@@ -2677,6 +2682,24 @@ function execPowerOff() {
       process.exit(0);
     } else {
       const _playone = spawn('/usr/bin/sudo', ['shutdown', '-f', 'now']);
+      _playone.on('close', function(code) {
+        console.log('shutdown done');
+      });
+    }
+    doShutdown = false;
+  }, 5000)
+}
+
+function execReboot() {
+  gpioSocket.emit('led-command', { action: 'on' });
+  //シャットダウン
+  doShutdown = true;
+  servoAction('stop');
+  setTimeout(() => {
+    if (process.platform === 'darwin') {
+      process.exit(0);
+    } else {
+      const _playone = spawn('/usr/bin/sudo', ['reboot']);
       _playone.on('close', function(code) {
         console.log('shutdown done');
       });
