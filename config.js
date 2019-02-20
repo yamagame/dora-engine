@@ -41,14 +41,14 @@ const config = {
     {
       username: 'admin',
       //default: robotnopass
-      password: '$2b$08$4r.XgxukN5Bo/BrlDW6aYObEJgSC4o5NXOkTlGO71xQAumhHJJN72',
+      password: process.env.ROBOT_ADMIN_PASS || '$2b$08$4r.XgxukN5Bo/BrlDW6aYObEJgSC4o5NXOkTlGO71xQAumhHJJN72',
       permissions: '*',
     },
     //クイズ参加者用
     {
       username: 'player',
       //default: playernopass
-      password: '$2b$08$7ZZ1ndbn.GG5p/WBk9WsMOZPy4pLf75vvJYbHOFkHDwWXGIqjVvfm',
+      password: process.env.ROBOT_PLAYER_PASS || '$2b$08$7ZZ1ndbn.GG5p/WBk9WsMOZPy4pLf75vvJYbHOFkHDwWXGIqjVvfm',
       permissions: ['result.read', 'command.write',],
       guest: true,
     },
@@ -56,7 +56,7 @@ const config = {
     {
       username: 'guest-client',
       //default: guestclientnopass
-      password: '$2b$08$yxLRwXjWVkJStJNNAlz5pe43xG7aLcExyViyzstVPMMVBdUe4blyi',
+      password: process.env.ROBOT_GUEST_PASS || '$2b$08$yxLRwXjWVkJStJNNAlz5pe43xG7aLcExyViyzstVPMMVBdUe4blyi',
       permissions: ['image-server.read'],
       guest: true,
     },
@@ -67,9 +67,9 @@ const config = {
     //自動起動させる場合はここをtrueにする
     auto: true,
     //ユーザー名
-    username: 'dora-engine',
+    username: process.env.ROBOT_DEFAULT_USER || 'dora-engine',
     //開始したいスクリプト
-    filename: 'start.dora',
+    filename: process.env.ROBOT_START_SCRIPT || 'start.dora',
   },
   //Google text-to-speech関連
   synthesizeSpeech: {
