@@ -21,7 +21,6 @@ const matchAll = (str, regex) => {
     }
   }
   match(str);
-console.log(ret);
   return ret;
 }
 
