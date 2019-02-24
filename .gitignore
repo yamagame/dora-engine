@@ -24,3 +24,4 @@ last_chat.txt
 start-robo-dev.sh
 chatData/*
 private
+robot-server-rpi.sh
