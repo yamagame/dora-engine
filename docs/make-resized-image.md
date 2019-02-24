@@ -153,3 +153,18 @@ $ sudo dcfldd if=~/Documents/cardbot-os.img of=/dev/sda
 ```
 
 ifで読み込み元を、ofで書き出し先を指定します。
+
+### ディスクイメージのマウント
+
+以下のコマンドでディスクイメージを調べます。
+
+```bash
+$ fdisk -l ~/Documents/cardbot-os.img
+```
+
+start-block と block-size を掛け合わせたものを offset で指定してマウントします。
+マウント先のディレクトリはあらかじめ作成しておきます。
+
+```bash
+$ sudo mount -o loop,offset=65536 cardbot-os.img /mnt/tmp
+```
