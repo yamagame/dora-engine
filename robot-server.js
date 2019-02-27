@@ -2410,6 +2410,7 @@ io.on('connection', function (socket) {
     localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
+        if (payload.option === 'stop-sound') execSoundCommand({ sound: 'stop' });
         buttonClient.emit('stop-speech-to-text');
         speech.emit('data', 'stoped');
         talk.stop(() => {
