@@ -1153,15 +1153,29 @@ function changeLed(payload) {
   }
 }
 
-let _playone = null;
+let playsnd = {};
 
-function execSoundCommand(payload) {
+function execSoundCommand(payload, callback) {
   const sound = (typeof payload.play !== 'undefined') ? payload.play : payload.sound;
   if (sound === 'stop') {
-    if (_playone) {
-      utils.kill(_playone.pid,'SIGTERM',function() {
-      });
-      _playone = null;
+    const pids = Object.keys(playsnd);
+    const _playsnd = playsnd;
+    let count = pids.length;
+    if (count > 0) {
+      playsnd = {};
+      pids.forEach( pid => {
+        const playone = _playsnd[pid];
+        if (playone) {
+          utils.kill(playone.pid, 'SIGTERM', function() {
+            count --;
+            if (count <= 0) {
+              if (callback) callback();
+            }
+          });
+        }
+      })
+    } else {
+      if (callback) callback();
     }
   } else
   if (typeof sound !== 'undefined') {
@@ -1171,10 +1185,13 @@ function execSoundCommand(payload) {
       const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
       const opt = (process.platform === 'darwin') ? [p] : ((config.voiceHat)?['-Dplug:softvol', p]:[p]);
       console.log(`/usr/bin/${cmd} ${p}`);
-      _playone = spawn(`/usr/bin/${cmd}`, opt);
-      _playone.on('close', function(code) {
-        console.log('close', code);
+      const playone = spawn(`/usr/bin/${cmd}`, opt);
+      playone.on('close', function() {
+        console.log('close');
+        delete playsnd[playone.pid];
+        if (callback) callback();
       });
+      playsnd[playone.pid] = playone;
     }
   }
 }
@@ -1534,6 +1551,12 @@ const postCommand = async (req, res, credential) => {
       return;
     }
   }
+  if (req.body.type === 'sound.sync') {
+    execSoundCommand(req.body, () => {
+      res.send({ state: 'ok', });
+    });
+    return;
+  }
   if (req.body.type === 'sound') {
     execSoundCommand(req.body);
   }
@@ -1586,18 +1609,19 @@ const postCommand = async (req, res, credential) => {
       dora.stop();
       talk.stop();
       //servoAction('idle');
-      execSoundCommand({ sound: 'stop' });
-      buttonClient.emit('stop-speech-to-text');
-      buttonClient.emit('all-blink', {});
-      // buttonClient.emit('close-all', {});
-      speech.emit('data', 'stoped');
-      led_mode = 'auto';
-      servoAction('led-off');
-      last_led_action = 'led-off';
-      if (playerSocket) {
-        playerSocket.emit('movie', { action: 'cancel', }, (data) => {
-        });
-      }
+      execSoundCommand({ sound: 'stop' }, () => {
+        buttonClient.emit('stop-speech-to-text');
+        buttonClient.emit('all-blink', {});
+        // buttonClient.emit('close-all', {});
+        speech.emit('data', 'stoped');
+        led_mode = 'auto';
+        servoAction('led-off');
+        last_led_action = 'led-off';
+        if (playerSocket) {
+          playerSocket.emit('movie', { action: 'cancel', }, (data) => {
+          });
+        }
+      });
     }
     if (action == 'play') {
       run_scenario = true;
@@ -2410,12 +2434,21 @@ io.on('connection', function (socket) {
     localhostCheck(payload);
     checkPermission(payload, 'control.write', (verified) => {
       if (verified) {
-        if (payload.option === 'stop-sound') execSoundCommand({ sound: 'stop' });
-        buttonClient.emit('stop-speech-to-text');
-        speech.emit('data', 'stoped');
-        talk.stop(() => {
-          if (callback) callback('OK');
-        });
+        if (payload.option === 'stop-sound') {
+          execSoundCommand({ sound: 'stop' }, () => {
+            buttonClient.emit('stop-speech-to-text');
+            speech.emit('data', 'stoped');
+            talk.stop(() => {
+              if (callback) callback('OK');
+            });
+          });
+        } else {
+          buttonClient.emit('stop-speech-to-text');
+          speech.emit('data', 'stoped');
+          talk.stop(() => {
+            if (callback) callback('OK');
+          });
+        }
         return;
       }
       if (callback) callback('NG');
