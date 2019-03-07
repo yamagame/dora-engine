@@ -395,6 +395,7 @@ if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parse
 if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
 if (typeof robotData.barData === 'undefined') robotData.barData = [];
 if (typeof robotData.calendarData === 'undefined') robotData.calendarData = {};
+if (typeof robotData.defaults === 'undefined') robotData.defaults = '';
 
 if (speech.setParams) {
   speech.setParams(robotData.voice)
@@ -1513,6 +1514,7 @@ app.post('/result', hasPermission('result.read'), async (req, res) => {
 })
 
 let run_scenario = false;
+let prefdata = '';
 
 const postCommand = async (req, res, credential) => {
   if (req.body.type === 'quiz') {
@@ -1601,6 +1603,16 @@ const postCommand = async (req, res, credential) => {
   if (req.body.type === 'reboot') {
     execReboot();
     res.send({ state: 'ok' });
+    return;
+  }
+  if (req.body.type === 'save') {
+    robotData.defaults = req.body.data;
+    writeRobotData();
+    res.send({ state: 'ok', });
+    return;
+  }
+  if (req.body.type === 'load') {
+    res.send({ state: 'ok', data: robotData.defaults, });
     return;
   }
   if (req.body.type === 'scenario') {
