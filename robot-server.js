@@ -1514,7 +1514,6 @@ app.post('/result', hasPermission('result.read'), async (req, res) => {
 })
 
 let run_scenario = false;
-let prefdata = '';
 
 const postCommand = async (req, res, credential) => {
   if (req.body.type === 'quiz') {
