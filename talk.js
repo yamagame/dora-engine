@@ -37,6 +37,7 @@ function Talk() {
     const ssmlGender = params.ssmlGender;
     const speakingRate = params.speakingRate;
     const pitch = params.pitch;
+    const voiceId = params.voiceId;
     const name = params.name;
     const conts = (['default', '', null].indexOf(languageCode)>=0) ? words.split(/\n|,|、|。|@|＠|？|\s|\?/g) : [words];
     const playone = () => {
@@ -125,6 +126,7 @@ function Talk() {
             if (ssmlGender) params.ssmlGender = ssmlGender;
             if (speakingRate !== null) params.speakingRate = speakingRate;
             if (pitch !== null) params.pitch = pitch;
+            if (voiceId !== null) params.voiceId = voiceId;
             if (name) params.name = name;
             this._playone = `http://localhost:${config.port}/google`;
             //音声データのダウンロードのみ

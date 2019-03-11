@@ -3,7 +3,7 @@ const router = express.Router();
 const config = require('./config');
 const { spawn } = require('child_process');
 const fs = require('fs');
-const client = (() => {
+const googleSpeech = (() => {
   if ('synthesizeSpeech' in config
    && 'credentialPath' in config.synthesizeSpeech
    && config.synthesizeSpeech.credentialPath) {
@@ -19,11 +19,30 @@ const client = (() => {
   console.log('google text-to-speech is disabled.');
   return null;
 })();
+const polly = (() => {
+  if ('synthesizeSpeech' in config
+   && 'awsCredentialPath' in config.synthesizeSpeech
+   && config.synthesizeSpeech.awsCredentialPath) {
+    try {
+      const aws = require('aws-sdk');
+      aws.config.loadFromPath(config.synthesizeSpeech.awsCredentialPath);
+      const polly = new aws.Polly({apiVersion: '2016-06-10',region:'us-west-2'});
+      console.log('aws text-to-speech initialized.');
+      return polly;
+    } catch(err) {
+      console.log(err);
+    }
+  }
+  console.log('aws text-to-speech is disabled.');
+  return null;
+})();
 const crypto = require('crypto');
 const path = require('path');
 const readline = require('readline');
 const {google} = require('googleapis');
 const utils = require('./utils');
+const FileWriter = require('wav').FileWriter;
+const { Readable } = require('stream');
 
 const cacheDBPath = ('synthesizeSpeech' in config && 'cacheDBPath' in config.synthesizeSpeech)?config.synthesizeSpeech.cacheDBPath:null;
 
@@ -118,6 +137,12 @@ function ReqTextToSpeech(req, res, mode='play') {
     voice.languageCode = 'ja-JP';
   }
 
+  if ('voiceId' in req.body) {
+    voice.voiceId = req.body.voiceId;
+  } else {
+    voice.voiceId = null;
+  }
+
   if ('ssmlGender' in req.body) {
     voice.ssmlGender = req.body.ssmlGender;
   } else {
@@ -154,6 +179,8 @@ function ReqTextToSpeech(req, res, mode='play') {
     // Select the type of audio encoding
     audioConfig,
   };
+
+  console.log(request);
 
   const cacheFilePath = (filename) => {
     return path.join(config.synthesizeSpeech.tempdir, filename);
@@ -221,12 +248,66 @@ function ReqTextToSpeech(req, res, mode='play') {
         recording.on('close', function(code) {
           callback(null, sndfilepath);
         });
-      } else {
-        if (!client) {
-          callback(new Error('TextToSpeechClient is disabled.'));
+      } else
+      if (request.voice.languageCode.indexOf('aws') >= 0) {
+        if (!polly) {
+          callback(new Error('AWS Polly is disabled.'));
           return;
         }
-        client.synthesizeSpeech(request, (err, response) => {
+        const playone = (VoiceId, Text) => {
+          polly.synthesizeSpeech({
+            OutputFormat: 'pcm',
+            VoiceId,
+            Text,
+            SampleRate: '16000',
+            TextType: 'text'
+          }).promise()
+            .then(data => {
+              var outputFileStream = new FileWriter(sndfilepath, {
+                sampleRate: 16000,
+                channels: 1
+              });
+              const readable = new Readable()
+              readable.push(data.AudioStream)
+              readable.push(null)
+              readable.pipe(outputFileStream);
+              outputFileStream.on('error', (err) => {
+                callback(err);
+              });
+              outputFileStream.on('end', () => {
+                callback(null, sndfilepath);
+              });
+            })
+            .catch(err => {
+              callback(err);
+            });
+        }
+        if (request.voice.voiceId) {
+          playone(request.voice.voiceId, request.input.text);
+        } else {
+          let LanguageCode = '';
+          try {
+            LanguageCode = request.voice.languageCode.split('.')[1].trim()
+          } catch(err) {
+            callback(err);
+            return;
+          }
+          polly.describeVoices({
+            LanguageCode,
+          }).promise()
+          .then(data => {
+            playone(data.Voices[0].Id, request.input.text);
+          })
+          .catch(err => {
+            callback(err);
+          });
+        }
+      } else {
+        if (!googleSpeech) {
+          callback(new Error('Google TextToSpeech is disabled.'));
+          return;
+        }
+        googleSpeech.synthesizeSpeech(request, (err, response) => {
           if (err) {
             callback(err);
             return;

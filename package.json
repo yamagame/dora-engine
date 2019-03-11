@@ -7,6 +7,7 @@
     "@google-cloud/speech": "^2.1.1",
     "@google-cloud/text-to-speech": "^0.3.0",
     "aws-iot-device-sdk": "^2.1.0",
+    "aws-sdk": "^2.418.0",
     "bcrypt": "^3.0.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.18.2",
@@ -41,7 +42,8 @@
     "request-promise": "^4.2.2",
     "sequelize": "^4.37.10",
     "socket.io": "^2.0.4",
-    "sqlite3": "^4.0.0"
+    "sqlite3": "^4.0.0",
+    "wav": "^1.0.2"
   },
   "devDependencies": {
     "mocha": "^5.2.0"

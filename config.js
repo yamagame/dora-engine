@@ -73,8 +73,10 @@ const config = {
   },
   //Google text-to-speech関連
   synthesizeSpeech: {
-    //認証ファイルへのパス
+    //Google認証ファイルへのパス
     credentialPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
+    //AWS認証ファイルへのパス
+    awsCredentialPath: process.env.ROBOT_AWS_CREDENTIALS || null,
     //キャッシュする音声データを保存するディレクトリ
     tempdir: process.env.ROBOT_GOOGLE_SPEECH_DATA_DIR || '/tmp',
     //キャッシュする音声データのトータルサイズ(MByte)
