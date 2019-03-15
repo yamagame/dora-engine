@@ -27,6 +27,7 @@ const DoraChat = require('./doraChat');
 const LocalStrategy = require('passport-local').Strategy;
 const uuidv4 = require('uuid/v4');
 const mkdirp = require('mkdirp');
+const UserDefaults = require('./user-defaults');
 const {
   localhostIPs,
   localIPCheck,
@@ -395,7 +396,6 @@ if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parse
 if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
 if (typeof robotData.barData === 'undefined') robotData.barData = [];
 if (typeof robotData.calendarData === 'undefined') robotData.calendarData = {};
-if (typeof robotData.defaults === 'undefined') robotData.defaults = '';
 
 if (speech.setParams) {
   speech.setParams(robotData.voice)
@@ -580,7 +580,7 @@ passport.use('local', new LocalStrategy({
   passReqToCallback : true
 },
 function(req, name, password, done) {
-console.log(`name:${name} password:${password}`);
+  //console.log(`name:${name} password:${password}`);
   setTimeout(function() {
     let auth = {};
     const checkPass = () => {
@@ -1592,7 +1592,38 @@ const postCommand = async (req, res, credential) => {
       } else {
         console.log(`invalid 'imageMap' save command `)
       }
+    } else
+    if (action === 'defaults') {
+      UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
+        UserDefaults.save(config.robotUserDefaultsPath, req.body.data, (err) => {
+          if (err) {
+            console.log(err);
+            res.send({ state: 'ng', });
+            return;
+          }
+          res.send({ state: 'ok', });
+        })
+      });
+      return;
     }
+    res.send({ state: 'ng', });
+    return;
+  }
+  if (req.body.type === 'load') {
+    const { action, } = req.body;
+    if (action === 'defaults') {
+      UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
+        if (err) {
+          console.log(err);
+          res.send({ state: 'ng', });
+          return;
+        }
+        res.send({ state: 'ok', data, });
+      })
+      return;
+    }
+    res.send({ state: 'ng', });
+    return;
   }
   if (req.body.type === 'poweroff') {
     execPowerOff();
@@ -1602,16 +1633,6 @@ const postCommand = async (req, res, credential) => {
   if (req.body.type === 'reboot') {
     execReboot();
     res.send({ state: 'ok' });
-    return;
-  }
-  if (req.body.type === 'save') {
-    robotData.defaults = req.body.data;
-    writeRobotData();
-    res.send({ state: 'ok', });
-    return;
-  }
-  if (req.body.type === 'load') {
-    res.send({ state: 'ok', data: robotData.defaults, });
     return;
   }
   if (req.body.type === 'scenario') {
@@ -1636,7 +1657,7 @@ const postCommand = async (req, res, credential) => {
     }
     if (action == 'play') {
       run_scenario = true;
-      const play = ({ filename, range, name }) => {
+      const play = ({ filename, range, name }, defaults) => {
         stopAll();
         function emitError(err) {
           console.log(err);
@@ -1686,6 +1707,7 @@ console.log(robotData.voice);
                   host: 'localhost',
                   port: config.port,
                 },
+                defaults,
               }, {
                 socket: localSocket,
                 range,
@@ -1731,7 +1753,9 @@ console.log(robotData.voice);
           emitError(err);
         }
       }
-      play(req.body);
+      UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
+        play(req.body, data);
+      });
     }
     if (action == 'stop') {
       run_scenario = false;

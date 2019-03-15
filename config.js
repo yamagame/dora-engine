@@ -20,6 +20,7 @@ const config = {
     api_key: process.env.DOCOMO_API_KEY || '',
     app_id:  process.env.DOCOMO_APP_ID  || '',
   },
+  robotUserDefaultsPath: process.env.ROBOT_USER_DEFAULTS_PATH || path.join(__dirname, 'robot-defaults.json'),
   voiceHat: (process.env.ROBOT_USB_VOICE_HAT || 'true') === 'true',
   usbUSBMIC: (process.env.ROBOT_USB_MIC_DEVICE || 'false') !== 'false',
   usbUSBMICDevice: process.env.ROBOT_USB_MIC_DEVICE || 'plughw:1,0',
