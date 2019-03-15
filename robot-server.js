@@ -1,4 +1,5 @@
 const EventEmitter = require('events');
+const os = require('os');
 const ip = require('ip');
 const express = require('express')
 const router = require('express').Router()
