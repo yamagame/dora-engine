@@ -1695,6 +1695,7 @@ const postCommand = async (req, res, credential) => {
 console.log(robotData.voice);
               dora.play({
                 username,
+                hostname: os.hostname(),
                 ip_address: ip.address(),
                 voice: {
                   sensitivity: robotData.voice.threshold,
