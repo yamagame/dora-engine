@@ -2528,7 +2528,7 @@ io.on('connection', function (socket) {
     localhostCheck(payload);
     checkPermission(payload, 'command.write', (verified) => {
       try {
-        const base = path.join(__dirname, 'command');
+        const base = config.commandDirPath;
         const cmd = path.normalize(path.join(base, payload.command));
         const args = payload.args || '';
         if (cmd.indexOf(base) == 0) {
