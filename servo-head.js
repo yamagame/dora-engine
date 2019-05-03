@@ -136,7 +136,7 @@ raspi.init(() => {
       const url = require('url').parse(req.url);
       const params = require('querystring').parse(url.search);
       req.params = params;
-      
+
       // curl -X POST -d '{"h":100,"v":200}' http://localhost:3091/center
       if (url.pathname === '/center' || url.pathname === '/reset') {
         return requestHandler(req, (data) => {
@@ -194,6 +194,19 @@ raspi.init(() => {
         return requestHandler(req, (data) => {
           saveSetting(servo0, servo1);
           res.end('OK\n');
+        })
+      }
+
+      // curl -X POST http://localhost:3091/exit
+      if (url.pathname === '/exit') {
+        return requestHandler(req, (data) => {
+          mode = 'stop';
+          setTimeout(() => {
+            res.end('OK\n', () => {
+              console.log('exit');
+              process.exit(0);
+            });
+          }, 3000);
         })
       }
 
