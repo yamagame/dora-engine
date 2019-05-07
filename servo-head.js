@@ -201,6 +201,7 @@ raspi.init(() => {
       if (url.pathname === '/exit') {
         return requestHandler(req, (data) => {
           mode = 'stop';
+          led_mode = 'off';
           setTimeout(() => {
             res.end('OK\n', () => {
               console.log('exit');
