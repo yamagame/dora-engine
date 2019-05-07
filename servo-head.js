@@ -200,7 +200,7 @@ raspi.init(() => {
       // curl -X POST http://localhost:3091/exit
       if (url.pathname === '/exit') {
         return requestHandler(req, (data) => {
-          mode = 'stop';
+          mode = 'exit';
           led_mode = 'off';
           setTimeout(() => {
             res.end('OK\n', () => {
@@ -239,6 +239,10 @@ raspi.init(() => {
     });
     
     socket.on('message', function(payload, callback) {
+      if (mode === 'exit') {
+        if (callback) callback();
+        return;
+      }
       try {
         const { action, direction } = payload;
         if (action === 'centering') {
