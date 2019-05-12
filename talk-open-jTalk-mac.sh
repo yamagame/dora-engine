@@ -12,5 +12,5 @@ do
 done
 echo "$2" | open_jtalk \
 -m $VOICE_PATH \
--x /Users/$USER_NAME/Downloads/open_jtalk_dic_utf_8-1.10 \
+-x /Users/$USER_NAME/Downloads/open_jtalk_dic_utf_8-1.11 \
 -ow $TMP

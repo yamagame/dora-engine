@@ -9,8 +9,8 @@ sudo apt-get install open-jtalk-mecab-naist-jdic hts-voice-nitech-jp-atr503-m001
 
 cd ~/Downloads/
 # Download and restore dictionary
-wget https://sourceforge.mirrorservice.org/o/op/open-jtalk/Dictionary/open_jtalk_dic-1.10/open_jtalk_dic_utf_8-1.10.tar.gz
-tar -zxvf open_jtalk_dic_utf_8-1.10.tar.gz
+wget https://sourceforge.net/projects/open-jtalk/files/Dictionary/open_jtalk_dic-1.11/open_jtalk_dic_utf_8-1.11.tar.gz
+tar -zxvf open_jtalk_dic_utf_8-1.11.tar.gz
 
 # Download voice mei
 wget https://jaist.dl.sourceforge.net/project/mmdagent/MMDAgent_Example/MMDAgent_Example-1.7/MMDAgent_Example-1.7.zip
