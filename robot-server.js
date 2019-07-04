@@ -2292,7 +2292,17 @@ app.post('/autostart', hasPermission('control.write'), async (req, res) => {
 });
 
 app.get('/autostart', async (req, res) => {
-  res.send(robotData.autoStart);
+  if (robotData.autoStart.username && robotData.autoStart.filename) {
+    res.send(robotData.autoStart);
+  } else
+  if (config.startScript && config.startScript.auto) {
+    res.send({
+      username: config.startScript.username,
+      filename: config.startScript.filename
+    });
+  } else {
+    res.send({});
+  }
 });
 
 const server = require('http').Server(app);
