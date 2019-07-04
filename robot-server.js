@@ -397,6 +397,7 @@ if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parse
 if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
 if (typeof robotData.barData === 'undefined') robotData.barData = [];
 if (typeof robotData.calendarData === 'undefined') robotData.calendarData = {};
+if (typeof robotData.autoStart === 'undefined') robotData.autoStart = {};
 
 if (speech.setParams) {
   speech.setParams(robotData.voice)
@@ -2281,6 +2282,19 @@ app.get('/calendar', async (req, res) => {
   res.send(robotData.calendarData);
 });
 
+app.post('/autostart', hasPermission('control.write'), async (req, res) => {
+  const autostart = ('autostart' in req.body) ? { ...req.body.autostart } : null;
+  if (autostart) {
+    robotData.autoStart = autostart;
+    writeRobotData();
+  }
+  res.send({ status: 'OK' });
+});
+
+app.get('/autostart', async (req, res) => {
+  res.send(robotData.autoStart);
+});
+
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
 const ioa = io.of('audio');
@@ -2842,9 +2856,7 @@ const checkScenarioFile = (name, filename, callback) => {
   })
 }
 
-if (config.startScript && config.startScript.auto) {
-  const username = config.startScript.username;
-  const filename = config.startScript.filename;
+function startSenario(username, filename) {
   checkScenarioFile(username, filename, () => {
     setTimeout(() => {
       console.log(`request scenario ${username}:${filename}`);
@@ -2869,6 +2881,17 @@ if (config.startScript && config.startScript.auto) {
       })
     }, 5000)
   })
+}
+
+if (robotData.autoStart.username && robotData.autoStart.filename) {
+  const username = robotData.autoStart.username;
+  const filename = robotData.autoStart.filename;
+  startSenario(username, filename);
+} else
+if (config.startScript && config.startScript.auto) {
+  const username = config.startScript.username;
+  const filename = config.startScript.filename;
+  startSenario(username, filename);
 }
 
 /*
