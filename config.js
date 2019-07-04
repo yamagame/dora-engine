@@ -67,7 +67,7 @@ const config = {
   defualtUserPermissions: '*',
   startScript: {
     //自動起動させる場合はここをtrueにする
-    auto: true,
+    auto: false,
     //ユーザー名
     username: process.env.ROBOT_DEFAULT_USER || 'dora-engine',
     //開始したいスクリプト
