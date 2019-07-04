@@ -40,7 +40,7 @@
     "raspi-soft-pwm": "^4.0.1",
     "request": "^2.83.0",
     "request-promise": "^4.2.2",
-    "sequelize": "^4.37.10",
+    "sequelize": "^5.9.2",
     "socket.io": "^2.0.4",
     "sqlite3": "^4.0.0",
     "wav": "^1.0.2"
