@@ -30,6 +30,11 @@ const uuidv4 = require('uuid/v4');
 const mkdirp = require('mkdirp');
 const UserDefaults = require('./user-defaults');
 const {
+  upload,
+  readDir,
+  deleteFile,
+} = require('./fileServer');
+const {
   localhostIPs,
   localIPCheck,
   createSignature,
@@ -2303,6 +2308,18 @@ app.get('/autostart', async (req, res) => {
   } else {
     res.send({});
   }
+});
+
+app.post('/file/upload/pictures/:subdir', hasPermission('control.write'), async (req, res) => {
+  upload(req, res, PICT, req.params.subdir);
+});
+
+app.post('/file/readDir/pictures/:subdir', hasPermission('control.write'), async (req, res) => {
+  readDir(req, res, PICT, req.params.subdir);
+});
+
+app.post('/file/delete/pictures/:subdir/:filename', hasPermission('control.write'), async (req, res) => {
+  deleteFile(req, res, PICT, req.params.subdir, req.params.filename);
 });
 
 const server = require('http').Server(app);
