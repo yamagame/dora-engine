@@ -51,7 +51,10 @@ const readDir = function (req, res, basePath, dirPath) {
         if (err) {
           return res.status(500).json(err)
         }
-        res.status(200).json(files.filter( v => typeof(v) === 'string' &&  v.indexOf('.') !== 0 ));
+        res.status(200).json(
+          files.filter( v => typeof(v) === 'string' &&  v.indexOf('.') !== 0 )
+               .filter( v => ['.jpeg', '.jpg', '.png', '.git'].indexOf(path.extname(v).toLowerCase()) >= 0 )
+        );
       });
     });
   })
