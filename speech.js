@@ -55,6 +55,7 @@ function Speech() {
       encoding: 'LINEAR16',
       sampleRateHertz: 16000,
       languageCode: 'ja-JP',
+      alternativeLanguageCodes: null,
       maxAlternatives: 3,
     },
     interimResults: false,
@@ -121,22 +122,34 @@ function Speech() {
       }
     }
     requestOpts = [];
-    if ('languageCode' in params) {
-      if (typeof params.languageCode === 'string') {
-        const opts = { ...defaultRequestOpts, };
-        opts.languageCode = params.languageCode.trim();
-        requestOpts.push(opts);
-      } else {
-        params.languageCode.forEach( (code, i) => {
-          const opts = { ...defaultRequestOpts, };
-          opts.config = { ...defaultRequestOpts.config };
-          opts.config.languageCode = code.trim();
-          requestOpts.push(opts);
+    const opts = { ...defaultRequestOpts, };
+    let alternativeLanguageCodes = {};
+    if ('alternativeLanguageCodes' in params) {
+      if (params.alternativeLanguageCodes) {
+        const t = params.alternativeLanguageCodes.trim().split('/');
+        t.forEach( v => {
+          alternativeLanguageCodes[v] = true;
         })
       }
-    } else {
-      requestOpts.push({ ...defaultRequestOpts, });
     }
+    if ('languageCode' in params) {
+      if (typeof params.languageCode === 'string') {
+        opts.languageCode = params.languageCode.trim();
+      } else {
+        params.languageCode.forEach( (code, i) => {
+          if (i==0) {
+            opts.config = { ...defaultRequestOpts.config };
+            opts.config.languageCode = code.trim();
+          } else {
+            alternativeLanguageCodes[code.trim()] = true;
+          }
+        })
+      }
+    }
+    if (Object.keys(alternativeLanguageCodes).length > 0) {
+      opts.alternativeLanguageCodes = [ ...Object.keys(alternativeLanguageCodes) ];
+    }
+    requestOpts.push(opts);
     streamQue = [];
     console.log('startRecording');
     console.log(JSON.stringify(requestOpts, null, '  '));
@@ -246,40 +259,29 @@ function Speech() {
               // }
             })
             .on('data', (data) => {
-              if (data.results[0] && data.results[0].alternatives[0]) {
-                const alternatives = data.results[0].alternatives.map(v => v);
-                const sentence = alternatives.shift();
-                console.log(JSON.stringify(data, null, '  '));
-                if (!t.recording) return;
-                const result = {
-                  languageCode: opts.config.languageCode,
-                  transcript: sentence.transcript,
-                  confidence: sentence.confidence,
+              console.log(JSON.stringify(data, null, '  '));
+              if (!t.recording) return;
+              const emitResult = (result) => {
+                console.log(`result ${JSON.stringify(result, null, '  ')}`);
+                t.emit('data', result);
+                if (!t.writing) {
+                  t.recording = false;
                 }
-                const emitResult = (result) => {
-                  console.log(`result ${JSON.stringify(result, null, '  ')}`);
-                  t.emit('data', result);
-                  if (!t.writing) {
-                    t.recording = false;
-                  }
-                }
-                if (rec_length > 1) {
-                  results.push(result);
-                  if (results.length == 1) {
-                    setTimeout(() => {
-                      let candidate = results[0];
-                      for (var i=0;i<results.length;i++) {
-                        if (candidate.confidence < results[i].confidence) {
-                          candidate = results[i];
-                        }
-                      }
-                      emitResult(candidate);
-                    }, 1000)
-                    return;
-                  }
-                  return;
-                }
-                emitResult(result);
+              }
+              if (data.results) {
+                let candidate = {
+                  confidence: 0,
+                };
+                data.results.forEach( result => {
+                  const languageCode = result.languageCode;
+                  result.alternatives.forEach( alt => {
+                    if (candidate.confidence < alt.confidence) {
+                      candidate = alt;
+                      candidate.languageCode = languageCode;
+                    }
+                  })
+                })
+                emitResult(candidate);
               }
             })
           )

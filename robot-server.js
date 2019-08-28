@@ -313,6 +313,7 @@ dora.loadModule('button', function(DORA, config) {
             } else
             if (typeof res === 'object') {
               msg.languageCode = res.languageCode,
+              msg.alternativeLanguageCodes = res.alternativeLanguageCodes,
               msg.confidence = res.confidence;
               msg.payload = res.transcript;
               msg.speechText = msg.payload;
@@ -843,6 +844,7 @@ function speech_to_text(payload, callback) {
   const threshold = payload.threshold;
   const level = payload.level;
   const languageCode = payload.languageCode;
+  const alternativeLanguageCodes = payload.alternativeLanguageCodes;
 
   const stopRecording = () => {
     speech.recording = false;
@@ -856,6 +858,7 @@ function speech_to_text(payload, callback) {
     speech.emit('startRecording', {
       threshold,
       languageCode,
+      alternativeLanguageCodes,
       level,
     });
   }
@@ -1085,6 +1088,7 @@ app.post('/speech-to-text', hasPermission('control.write'), (req, res) => {
     threshold: (typeof req.body.payload.sensitivity === 'undefined') ? 2000 : req.body.payload.sensitivity,
     level: (typeof req.body.payload.level === 'undefined') ? 100 : req.body.payload.level,
     languageCode: (typeof req.body.payload.languageCode === 'undefined') ? 'ja-JP' : req.body.payload.languageCode,
+    alternativeLanguageCodes: (typeof req.body.payload.alternativeLanguageCodes === 'undefined') ? null : req.body.payload.alternativeLanguageCodes,
     recording: (typeof req.body.payload.recording === 'undefined') ? true : req.body.payload.recording,
   }, (err, data) => {
     res.send(data);
@@ -2542,6 +2546,7 @@ io.on('connection', function (socket) {
             threshold: (typeof payload.sensitivity === 'undefined') ? 2000 : payload.sensitivity,
             level: (typeof payload.level === 'undefined') ? 100 : payload.level,
             languageCode: (typeof payload.languageCode === 'undefined') ? 'ja-JP' : payload.languageCode,
+            alternativeLanguageCodes: (typeof payload.alternativeLanguageCodes === 'undefined') ? null : payload.alternativeLanguageCodes,
             recording: (typeof payload.recording === 'undefined') ? true : payload.recording,
           }, (err, data) => {
             if (callback) callback(data);
