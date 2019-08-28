@@ -4,7 +4,7 @@ const jws = require('jws');
 const config = require('./config');
 const bcrypt = (() => {
   try { return require('bcrypt'); }
-  catch(e) { return equire('bcryptjs'); }
+  catch(e) { return require('bcryptjs'); }
 })();
 
 function getCredential(path) {

@@ -46,7 +46,7 @@ const csrf = require('csurf');
 const csrfProtection = csrf({ cookie: true });
 const bcrypt = (() => {
   try { return require('bcrypt'); }
-  catch(e) { return equire('bcryptjs'); }
+  catch(e) { return require('bcryptjs'); }
 })();
 const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
 const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
