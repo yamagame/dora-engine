@@ -97,6 +97,10 @@ const config = {
   googleTranslate: {
     //Google認証ファイルへのパス
     credentialPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
+    //TranslateAPI ProjectId
+    projectId: process.env.ROBOT_GOOGLE_TRANSLATE_PROJECT_ID || null,
+    //TranslateAPI Location
+    location: process.env.ROBOT_GOOGLE_TRANSLATE_LOCATION || 'global',
   },
   //対話関連
   doraChat: {

@@ -46,12 +46,25 @@ const { Readable } = require('stream');
 const googleTranslate = (() => {
   if ('googleTranslate' in config
    && 'credentialPath' in config.googleTranslate
-   && config.googleTranslate.credentialPath) {
+   && config.googleTranslate.credentialPath
+   && config.googleTranslate.projectId) {
     try {
-      const {Translate} = require('@google-cloud/translate');
-      const translate = new Translate();
+      const {TranslationServiceClient} = require('@google-cloud/translate').v3beta1;
+      const translationClient = new TranslationServiceClient();
       console.log('google translate api initialized.');
-      return translate;
+      return async function(text, source, target) {
+        // Construct request
+        const request = {
+          parent: translationClient.locationPath(config.googleTranslate.projectId, config.googleTranslate.location),
+          contents: [text],
+          mimeType: 'text/plain', // mime types: text/plain, text/html
+          sourceLanguageCode: source ? source : 'ja',
+          targetLanguageCode: target ? target : 'en',
+        };
+        // Run request
+        const [response] = await translationClient.translateText(request);
+        return response.translations.map( t => t.translatedText );
+      };
     } catch(err) {
       console.log(err);
     }
@@ -405,8 +418,8 @@ router.post('/text-to-speech', (req, res) => {
 
 router.post('/translate', async (req, res) => {
   try {
-    const { text, target } = req.body;
-    let [translations] = await googleTranslate.translate(text, target);
+    const { text, source, target } = req.body;
+    let [translations] = await googleTranslate(text, source, target);
     translations = Array.isArray(translations) ? translations : [translations];
     res.json(translations);
   } catch(err) {
