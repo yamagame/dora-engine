@@ -6,6 +6,7 @@
   "dependencies": {
     "@google-cloud/speech": "^2.1.1",
     "@google-cloud/text-to-speech": "^0.3.0",
+    "@google-cloud/translate": "^4.1.3",
     "aws-iot-device-sdk": "^2.1.0",
     "aws-sdk": "^2.418.0",
     "bcrypt": "^3.0.0",

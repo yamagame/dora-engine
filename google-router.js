@@ -16,7 +16,7 @@ const googleSpeech = (() => {
       console.log(err);
     }
   }
-  console.log('google text-to-speech is disabled.');
+  console.log('google text-to-speech disabled.');
   return null;
 })();
 const polly = (() => {
@@ -33,7 +33,7 @@ const polly = (() => {
       console.log(err);
     }
   }
-  console.log('aws text-to-speech is disabled.');
+  console.log('aws text-to-speech disabled.');
   return null;
 })();
 const crypto = require('crypto');
@@ -43,6 +43,22 @@ const {google} = require('googleapis');
 const utils = require('./utils');
 const FileWriter = require('wav').FileWriter;
 const { Readable } = require('stream');
+const googleTranslate = (() => {
+  if ('googleTranslate' in config
+   && 'credentialPath' in config.googleTranslate
+   && config.googleTranslate.credentialPath) {
+    try {
+      const {Translate} = require('@google-cloud/translate');
+      const translate = new Translate();
+      console.log('google translate api initialized.');
+      return translate;
+    } catch(err) {
+      console.log(err);
+    }
+  }
+  console.log('google translate api disabled.');
+  return null;
+})();
 
 const cacheDBPath = ('synthesizeSpeech' in config && 'cacheDBPath' in config.synthesizeSpeech)?config.synthesizeSpeech.cacheDBPath:null;
 
@@ -385,6 +401,18 @@ router.post('/init-text-to-speech', (req, res) => {
 
 router.post('/text-to-speech', (req, res) => {
   ReqTextToSpeech(req, res);
+})
+
+router.post('/translate', async (req, res) => {
+  try {
+    const { text, target } = req.body;
+    let [translations] = await googleTranslate.translate(text, target);
+    translations = Array.isArray(translations) ? translations : [translations];
+    res.json(translations);
+  } catch(err) {
+    console.log(err);
+    res.json([`[error: ${err.message}]`]);
+  }
 })
 
 let google_sheet = {

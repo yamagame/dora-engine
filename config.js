@@ -93,6 +93,11 @@ const config = {
     //トークンファイルへのパス
     tokenPath: process.env.ROBOT_GOOGLE_SHEET_TOKEN_PATH || null,
   },
+  //Google translate API関連
+  googleTranslate: {
+    //Google認証ファイルへのパス
+    credentialPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
+  },
   //対話関連
   doraChat: {
     dataDir: process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(__dirname, 'chatData'),
