@@ -416,11 +416,36 @@ router.post('/text-to-speech', (req, res) => {
   ReqTextToSpeech(req, res);
 })
 
+const translateCache = {
+  count: 0,
+  cache: {},
+}
+
 router.post('/translate', async (req, res) => {
   try {
     const { text, source, target } = req.body;
+    const lowtext = text.toLowerCase();
+    if (translateCache.cache[source]) {
+      if (translateCache.cache[source][target]) {
+        if (translateCache.cache[source][target][lowtext]) {
+          res.json(translateCache.cache[source][target][lowtext].translations);
+          return;
+        }
+      }
+    }
     let [translations] = await googleTranslate(text, source, target);
     translations = Array.isArray(translations) ? translations : [translations];
+    if (!translateCache.cache[source]) {
+      translateCache.cache[source] = {}
+    }
+    if (!translateCache.cache[source][target]) {
+      translateCache.cache[source][target] = {}
+    }
+    translateCache.cache[source][target][lowtext] = {
+      count: translateCache.count,
+      translations,
+    }
+    translateCache.count ++;
     res.json(translations);
   } catch(err) {
     console.log(err);
