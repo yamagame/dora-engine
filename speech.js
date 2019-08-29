@@ -1,5 +1,5 @@
 const EventEmitter = require('events');
-const speech = require('@google-cloud/speech');
+const speech = require('@google-cloud/speech').v1p1beta1;
 const mic = require('mic');
 const config = require('./config');
 
@@ -147,7 +147,7 @@ function Speech() {
       }
     }
     if (Object.keys(alternativeLanguageCodes).length > 0) {
-      opts.alternativeLanguageCodes = [ ...Object.keys(alternativeLanguageCodes) ];
+      opts.config.alternativeLanguageCodes = [ ...Object.keys(alternativeLanguageCodes) ];
     }
     requestOpts.push(opts);
     streamQue = [];
