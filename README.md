@@ -221,6 +221,18 @@ $ node speech.js
 $ npm rebuild grpc --build-from-source
 ```
 
+## Google Translation APIの準備
+
+環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
+
+認証ファイル(JSON ファイル)の取得方法については以下を参照してください。
+
+[https://cloud.google.com/translate/docs/quickstart-client-libraries](https://cloud.google.com/translate/docs/quickstart-client-libraries)
+
+プロジェクトの Translation API を有効にします。
+
+環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectIDを設定します。
+
 ## docomo雑談対話APIの準備
 
 [docomo Developer support](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=natural_dialogue&p_name=api_4_usage_scenario#tag01) のページから、雑談対話のAPIキーを取得して、環境変数 DOCOMO_API_KEY に設定します。
