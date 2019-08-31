@@ -53,7 +53,7 @@ const readDir = function (req, res, basePath, dirPath) {
         }
         res.status(200).json(
           files.filter( v => typeof(v) === 'string' &&  v.indexOf('.') !== 0 )
-               .filter( v => ['.jpeg', '.jpg', '.png', '.git'].indexOf(path.extname(v).toLowerCase()) >= 0 )
+               .filter( v => ['.jpeg', '.jpg', '.png', '.gif'].indexOf(path.extname(v).toLowerCase()) >= 0 )
         );
       });
     });
