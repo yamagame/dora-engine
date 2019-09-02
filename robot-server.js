@@ -1100,15 +1100,25 @@ app.post('/speech-to-text', hasPermission('control.write'), (req, res) => {
   Google Speech API に問い合わせないで curl コマンドでメッセージを送信できる
 
   curlコマンド使用例
-  $ curl -X POST --data 'こんにちは' http://192.168.X.X:3090/debug-speech
+  $ curl -X POST --data 'こんにちは' -H 'content-type:text/plain' http://192.168.X.X:3090/debug-speech
 */
 app.post('/debug-speech', hasPermission('control.write'), (req, res) => {
-  speech.emit('data', req.body.toString('utf-8'));
+  if (typeof req.body === 'string') {
+    speech.emit('data', req.body.toString('utf-8'));
+  } else
+  if (typeof req.body.payload === 'string') {
+    speech.emit('data', req.body.payload.toString('utf-8'));
+  }
   res.send('OK');
 });
 
 app.post('/speech', hasPermission('control.write'), (req, res) => {
-  speech.emit('speech', req.body.toString('utf-8'));
+  if (typeof req.body === 'string') {
+    speech.emit('speech', req.body.toString('utf-8'));
+  } else
+  if (typeof req.body.payload === 'string') {
+    speech.emit('speech', req.body.payload.toString('utf-8'));
+  }
   res.send('OK');
 });
 
