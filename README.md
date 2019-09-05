@@ -191,47 +191,26 @@ $ ./talk-f1.sh こんにちは
 
 ## Google Speech APIの準備
 
-下記のページにしたがって準備します。google-cloud-sdkのインストールは、setup-system.shですでにインストールしていますので不要です。SDKの初期化のセクションから進めます。
-
-[https://cloud.google.com/sdk/docs/quickstart-debian-ubuntu](https://cloud.google.com/sdk/docs/quickstart-debian-ubuntu)
-
-以下のコマンドを実行して、メッセージにしたがって設定します。
-
-```
-$ gcloud init
-```
-
-以下のコマンドを実行して、作成したプロジェクトをデフォルトプロジェクトに設定します。
-
-```
-$ export GCLOUD_PROJECT=[作成したプロジェクトID]
-$ gcloud auth application-default login
-```
-
-音声認識のテストを行います。以下のコマンドを入力して、マイクに向かって話します。話した言葉がテキスト化されれば成功です。
-
-```
-$ cd ~/dora-engine
-$ node speech.js
-```
-
-うまくいかない場合は、node-grpcのバイナリがおかしいのかもしれません。以下のコマンドを実行して、ソースからビルドし直します。
-
-```
-$ npm rebuild grpc --build-from-source
-```
-
-## Google Translation APIの準備
-
 環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
 
 認証ファイル(JSON ファイル)の取得方法については以下を参照してください。
 
-[https://cloud.google.com/translate/docs/quickstart-client-libraries](https://cloud.google.com/translate/docs/quickstart-client-libraries)
+[https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries)
 
-プロジェクトの Translation API を有効にします。
+プロジェクトの Speech API を有効にします。
 
-環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectIDを設定します。
+音声認識のテストを行います。以下のコマンドをシナリオエディタに入力してエコーロボットになればOKです。
+
+```
+/speech-to-text
+/text-to-speech
+```
+
+## Google Translation APIの準備
+
+環境変数 GOOGLE_APPLICATION_CREDENTIALS で指定したプロジェクトの Translation API を有効にします。
+
+環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectID を設定します。
 
 ## docomo雑談対話APIの準備
 
