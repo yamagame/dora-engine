@@ -550,6 +550,7 @@ app.set('view engine', 'pug');
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json({ type: 'application/json' }))
 app.use(bodyParser.raw({ type: 'application/*' }))
+app.use(bodyParser.text())
 
 app.use(cookieParser())
 
