@@ -13,5 +13,6 @@ export ROBOT_GOOGLE_SPEECH_DATA_DIR=~/Sound
 export ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH=~/Sound/robot-cacheDB.json
 #export ROBOT_CREDENTIAL_ACCESS_CONTROL=true
 #export ROBOT_ALLOW_LOCALHOST_ACCESS=false
+export ROBOT_DEFAULT_VOICE=open-jTalk
 export SPEECH=off
 node robot-server.js > robot-server.log
