@@ -20,3 +20,5 @@ sudo apt-get install sqlite3 -y
 #cd `dirname $0`
 #sudo cp asound.conf /etc/
 #sudo chown root:root /etc/asound.conf
+
+mkdir -p Sound
