@@ -1,21 +1,54 @@
 # Dora Engine
 
-ラズベリーパイとVoiceKitで作るコミュニケーションロボットエンジンです。
+ラズベリーパイと [RasPi-VoiceBot](https://yamagame.github.io/dora-board) で作るコミュニケーションロボットエンジンです。
 
 <p align="center">
   <img src="./images/IMG_6691.jpg"/>
 </p>
 
-## 機能
+## 特徴
 
-- [Speech-to-Text Client Libraries](https://cloud.google.com/speech-to-text/docs/reference/libraries) を使って音声認識ができます。
-- [AquesTalk Pi](https://www.a-quest.com/products/aquestalkpi.html) を使って音声合成ができます。他の音声合成エンジンに変更することもできます。
-- サーボ２つで、ロボットの頭部を２軸動作できます。
-- Node-REDとの連携でコントロールできます。
-- 専用スクリプト([DoraScript](https://github.com/yamagame/dora))を使ってブラウザ経由でコントロールできます。
-- 自動プレゼンテーション機能
-- 音声認識によるQ&A機能
-- [ドコモ雑談対話API](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=natural_dialogue&p_name=api_4_usage_scenario#tag01)に対応しています
+- 音声認識、音声合成機能を持つ Raspberry Pi を使った手作りできるコミュニケーションロボットです。
+- 部品代は AquesTalk Pi を含めて2万円ほどです。
+- 専用スクリプト言語を使ってロボットのコントロールを簡単に行えます。
+- 外部のパソコンなしにロボット単体で画像と連携したプレゼンテーションができます。
+- 外装はダンボールですのでお好みに合わせて自由に変更できます。
+- 言語の翻訳機能を持たせることもできます。
+
+### 音声認識
+
+音声認識には [Google Speech-to-Text](https://cloud.google.com/speech-to-text/) を使っています。[Google Speech-to-Text](https://cloud.google.com/speech-to-text/) はマイクに入力した音声を文字列に変換するサービスです。
+[Google Speech-to-Text](https://cloud.google.com/speech-to-text/) を使うことで以下のことができます。
+
+- 多言語認識：日本語だけでなく外国語の認識もできます。
+- 言語判定：入力した音声がどの言語のものなのかを判定できます。
+
+### 音声合成
+
+音声合成には以下のものを選択できます。
+
+- [Open JTalk](http://open-jtalk.sp.nitech.ac.jp/)
+- [AquesTalk Pi](https://www.a-quest.com/products/aquestalkpi.html)
+- [Google Text-to-Speech](https://cloud.google.com/text-to-speech/)
+- [AWS Polly](https://aws.amazon.com/jp/polly/)
+
+[Google Text-to-Speech](https://cloud.google.com/text-to-speech/) や [AWS Polly](https://aws.amazon.com/jp/polly/) を使うと外国語を話すことができます。
+
+### 言語翻訳
+
+言語翻訳には [Google Translation API](https://cloud.google.com/translate/) を使用します。
+
+### 頭部の稼働
+
+サーボモーター２つを使って頭が上下左右に動きます。頭の動きは自動的に行われます。何も指示がないときにはロボットの頭部は上下左右にランダムに動きます。ロボットがおしゃべりしているときは頭が上下に動きます。
+
+### 専用スクリプト言語 ([DoraScript](https://github.com/yamagame/dora))
+
+専用のスクリプト言語を使ってシナリオを作成できます。シナリオで音声認識や音声合成、プレゼンテーション画面の切り替え、お腹のボタンのコントロールなどができます。シナリオはブラウザベースのエディタを使って編集できます。特定のシナリオを電源投入時に自動的に実行することもできます。
+
+### プレゼンテーション
+
+おしゃべりと連携してプレゼンテーション画像を表示することができます。プレゼンテーション画面は Raspberry Pi のブラウザに表示されます。外部モニタを接続することで Raspberry Pi の画面を表示することができますので、外部のパソコンなしにロボット単体でプレゼンテーションができます。
 
 ## ロボットの設計図
 
@@ -36,49 +69,51 @@
 
 - [ロボット組立方法](http://bit.ly/2zTPUfn)
 
+### サーボモーターについて
+
+ダンボールロボットの設計図はマイクロサーボを２つ使う設計になっています。一つは頭部を左右に、もう一つは上下に動かします。しかし、Servo MG90D の様なマイクロサーボは稼働させ続けると壊れやすい様です。長時間動かす場合はマイクロサーボではなく、MG996R の様な大きめのサーボをオススメします。
+
+[秋月電子：TowerPro MG996R](http://akizukidenshi.com/catalog/g/gM-12534/)
+
+MG996R ではダンボールロボットのサイズに合いませんので上下の動きは諦めて左右の動きのサーボとして使用します。
+
 ## 準備
 
-SDカードを作成します。ここでは、Google Voice Kitの2017/09/11バージョンを使用します。その他のバージョンで動作させる場合は、次のセクションをご覧ください。
+Raspberry Pi のホームページから [Raspbian](https://www.raspberrypi.org/downloads/) をダウンロードして、Raspbian の入った microSD カードを作成します。
 
-[https://dl.google.com/dl/aiyprojects/voice/aiyprojects-2017-09-11.img.xz](https://dl.google.com/dl/aiyprojects/voice/aiyprojects-2017-09-11.img.xz)
-
-ラズベリーパイのターミナルで、以下のコマンドを入力して、ロボットエンジンをダウンロードします。
+Raspberry Pi のターミナルで、以下のコマンドを入力して、ロボットエンジンをダウンロードします。
 
 ```
 $ cd ~
 $ git clone https://github.com/yamagame/dora-engine
 ```
 
-dora-engineフォルダに移動して、setup-system.shを実行します。
+dora-engine フォルダに移動して、setup-system.sh を実行します。
 
 ```
 $ cd dora-engine
 $ ./setup-system.sh
 ```
 
-setup-nodejs.shでNode.jsをセットアップします。
+setup-nodejs.sh で Node.js をセットアップします。
 
 ```
 $ ./setup-nodejs.sh
 ```
 
-setup-node-red.shでNode-REDをセットアップします。
+setup-open-jTalk.sh で Open JTalk をセットアップします。
 
 ```
-$ ./setup-node-red.sh
+$ ./setup-open-jTalk.sh
 ```
 
-setup-autolaunch.shで、自動起動の設定を行います。
+setup-autolaunch.sh で、自動起動の設定を行います。
 
 ```
 $ ./setup-autolaunch.sh
 ```
 
 再起動します。
-
-## aiyprojects-2017-09-11.img.xz 以外の Raspbian で動作させる方法
-
-NOOBS_v2_8_2 でのみ確認しています。
 
 ### 8GByteのSDカードを使用している場合
 
@@ -139,7 +174,7 @@ ctl.!default {
 }
 ```
 
-## 録音再生をテストする
+## マイクとスピーカーをテストする
 
 ### 録音する場合
 
@@ -153,29 +188,17 @@ $ arecord -Dplug:micboost -f S16_LE -r 16000 test.wav
 $ aplay -Dplug:softvol test.wav
 ```
 
-### うまく再生できない場合
+## AquesTalk Pi の準備
 
-以下のコマンドを実行して、「ワン！」と犬の鳴き声が鳴るかを試してみてください。
-
-```
-$ aplay /usr/share/scratch/Media/Sounds/Animal/Dog1.wav
-```
-
-その後、以下のコマンドを実行するとうまくいく現象を確認しています。
-
-```
-$ aplay -Dplug:softvol /usr/share/scratch/Media/Sounds/Animal/Dog1.wav
-```
-
-## AquesTalk Piの準備
+デフォルトの音声合成は Open JTalk になってます。AquesTalk Pi を使用する場合は以下の手順で準備します。
 
 ブラウザで以下のURLを開きます。
 
 [https://www.a-quest.com/products/aquestalkpi.html](https://www.a-quest.com/products/aquestalkpi.html)
 
-Downloadのセクションから、使用許諾を読んで「同意してDownload」ボタンをクリックします。
+Download のセクションから、使用許諾を読んで「同意してDownload」ボタンをクリックします。
 
-Downloadsフォルダにファイルがダウンロードされますので、以下のコマンドを入力して解凍します。
+Downloads フォルダにファイルがダウンロードされますので、以下のコマンドを入力して解凍します。
 
 ```
 $ cd ~/Downloads
@@ -189,70 +212,46 @@ $ cd ~/dora-engine
 $ ./talk-f1.sh こんにちは
 ```
 
-## Google Speech APIの準備
+音声合成を Open JTalk から変更する場合は、環境変数 ROBOT_DEFAULT_VOICE の設定を外します。
+
+[robot-server.sh](./robot-server.sh) の以下の行のコメントアウトします。
+
+```
+#export ROBOT_DEFAULT_VOICE=open-jTalk
+```
+
+再起動後、デフォルト音声合成が AquesTalk Pi になります。
+
+## Google Speech API の準備
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
 
-認証ファイル(JSON ファイル)の取得方法については以下を参照してください。
+認証ファイル (JSON ファイル) の取得方法については以下を参照してください。
 
 [https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries)
 
 プロジェクトの Speech API を有効にします。
 
-音声認識のテストを行います。以下のコマンドをシナリオエディタに入力してエコーロボットになればOKです。
+環境変数 SPEECH の設定を削除して音声認識を有効化します。[robot-server.sh](./robot-server.sh) の以下の行のコメントアウトします。
+
+```
+#export SPEECH=off
+```
+
+音声認識のテストを行います。以下のコマンドをシナリオエディタに入力してエコーロボットになれば OK です。音声認識している最中はお腹のボタンが点灯します。
 
 ```
 /speech-to-text
 /text-to-speech
 ```
 
-## Google Translation APIの準備
+[Google Text-to-Speech](https://cloud.google.com/text-to-speech/) は最長で60秒間音声認識します。60秒以上になるとエラーになります。そのため、DoraEngine では初期設定では30秒で音声認識はタイムアウトします。
+
+## Google Translation API の準備
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS で指定したプロジェクトの Translation API を有効にします。
 
 環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectID を設定します。
-
-## docomo雑談対話APIの準備
-
-[docomo Developer support](https://dev.smt.docomo.ne.jp/?p=docs.api.page&api_name=natural_dialogue&p_name=api_4_usage_scenario#tag01) のページから、雑談対話のAPIキーを取得して、環境変数 DOCOMO_API_KEY に設定します。
-
-```
-export DOCOMO_API_KEY=7570304351643...................
-```
-
-以下のコマンドを実行して、雑談対話のappIdを取得します。
-
-```
-$ ./setup-docomo-appid.sh
-{"appId":"eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}
-```
-
-appIdとして出力された文字列を、環境変数 DOCOMO_APP_ID に設定します。
-
-```
-export DOCOMO_APP_ID=eb9xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
-
-## サーボで頭を動かす
-
-```
-$ cd ~/dora-engine
-$ sudo node servo-head.js
-```
-
-servo-head.jsはGPIOを使う機能を制御するプログラムです。
-首のモーターや、お腹のボタンを制御します。
-
-## ロボットサーバーを動かす
-
-```
-$ cd ~/dora-engine
-$ node robot-server.js
-```
-
-robot-server.jsは、DoraEditor や Node-RED からの指示を受け付け、音声認識、音声合成を制御します。DoraEditorを使用するには、robot-server.jsが動いていないといけません。
-
-robot-server.jsを正常に動作させるには、Google Speech APIの設定が終わっていないといけません。
 
 ## プレゼンテーション画面
 
