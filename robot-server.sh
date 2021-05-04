@@ -1,8 +1,8 @@
 #!/bin/bash
 cd `dirname $0`
 #./talk-f1.sh 起動中です
-sudo systemctl enable ntp
-sudo timedatectl set-ntp 1
+# sudo systemctl enable ntp
+# sudo timedatectl set-ntp 1
 #sleep 1
 #export ROBOT_PRIVATE_KEY=~/.config/robot/robot-private-key.pem
 #export ROBOT_PUBLIC_KEY=~/.config/robot/robot-public-key.pem
