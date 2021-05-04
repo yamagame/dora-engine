@@ -1,39 +1,36 @@
-const EventEmitter = require('events');
-const os = require('os');
-const ip = require('ip');
-const express = require('express')
-const router = require('express').Router()
-const bodyParser = require('body-parser')
-const cookieParser = require('cookie-parser')
-const request = require('request-promise');
-const speech = (() => (process.env['SPEECH'] === 'off') ? (new EventEmitter()) : require('./speech'))();
-const talk = require('./talk');
-const config = require('./config');
+const EventEmitter = require("events");
+const os = require("os");
+const ip = require("ip");
+const express = require("express");
+const router = require("express").Router();
+const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+const request = require("request-promise");
+const speech = (() =>
+  process.env["SPEECH"] === "off" ? new EventEmitter() : require("./speech"))();
+const talk = require("./talk");
+const config = require("./config");
 const APIKEY = config.docomo.api_key;
 const APPID = config.docomo.app_id;
-const { exec, spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const workFolder = 'DoraEngine';  //for macOS(development)
-const buttonClient = require('./button-client')(config);
-const RobotDB = require('./robot-db');
+const { exec, spawn } = require("child_process");
+const path = require("path");
+const fs = require("fs");
+const workFolder = "DoraEngine"; //for macOS(development)
+const buttonClient = require("./button-client")(config);
+const RobotDB = require("./robot-db");
 const USE_DB = config.useDB;
 const saveInterval = 1000;
-const URL = require('url');
-const googleRouter = require('./google-router');
-const session = require('express-session');
-const MemoryStore = require('memorystore')(session);
-const passport = require('passport');
-const DoraChat = require('./doraChat');
-const LocalStrategy = require('passport-local').Strategy;
-const uuidv4 = require('uuid/v4');
-const mkdirp = require('mkdirp');
-const UserDefaults = require('./user-defaults');
-const {
-  upload,
-  readDir,
-  deleteFile,
-} = require('./fileServer');
+const URL = require("url");
+const googleRouter = require("./google-router");
+const session = require("express-session");
+const MemoryStore = require("memorystore")(session);
+const passport = require("passport");
+const DoraChat = require("./doraChat");
+const LocalStrategy = require("passport-local").Strategy;
+const { v4: uuidv4 } = require("uuid");
+const mkdirp = require("mkdirp");
+const UserDefaults = require("./user-defaults");
+const { upload, readDir, deleteFile } = require("./fileServer");
 const {
   localhostIPs,
   localIPCheck,
@@ -41,37 +38,46 @@ const {
   localhostToken,
   hasPermission,
   checkPermission,
-} = require('./accessCheck');
-const csrf = require('csurf');
+} = require("./accessCheck");
+const csrf = require("csurf");
 const csrfProtection = csrf({ cookie: true });
 const bcrypt = (() => {
-  try { return require('bcrypt'); }
-  catch(e) { return require('bcryptjs'); }
+  try {
+    return require("bcrypt");
+  } catch (e) {
+    return require("bcryptjs");
+  }
 })();
-const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
-const PICT = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Pictures', workFolder) : path.join(process.env.HOME, 'Pictures');
-const PART_LIST_FILE_PATH = path.join(HOME, 'quiz-student.txt');
+const HOME =
+  process.platform === "darwin"
+    ? path.join(process.env.HOME, "Documents", workFolder)
+    : process.env.HOME;
+const PICT =
+  process.platform === "darwin"
+    ? path.join(process.env.HOME, "Pictures", workFolder)
+    : path.join(process.env.HOME, "Pictures");
+const PART_LIST_FILE_PATH = path.join(HOME, "quiz-student.txt");
 
-mkdirp(config.doraChat.dataDir, async function(err) {
+mkdirp(config.doraChat.dataDir, async function (err) {
   if (err) console.log(err);
-})
+});
 
 const defaultBarData = {
-  uuid: '',
+  uuid: "",
   x: 0,
   y: 0,
   width: 24,
   height: 24,
-  rgba: '#00FF00FF',
-  type: 'roundrect',
+  rgba: "#00FF00FF",
+  type: "roundrect",
   title: null,
   text: null,
   info: {
     readOnly: false,
   },
-}
+};
 
-const isLogined = function(view) {
+const isLogined = function (view) {
   return function (req, res, next) {
     if (!config.credentialAccessControl) {
       return next();
@@ -86,14 +92,17 @@ const isLogined = function(view) {
       res.redirect(`/login/${view}`);
     } else {
       res.statusCode = 401;
-      res.end('Unauthorized');
+      res.end("Unauthorized");
     }
   };
-}
+};
 
 function isValidFilename(filename) {
   if (filename) {
-    return (path.basename(filename) === filename && path.normalize(filename) === filename);
+    return (
+      path.basename(filename) === filename &&
+      path.normalize(filename) === filename
+    );
   }
   return false;
 }
@@ -117,13 +126,13 @@ function readdirFileOnly(dirname, callback) {
           return;
         }
         if (stat.isFile()) {
-          if (t.indexOf('.') !== 0) {
+          if (t.indexOf(".") !== 0) {
             r.push(t);
           }
         }
         check();
       });
-    }
+    };
     check();
   });
 }
@@ -137,184 +146,179 @@ function readdirFileOnly(dirname, callback) {
 {HOME}/Pictures/{slide image file}
 */
 
-const Dora = require('dora');
+const Dora = require("dora");
 const dora = new Dora();
-const utils = require('./utils');
-const dateutlis = require('date-utils');
+const utils = require("./utils");
+const dateutlis = require("date-utils");
 
-dora.loadModule('button', function(DORA, config) {
+dora.loadModule("button", function (DORA, config) {
   function connect(node, options) {
-    const params = options.split('/');
-    if (params.length < 1 || params === '') {
-      throw new Error('ホスト名がありません。');
+    const params = options.split("/");
+    if (params.length < 1 || params === "") {
+      throw new Error("ホスト名がありません。");
     }
-    node.on("input", async function(msg) {
+    node.on("input", async function (msg) {
       let host = params[0];
       let port = null;
-      if (host.indexOf(':') > 0) {
-        const h = host.split(':');
+      if (host.indexOf(":") > 0) {
+        const h = host.split(":");
         host = h[0];
         port = h[1];
       }
-      const name = (params.length > 1) ? params[1] : null;
-      const team = (params.length > 2) ? params[2] : null;
-      buttonClient.emit('open-slave', { host, name, team, port, });
+      const name = params.length > 1 ? params[1] : null;
+      const team = params.length > 2 ? params[2] : null;
+      buttonClient.emit("open-slave", { host, name, team, port });
       node.send(msg);
     });
   }
-  DORA.registerType('connect', connect);
+  DORA.registerType("connect", connect);
 
   function detect(node, options) {
-    const params = options.split('/');
-    if (params.length < 2 || params === '') {
-      throw new Error('ベンダーID/プロダクトIDがありません。');
+    const params = options.split("/");
+    if (params.length < 2 || params === "") {
+      throw new Error("ベンダーID/プロダクトIDがありません。");
     }
-    node.on("input", async function(msg) {
+    node.on("input", async function (msg) {
       let vendorId = params[0];
       let productId = params[1];
-      gpioSocket.emit('gamepad', {
-        action: 'add',
+      gpioSocket.emit("gamepad", {
+        action: "add",
         vendorId,
         productId,
       });
       node.send(msg);
     });
   }
-  DORA.registerType('gamepad', detect);
+  DORA.registerType("gamepad", detect);
 
   function close(node, options) {
-    const params = options.split('/');
-    if (params.length < 1 || params === '') {
-      throw new Error('ホスト名がありません。');
+    const params = options.split("/");
+    if (params.length < 1 || params === "") {
+      throw new Error("ホスト名がありません。");
     }
-    node.on("input", async function(msg) {
+    node.on("input", async function (msg) {
       const host = params[0];
-      buttonClient.emit('close-slave', { host });
+      buttonClient.emit("close-slave", { host });
       node.send(msg);
     });
   }
-  DORA.registerType('close', close);
+  DORA.registerType("close", close);
 
   function allBlink(node, options) {
-    node.on("input", async function(msg) {
-      buttonClient.emit('all-blink', {});
+    node.on("input", async function (msg) {
+      buttonClient.emit("all-blink", {});
       node.send(msg);
     });
   }
-  DORA.registerType('led-all-blink', allBlink);
+  DORA.registerType("led-all-blink", allBlink);
 
   function allOn(node, options) {
-    node.on("input", async function(msg) {
-      buttonClient.emit('all-on', {
+    node.on("input", async function (msg) {
+      buttonClient.emit("all-on", {
         bright: 1,
       });
       node.send(msg);
     });
   }
-  DORA.registerType('led-all-on', allOn);
+  DORA.registerType("led-all-on", allOn);
 
   function allOff(node, options) {
-    node.on("input", async function(msg) {
-      buttonClient.emit('all-off', {});
+    node.on("input", async function (msg) {
+      buttonClient.emit("all-off", {});
       node.send(msg);
     });
   }
-  DORA.registerType('led-all-off', allOff);
+  DORA.registerType("led-all-off", allOff);
 
   function ledOn(node, options) {
-    node.on("input", async function(msg) {
-      buttonClient.emit('one', {
+    node.on("input", async function (msg) {
+      buttonClient.emit("one", {
         name: msg.button.name,
         bright: 1,
       });
       node.send(msg);
     });
   }
-  DORA.registerType('led-on', ledOn);
+  DORA.registerType("led-on", ledOn);
 
   function sound(node, options) {
-    var isTemplated = (options||"").indexOf("{{") != -1;
-    node.on("input", async function(msg) {
+    var isTemplated = (options || "").indexOf("{{") != -1;
+    node.on("input", async function (msg) {
       const socket = buttonClient.socket(msg.button.name);
       if (socket) {
         let message = options;
         if (isTemplated) {
           message = DORA.utils.mustache.render(message, msg);
         }
-        socket.emit('sound-command', { sound: message });
+        socket.emit("sound-command", { sound: message });
       }
       node.send(msg);
     });
   }
-  DORA.registerType('sound', sound);
+  DORA.registerType("sound", sound);
 
   function soundAll(node, options) {
-    var isTemplated = (options||"").indexOf("{{") != -1;
-    node.on("input", async function(msg) {
+    var isTemplated = (options || "").indexOf("{{") != -1;
+    node.on("input", async function (msg) {
       let message = options;
       if (isTemplated) {
         message = DORA.utils.mustache.render(message, msg);
       }
-      buttonClient.emit('sound', { sound: message });
+      buttonClient.emit("sound", { sound: message });
       node.send(msg);
     });
   }
-  DORA.registerType('sound-all', soundAll);
+  DORA.registerType("sound-all", soundAll);
 
   function speechToText(node, options) {
     node.nextLabel(options);
-    node.on("input", async function(msg) {
+    node.on("input", async function (msg) {
       const socket = buttonClient.socket(msg.button.name);
       if (socket) {
         const params = {
           timeout: 30000,
-          sensitivity: 'keep',
+          sensitivity: "keep",
         };
-        if (typeof msg.timeout !== 'undefined') {
+        if (typeof msg.timeout !== "undefined") {
           params.timeout = msg.timeout;
         }
-        if (typeof msg.sensitivity !== 'undefined') {
+        if (typeof msg.sensitivity !== "undefined") {
           params.sensitivity = msg.sensitivity;
         }
         node.recording = true;
-        socket.emit('speech-to-text', params, (res) => {
+        socket.emit("speech-to-text", params, (res) => {
           if (!node.recording) return;
           node.recording = false;
-          if (res == '[timeout]') {
-            msg.payload = 'timeout';
+          if (res == "[timeout]") {
+            msg.payload = "timeout";
             node.send([msg, null]);
-          } else
-          if (res == '[canceled]') {
-            msg.payload = 'canceled';
+          } else if (res == "[canceled]") {
+            msg.payload = "canceled";
             node.send([msg, null]);
-          } else
-          if (res == '[camera]') {
-            msg.payload = 'camera';
+          } else if (res == "[camera]") {
+            msg.payload = "camera";
             node.send([msg, null]);
           } else {
             if (res.button) {
-              msg.payload = 'button';
+              msg.payload = "button";
               msg.button = res;
               delete res.button;
               node.send([msg, null]);
-            } else
-            if (res.gamepad) {
-              msg.payload = 'gamepad';
+            } else if (res.gamepad) {
+              msg.payload = "gamepad";
               msg.gamepad = res;
               delete res.gamepad;
               node.send([null, msg]);
-            } else
-            if (res.speechRequest) {
+            } else if (res.speechRequest) {
               msg.speechRequest = true;
               msg.payload = res.payload;
               msg.speechText = msg.payload;
               msg.topicPriority = 0;
               node.send([null, msg]);
-            } else
-            if (typeof res === 'object') {
-              msg.languageCode = res.languageCode,
-              msg.alternativeLanguageCodes = res.alternativeLanguageCodes,
-              msg.confidence = res.confidence;
+            } else if (typeof res === "object") {
+              (msg.languageCode = res.languageCode),
+                (msg.alternativeLanguageCodes = res.alternativeLanguageCodes),
+                (msg.confidence = res.confidence);
               msg.payload = res.transcript;
               msg.speechText = msg.payload;
               msg.topicPriority = 0;
@@ -330,29 +334,29 @@ dora.loadModule('button', function(DORA, config) {
           }
         });
       } else {
-        msg.payload = 'timeout';
+        msg.payload = "timeout";
         node.send([msg, null]);
       }
     });
   }
-  DORA.registerType('speech-to-text', speechToText);
+  DORA.registerType("speech-to-text", speechToText);
 });
 
-dora.request = async function(command, options, params) {
+dora.request = async function (command, options, params) {
   var len = 0;
-  if (typeof command !== 'undefined') len += 1;
-  if (typeof options !== 'undefined') len += 1;
-  if (typeof params !== 'undefined') len += 1;
+  if (typeof command !== "undefined") len += 1;
+  if (typeof options !== "undefined") len += 1;
+  if (typeof params !== "undefined") len += 1;
   if (len <= 0) {
-    throw new Error('Illegal arguments.');
+    throw new Error("Illegal arguments.");
   }
   const opt = {
-    method: 'POST',
-    restype: 'json',
-  }
+    method: "POST",
+    restype: "json",
+  };
   if (len == 1) {
     params = command;
-    command = 'command';
+    command = "command";
   }
   if (len == 2) {
     params = options;
@@ -369,19 +373,19 @@ dora.request = async function(command, options, params) {
   });
   console.log(body);
   return body;
-}
+};
 
-const quiz_master = process.env.QUIZ_MASTER || '_quiz_master_';
+const quiz_master = process.env.QUIZ_MASTER || "_quiz_master_";
 
-let led_mode = 'auto';
+let led_mode = "auto";
 let mode_slave = false;
 
 // talk.dummy = (process.env['SPEECH'] === 'off' && process.env['MACINTOSH'] !== 'on');
-talk.macvoice = (process.env['MACINTOSH'] === 'on');
+talk.macvoice = process.env["MACINTOSH"] === "on";
 
-let robotDataPath = process.argv[2] || path.join(HOME, 'robot-data.json');
+let robotDataPath = process.argv[2] || path.join(HOME, "robot-data.json");
 
-const m = function() {
+const m = function () {
   let res = {};
   for (let i = 0; i < arguments.length; ++i) {
     if (arguments[i]) Object.assign(res, arguments[i]);
@@ -390,23 +394,25 @@ const m = function() {
 };
 
 try {
-var robotJson = fs.readFileSync(robotDataPath);
-var robotData = JSON.parse(robotJson);
-} catch(err) {
+  var robotJson = fs.readFileSync(robotDataPath);
+  var robotData = JSON.parse(robotJson);
+} catch (err) {
   var robotData = {};
 }
-if (typeof robotData.quizAnswers === 'undefined') robotData.quizAnswers = {};
-if (typeof robotData.quizEntry === 'undefined') robotData.quizEntry = {};
-if (typeof robotData.quizPayload === 'undefined') robotData.quizPayload = {};
-if (typeof robotData.quizList === 'undefined') robotData.quizList = {};
-if (typeof robotData.recordingTime !== 'undefined') speech.recordingTime = parseInt(robotData.recordingTime);
-if (typeof robotData.voice === 'undefined') robotData.voice = { level: 100, threshold: 2000 };
-if (typeof robotData.barData === 'undefined') robotData.barData = [];
-if (typeof robotData.calendarData === 'undefined') robotData.calendarData = {};
-if (typeof robotData.autoStart === 'undefined') robotData.autoStart = {};
+if (typeof robotData.quizAnswers === "undefined") robotData.quizAnswers = {};
+if (typeof robotData.quizEntry === "undefined") robotData.quizEntry = {};
+if (typeof robotData.quizPayload === "undefined") robotData.quizPayload = {};
+if (typeof robotData.quizList === "undefined") robotData.quizList = {};
+if (typeof robotData.recordingTime !== "undefined")
+  speech.recordingTime = parseInt(robotData.recordingTime);
+if (typeof robotData.voice === "undefined")
+  robotData.voice = { level: 100, threshold: 2000 };
+if (typeof robotData.barData === "undefined") robotData.barData = [];
+if (typeof robotData.calendarData === "undefined") robotData.calendarData = {};
+if (typeof robotData.autoStart === "undefined") robotData.autoStart = {};
 
 if (speech.setParams) {
-  speech.setParams(robotData.voice)
+  speech.setParams(robotData.voice);
 }
 
 let { students } = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
@@ -423,7 +429,7 @@ function writeRobotData() {
       if (saveWFlag) {
         saveWFlag = false;
         saveDelay = true;
-        const data = JSON.stringify(robotData, null, '  ');
+        const data = JSON.stringify(robotData, null, "  ");
         if (savedData == null || savedData !== data) {
           savedData = data;
           try {
@@ -434,13 +440,13 @@ function writeRobotData() {
               }, saveInterval);
             });
             return;
-          } catch(err) {
+          } catch (err) {
             console.error(err);
           }
         }
       }
       saveDelay = false;
-    }
+    };
     save();
   }
 }
@@ -456,41 +462,45 @@ function chat(message, tone, callback) {
     voiceText: message,
     clientData: {
       option: {
-        t: '',
+        t: "",
       },
     },
-    appRecvTime: (robotData.chatRecvTime ?  robotData.chatRecvTime : sendTime),
+    appRecvTime: robotData.chatRecvTime ? robotData.chatRecvTime : sendTime,
     appSendTime: sendTime,
-  }
+  };
 
   if (tone) {
     json.clientData.option.t = tone;
   }
 
   request({
-    method: 'POST',
-    url:'https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY='+APIKEY,
+    method: "POST",
+    url:
+      "https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY=" +
+      APIKEY,
     json,
-  }).then((body) => {
-    callback(null, body);
-    robotData.chatRecvTime = body.serverSendTime;
-    writeRobotData();
-  }).catch((err) => {
-    callback(err, null);
   })
+    .then((body) => {
+      callback(null, body);
+      robotData.chatRecvTime = body.serverSendTime;
+      writeRobotData();
+    })
+    .catch((err) => {
+      callback(err, null);
+    });
 }
 
 speech.recording = false;
 
-var last_led_action = 'led-off';
+var last_led_action = "led-off";
 
-const gpioSocket = (function() {
-  const io = require('socket.io-client');
+const gpioSocket = (function () {
+  const io = require("socket.io-client");
   return io(`http://localhost:${config.gpioPort}`);
 })();
 
 function servoAction(action, payload, callback) {
-  if (process.env['MACINTOSH'] === 'on') {
+  if (process.env["MACINTOSH"] === "on") {
     if (callback) callback();
     return;
   }
@@ -499,7 +509,7 @@ function servoAction(action, payload, callback) {
     return;
   }
   let done = false;
-  gpioSocket.emit('message', { action, ...payload, }, (payload) => {
+  gpioSocket.emit("message", { action, ...payload }, (payload) => {
     if (done) return;
     done = true;
     //console.log(payload);
@@ -514,59 +524,61 @@ function servoAction(action, payload, callback) {
   }
 }
 
-talk.on('idle', function() {
-	//speech.recording = true;
+talk.on("idle", function () {
+  //speech.recording = true;
 });
 
-talk.on('talk', function() {
-	speech.recording = false;
+talk.on("talk", function () {
+  speech.recording = false;
 });
 
-speech.on('data', function(data) {
-  Object.keys(soundAnalyzer).forEach( key => {
+speech.on("data", function (data) {
+  Object.keys(soundAnalyzer).forEach((key) => {
     const socket = soundAnalyzer[key];
-    socket.emit('speech-data', data);
+    socket.emit("speech-data", data);
   });
 });
 
-speech.on('wave-data', function(data) {
-  Object.keys(soundAnalyzer).forEach( key => {
+speech.on("wave-data", function (data) {
+  Object.keys(soundAnalyzer).forEach((key) => {
     const socket = soundAnalyzer[key];
-    socket.emit('wave-data', data);
+    socket.emit("wave-data", data);
   });
 });
 
-const app = express()
+const app = express();
 
 app.use((req, res, next) => {
-  console.log(`# ${(new Date()).toLocaleString()} ${req.ip} ${req.url}`);
+  console.log(`# ${new Date().toLocaleString()} ${req.ip} ${req.url}`);
   console.log(`${JSON.stringify(req.headers)}`);
   next();
 });
 
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'pug');
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "pug");
 
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json({ type: 'application/json' }))
-app.use(bodyParser.raw({ type: 'application/*' }))
-app.use(bodyParser.text())
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json({ type: "application/json" }));
+app.use(bodyParser.raw({ type: "application/*" }));
+app.use(bodyParser.text());
 
-app.use(cookieParser())
+app.use(cookieParser());
 
-app.use('/images', express.static(PICT))
+app.use("/images", express.static(PICT));
 
 const sessionStore = new MemoryStore();
-app.use(session({
-  store: sessionStore,
-  secret: config.sessionSecret,
-  resave: false,
-  proxy: true,
-  // cookie: {
-  //   maxAge: 10*365*24*60*60*1000,
-  // },
-  saveUninitialized: false,
-}));
+app.use(
+  session({
+    store: sessionStore,
+    secret: config.sessionSecret,
+    resave: false,
+    proxy: true,
+    // cookie: {
+    //   maxAge: 10*365*24*60*60*1000,
+    // },
+    saveUninitialized: false,
+  })
+);
 
 app.use((req, res, next) => {
   console.log("SessionID: " + req.sessionID);
@@ -577,70 +589,98 @@ app.use((req, res, next) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser(function(user, done) {
+passport.serializeUser(function (user, done) {
   done(null, user);
 });
 
-passport.deserializeUser(function(user, done) {
-  done(null,user);
+passport.deserializeUser(function (user, done) {
+  done(null, user);
 });
 
-passport.use('local', new LocalStrategy({
-  passReqToCallback : true
-},
-function(req, name, password, done) {
-  //console.log(`name:${name} password:${password}`);
-  setTimeout(function() {
-    let auth = {};
-    const checkPass = () => {
-      return config.adminAuth.some( a => {
-        if (name === a.username && bcrypt.compareSync(password, a.password)) {
-          auth = a;
-          return true;
+passport.use(
+  "local",
+  new LocalStrategy(
+    {
+      passReqToCallback: true,
+    },
+    function (req, name, password, done) {
+      //console.log(`name:${name} password:${password}`);
+      setTimeout(function () {
+        let auth = {};
+        const checkPass = () => {
+          return config.adminAuth.some((a) => {
+            if (
+              name === a.username &&
+              bcrypt.compareSync(password, a.password)
+            ) {
+              auth = a;
+              return true;
+            }
+            return false;
+          });
+        };
+        if (checkPass()) {
+          done(null, {
+            id: name,
+            authInfo: { scope: auth.permissions },
+            timestamp: new Date(),
+          });
+        } else {
+          done(null, false, { message: "Incorrect password." });
         }
-        return false;
-      })
+      }, 1000);
     }
-    if (checkPass()) {
-      done(null,{ id: name, authInfo: { scope: auth.permissions, }, timestamp: new Date(), });
-    } else {
-      done(null,false, { message: 'Incorrect password.' });
-    }
-  },1000);
-}));
+  )
+);
 
-passport.use('guest-client', new LocalStrategy({
-  passReqToCallback : true
-},
-function(req, name, password, done) {
-  setTimeout(function() {
-    let auth = {};
-    const checkPass = () => {
-      return config.adminAuth.some( a => {
-        if (a.guest) {
-          if (name === a.username && bcrypt.compareSync(password, a.password)) {
-            auth = a;
-            return true;
-          }
+passport.use(
+  "guest-client",
+  new LocalStrategy(
+    {
+      passReqToCallback: true,
+    },
+    function (req, name, password, done) {
+      setTimeout(function () {
+        let auth = {};
+        const checkPass = () => {
+          return config.adminAuth.some((a) => {
+            if (a.guest) {
+              if (
+                name === a.username &&
+                bcrypt.compareSync(password, a.password)
+              ) {
+                auth = a;
+                return true;
+              }
+            }
+            return false;
+          });
+        };
+        if (checkPass()) {
+          done(null, {
+            id: name,
+            authInfo: { scope: auth.permissions },
+            timestamp: new Date(),
+          });
+        } else {
+          console.log("Incorrect password");
+          done(null, false, { message: "Incorrect password." });
         }
-        return false;
-      })
+      }, 1000);
     }
-    if (checkPass()) {
-      done(null,{ id: name, authInfo: { scope: auth.permissions, }, timestamp: new Date(), });
-    } else {
-console.log('Incorrect password');
-      done(null,false, { message: 'Incorrect password.' });
-    }
-  },1000);
-}));
+  )
+);
 
-app.get('/admin-page', isLogined('admin'), function(req,res,next) {
-  fs.createReadStream(path.join(__dirname,'public/admin-page/index.html')).pipe(res);
+app.get("/admin-page", isLogined("admin"), function (req, res, next) {
+  fs.createReadStream(
+    path.join(__dirname, "public/admin-page/index.html")
+  ).pipe(res);
 });
 
-app.get('/scenario-editor', isLogined('editor'), function(req,res,next) {
-  fs.createReadStream(path.join(__dirname,'public/scenario-editor/index.html')).pipe(res);
+app.get("/scenario-editor", isLogined("editor"), function (req, res, next) {
+  fs.createReadStream(
+    path.join(__dirname, "public/scenario-editor/index.html")
+  ).pipe(res);
 });
 
 app.use((req, res, next) => {
@@ -648,60 +688,65 @@ app.use((req, res, next) => {
     if (config.allowLocalhostAccess && localIPCheck(req)) {
       return next();
     }
-    if (req.url.indexOf('/admin-page') === 0) {
+    if (req.url.indexOf("/admin-page") === 0) {
       if (!req.isAuthenticated()) {
-        return res.redirect('/login/admin');
+        return res.redirect("/login/admin");
       }
     }
-    if (req.url.indexOf('/scenario-editor') === 0) {
+    if (req.url.indexOf("/scenario-editor") === 0) {
       if (!req.isAuthenticated()) {
-        return res.redirect('/login/editor');
+        return res.redirect("/login/editor");
       }
     }
   }
   return next();
-}, express.static('public'))
+}, express.static("public"));
 
-app.get('/login/:view', csrfProtection, function(req, res, next) {
+app.get("/login/:view", csrfProtection, function (req, res, next) {
   res.render(`login-${req.params.view}`, { csrfToken: req.csrfToken() });
 });
 
-app.post('/login/:view', csrfProtection, function(req, res, next) {
-  passport.authenticate('local', {
-    successRedirect: (req.params.view=='admin')?'/admin-page':'/scenario-editor',
+app.post("/login/:view", csrfProtection, function (req, res, next) {
+  passport.authenticate("local", {
+    successRedirect:
+      req.params.view == "admin" ? "/admin-page" : "/scenario-editor",
     failureRedirect: `/login/${req.params.view}`,
   })(req, res, next);
 });
 
-app.post('/login-quiz-player', function(req, res, next) {
+app.post("/login-quiz-player", function (req, res, next) {
   if (req.isAuthenticated()) {
-    res.send('OK\n');
+    res.send("OK\n");
     return;
   }
-  req.body.username = 'player';
-  req.body.password = 'playernopass';
-  passport.authenticate('guest-client', (err, user, info) => {
+  req.body.username = "player";
+  req.body.password = "playernopass";
+  passport.authenticate("guest-client", (err, user, info) => {
     if (err) {
       res.statusCode = 401;
-      res.end('Unauthorized');
+      res.end("Unauthorized");
     } else {
-      req.logIn(user, {}, function(err) {
-        if (err) { return next(err); }
-        res.send('OK\n');
+      req.logIn(user, {}, function (err) {
+        if (err) {
+          return next(err);
+        }
+        res.send("OK\n");
       });
     }
   })(req, res, next);
 });
 
-app.post('/login-guest-client', function(req, res, next) {
+app.post("/login-guest-client", function (req, res, next) {
   const { username } = req.body;
-  passport.authenticate('guest-client', (err, user, info) => {
+  passport.authenticate("guest-client", (err, user, info) => {
     if (err) {
       res.statusCode = 401;
-      res.end('Unauthorized');
+      res.end("Unauthorized");
     } else {
-      req.logIn(user, {}, function(err) {
-        if (err) { return next(err); }
+      req.logIn(user, {}, function (err) {
+        if (err) {
+          return next(err);
+        }
         createSignature(username, (signature) => {
           res.send({
             user_id: username,
@@ -713,35 +758,35 @@ app.post('/login-guest-client', function(req, res, next) {
   })(req, res, next);
 });
 
-app.post('/access-token', isLogined(), function(req, res) {
+app.post("/access-token", isLogined(), function (req, res) {
   if (req.user) {
     createSignature(req.user.id, (signature) => {
       res.json({ user_id: req.user.id, signature });
-    })
+    });
   } else {
-    res.json({ user_id: 'none-user', signature: 'dummy', });
+    res.json({ user_id: "none-user", signature: "dummy" });
   }
 });
 
-app.get('/logout/:view',function(req,res) {
+app.get("/logout/:view", function (req, res) {
   req.logout();
   res.redirect(`/login/${req.params.view}`);
 });
 
 function docomo_chat(payload, callback) {
-  if (payload.tone == 'kansai_dialect') {
+  if (payload.tone == "kansai_dialect") {
     var tone = "kansai";
-  } else if (payload.tone == 'baby_talk_japanese') {
+  } else if (payload.tone == "baby_talk_japanese") {
     var tone = "akachan";
   } else {
     var tone = "";
   }
-	chat(payload.message, tone, function(err, body) {
-    var utt = payload.message+'がどうかしましたか。';
+  chat(payload.message, tone, function (err, body) {
+    var utt = payload.message + "がどうかしましたか。";
     try {
       if (err) {
         console.error(err);
-        if (callback) callback(err, 'エラー');
+        if (callback) callback(err, "エラー");
         return;
       } else {
         utt = body.systemText.expression;
@@ -749,59 +794,66 @@ function docomo_chat(payload, callback) {
       if (payload.silence) {
         if (callback) callback(err, utt);
       } else {
-        if (led_mode == 'auto') {
-          servoAction('led-off');
-          last_led_action = 'led-off';
+        if (led_mode == "auto") {
+          servoAction("led-off");
+          last_led_action = "led-off";
         }
-        servoAction('centering', { direction: payload.direction, }, () => {
+        servoAction("centering", { direction: payload.direction }, () => {
           talk.voice = payload.voice;
-          talk.play(utt, {
-            ...payload,
-          }, (mode) => {
-            if (mode === 'idle') {
-              servoAction('idle');
-              if (callback) callback(err, utt);
+          talk.play(
+            utt,
+            {
+              ...payload,
+            },
+            (mode) => {
+              if (mode === "idle") {
+                servoAction("idle");
+                if (callback) callback(err, utt);
+              }
+              if (mode === "talk") {
+                servoAction("talk");
+              }
             }
-            if (mode === 'talk') {
-              servoAction('talk');
-            }
-          });
-        })
+          );
+        });
       }
-    } catch(err) {
+    } catch (err) {
       console.error(err);
-      if (callback) callback(err, '');
+      if (callback) callback(err, "");
     }
-	})
+  });
 }
 
-const doraChat = DoraChat((function() {
-  const r = {
-    post: function(key, fn) {
-      r[key] = fn;
-    }
+const doraChat = DoraChat(
+  (function () {
+    const r = {
+      post: function (key, fn) {
+        r[key] = fn;
+      },
+    };
+    return r;
+  })(),
+  {
+    credentialPath: config.googleSheet.credentialPath,
+    tokenPath: config.googleSheet.tokenPath,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    cacheDir: config.doraChat.dataDir,
+    wikipedia: config.doraChat.wikipedia,
+    weather: config.doraChat.weather,
   }
-  return r;
-})(), {
-  credentialPath: config.googleSheet.credentialPath,
-  tokenPath: config.googleSheet.tokenPath,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  cacheDir: config.doraChat.dataDir,
-  wikipedia: config.doraChat.wikipedia,
-  weather: config.doraChat.weather,
-})
+);
 
 function dora_chat(payload, callback) {
   const req = {
     body: {
       ...payload,
-    }
-  }
+    },
+  };
   const res = {
-    send: function(res) {
+    send: function (res) {
       callback(null, res);
-    }
-  }
+    },
+  };
   doraChat[`/${payload.action}`](req, res);
 }
 
@@ -813,23 +865,27 @@ function text_to_speech(payload, callback) {
       if (callback) callback();
     } else {
       playing = true;
-      if (led_mode == 'auto') {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      if (led_mode == "auto") {
+        servoAction("led-off");
+        last_led_action = "led-off";
       }
-      servoAction('centering', { direction: payload.direction, }, () => {
-        talk.play(payload.message, {
-          ...payload,
-        }, (mode) => {
-          if (mode === 'idle') {
-            servoAction('idle');
-            playing = false;
-            if (callback) callback();
+      servoAction("centering", { direction: payload.direction }, () => {
+        talk.play(
+          payload.message,
+          {
+            ...payload,
+          },
+          (mode) => {
+            if (mode === "idle") {
+              servoAction("idle");
+              playing = false;
+              if (callback) callback();
+            }
+            if (mode === "talk") {
+              servoAction("talk");
+            }
           }
-          if (mode === 'talk') {
-            servoAction('talk');
-          }
-        });
+        );
       });
     }
   } else {
@@ -849,40 +905,40 @@ function speech_to_text(payload, callback) {
 
   const stopRecording = () => {
     speech.recording = false;
-    speech.emit('stopRecording');
+    speech.emit("stopRecording");
     robotData.recordingTime = speech.recordingTime;
-    writeRobotData()
-  }
+    writeRobotData();
+  };
 
   const startRecording = () => {
     speech.recording = true;
-    speech.emit('startRecording', {
+    speech.emit("startRecording", {
       threshold,
       languageCode,
       alternativeLanguageCodes,
       level,
     });
-  }
+  };
 
   const removeListener = () => {
-    buttonClient.removeListener('button', listenerButton);
-    buttonClient.removeListener('speech', listenerSpeech);
-    speech.removeListener('data', dataListener);
-    speech.removeListener('speech', speechListener);
-    speech.removeListener('button', buttonListener);
-    speech.removeListener('camera', cameraListener);
-    speech.removeListener('gamepad', gamepadListener);
-  }
+    buttonClient.removeListener("button", listenerButton);
+    buttonClient.removeListener("speech", listenerSpeech);
+    speech.removeListener("data", dataListener);
+    speech.removeListener("speech", speechListener);
+    speech.removeListener("button", buttonListener);
+    speech.removeListener("camera", cameraListener);
+    speech.removeListener("gamepad", gamepadListener);
+  };
 
   if (payload.timeout != 0) {
     setTimeout(() => {
       if (!done) {
         stopRecording();
         removeListener();
-        if (callback) callback(null, '[timeout]');
-        if (led_mode == 'auto') {
-          servoAction('led-off');
-          last_led_action = 'led-off';
+        if (callback) callback(null, "[timeout]");
+        if (led_mode == "auto") {
+          servoAction("led-off");
+          last_led_action = "led-off";
         }
       }
       done = true;
@@ -898,62 +954,62 @@ function speech_to_text(payload, callback) {
       stopRecording();
       removeListener();
       if (callback) callback(null, payload);
-      if (led_mode == 'auto') {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      if (led_mode == "auto") {
+        servoAction("led-off");
+        last_led_action = "led-off";
       }
     }
     done = true;
-  }
+  };
 
   const speechListener = (payload) => {
     if (!done) {
       var retval = {
         speechRequest: true,
         payload,
-      }
+      };
       stopRecording();
       removeListener();
       if (callback) callback(null, retval);
-      if (led_mode == 'auto') {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      if (led_mode == "auto") {
+        servoAction("led-off");
+        last_led_action = "led-off";
       }
     }
     done = true;
-  }
+  };
 
   const buttonListener = (payload) => {
     if (payload) {
       if (!done) {
         stopRecording();
         removeListener();
-        if (callback) callback(null, '[canceled]');
-        if (led_mode == 'auto') {
-          servoAction('led-off');
-          last_led_action = 'led-off';
+        if (callback) callback(null, "[canceled]");
+        if (led_mode == "auto") {
+          servoAction("led-off");
+          last_led_action = "led-off";
         }
       }
       done = true;
     }
-  }
+  };
 
   const listenerButton = (payload) => {
     if (!done) {
       const data = {
         ...payload,
-      }
+      };
       data.button = true;
       stopRecording();
       removeListener();
       if (callback) callback(null, data);
-      if (led_mode == 'auto') {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      if (led_mode == "auto") {
+        servoAction("led-off");
+        last_led_action = "led-off";
       }
     }
     done = true;
-  }
+  };
 
   const listenerSpeech = (payload) => {
     if (!done) {
@@ -963,26 +1019,26 @@ function speech_to_text(payload, callback) {
       stopRecording();
       removeListener();
       if (callback) callback(null, data);
-      if (led_mode == 'auto') {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      if (led_mode == "auto") {
+        servoAction("led-off");
+        last_led_action = "led-off";
       }
     }
     done = true;
-  }
+  };
 
   const cameraListener = (payload) => {
     if (!done) {
       stopRecording();
       removeListener();
-      if (callback) callback(null, '[camera]');
-      if (led_mode == 'auto') {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      if (callback) callback(null, "[camera]");
+      if (led_mode == "auto") {
+        servoAction("led-off");
+        last_led_action = "led-off";
       }
     }
     done = true;
-  }
+  };
 
   const gamepadListener = (payload) => {
     if (!done) {
@@ -993,31 +1049,31 @@ function speech_to_text(payload, callback) {
       stopRecording();
       removeListener();
       if (callback) callback(null, data);
-      if (led_mode == 'auto') {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      if (led_mode == "auto") {
+        servoAction("led-off");
+        last_led_action = "led-off";
       }
     }
     done = true;
-  }
+  };
 
-  if (led_mode == 'auto') {
+  if (led_mode == "auto") {
     if (payload.timeout > 0 && payload.recording) {
-        servoAction('led-on');
-        last_led_action = 'led-on';
+      servoAction("led-on");
+      last_led_action = "led-on";
     } else {
-        servoAction('led-off');
-        last_led_action = 'led-off';
+      servoAction("led-off");
+      last_led_action = "led-off";
     }
   }
 
-  buttonClient.on('button', listenerButton);
-  buttonClient.on('speech', listenerSpeech);
-  speech.on('data', dataListener);
-  speech.on('speech', speechListener);
-  speech.on('button', buttonListener);
-  speech.on('camera', cameraListener);
-  speech.on('gamepad', gamepadListener);
+  buttonClient.on("button", listenerButton);
+  buttonClient.on("speech", listenerSpeech);
+  speech.on("data", dataListener);
+  speech.on("speech", speechListener);
+  speech.on("button", buttonListener);
+  speech.on("camera", cameraListener);
+  speech.on("gamepad", gamepadListener);
 }
 
 function quiz_button(payload, callback) {
@@ -1026,8 +1082,8 @@ function quiz_button(payload, callback) {
   if (payload.timeout != 0) {
     setTimeout(() => {
       if (!done) {
-        if (callback) callback(null, '[timeout]');
-        buttonClient.removeListener('button', listener);
+        if (callback) callback(null, "[timeout]");
+        buttonClient.removeListener("button", listener);
       }
       done = true;
     }, payload.timeout);
@@ -1036,64 +1092,91 @@ function quiz_button(payload, callback) {
   function listener(data) {
     if (!done) {
       if (callback) callback(null, data);
-      buttonClient.removeListener('button', listener);
+      buttonClient.removeListener("button", listener);
     }
     done = true;
   }
 
-  buttonClient.on('button', listener);
+  buttonClient.on("button", listener);
 }
 
-app.get('/health', (req, res) => {
-  res.send(`${(new Date()).toLocaleString()}`);
+app.get("/health", (req, res) => {
+  res.send(`${new Date().toLocaleString()}`);
 });
 
-app.get('/recordingTime', (req, res) => {
+app.get("/recordingTime", (req, res) => {
   res.send(`${speech.recordingTime}`);
 });
 
-app.post('/docomo-chat', hasPermission('control.write'), (req, res) => {
-  console.log('/docomo-chat');
+app.post("/docomo-chat", hasPermission("control.write"), (req, res) => {
+  console.log("/docomo-chat");
   console.log(req.body);
 
-  docomo_chat({
-    message: req.body.message,
-    speed: req.body.speed || null,
-    volume: req.body.volume || null,
-    tone: req.body.tone || null,
-    direction: req.body.direction || null,
-    voice: req.body.voice || null,
-    silence: req.body.silence || null,
-  }, (err, data) => {
-    res.send(data);
-  });
+  docomo_chat(
+    {
+      message: req.body.message,
+      speed: req.body.speed || null,
+      volume: req.body.volume || null,
+      tone: req.body.tone || null,
+      direction: req.body.direction || null,
+      voice: req.body.voice || null,
+      silence: req.body.silence || null,
+    },
+    (err, data) => {
+      res.send(data);
+    }
+  );
 });
 
-app.post('/text-to-speech', hasPermission('control.write'), (req, res) => {
-  console.log('/text-to-speech');
+app.post("/text-to-speech", hasPermission("control.write"), (req, res) => {
+  console.log("/text-to-speech");
   console.log(req.body);
 
-  text_to_speech({
-    ...req.body,
-  }, (err) => {
-    res.send('OK');
-  });
+  text_to_speech(
+    {
+      ...req.body,
+    },
+    (err) => {
+      res.send("OK");
+    }
+  );
 });
 
-app.post('/speech-to-text', hasPermission('control.write'), (req, res) => {
-  console.log('/speech-to-text');
+app.post("/speech-to-text", hasPermission("control.write"), (req, res) => {
+  console.log("/speech-to-text");
   console.log(req.body);
 
-  speech_to_text({
-    timeout: (typeof req.body.payload.timeout === 'undefined') ? 30000 : req.body.payload.timeout,
-    threshold: (typeof req.body.payload.sensitivity === 'undefined') ? 2000 : req.body.payload.sensitivity,
-    level: (typeof req.body.payload.level === 'undefined') ? 100 : req.body.payload.level,
-    languageCode: (typeof req.body.payload.languageCode === 'undefined') ? 'ja-JP' : req.body.payload.languageCode,
-    alternativeLanguageCodes: (typeof req.body.payload.alternativeLanguageCodes === 'undefined') ? null : req.body.payload.alternativeLanguageCodes,
-    recording: (typeof req.body.payload.recording === 'undefined') ? true : req.body.payload.recording,
-  }, (err, data) => {
-    res.send(data);
-  });
+  speech_to_text(
+    {
+      timeout:
+        typeof req.body.payload.timeout === "undefined"
+          ? 30000
+          : req.body.payload.timeout,
+      threshold:
+        typeof req.body.payload.sensitivity === "undefined"
+          ? 2000
+          : req.body.payload.sensitivity,
+      level:
+        typeof req.body.payload.level === "undefined"
+          ? 100
+          : req.body.payload.level,
+      languageCode:
+        typeof req.body.payload.languageCode === "undefined"
+          ? "ja-JP"
+          : req.body.payload.languageCode,
+      alternativeLanguageCodes:
+        typeof req.body.payload.alternativeLanguageCodes === "undefined"
+          ? null
+          : req.body.payload.alternativeLanguageCodes,
+      recording:
+        typeof req.body.payload.recording === "undefined"
+          ? true
+          : req.body.payload.recording,
+    },
+    (err, data) => {
+      res.send(data);
+    }
+  );
 });
 
 /*
@@ -1103,34 +1186,36 @@ app.post('/speech-to-text', hasPermission('control.write'), (req, res) => {
   curlコマンド使用例
   $ curl -X POST --data 'こんにちは' -H 'content-type:text/plain' http://192.168.X.X:3090/debug-speech
 */
-app.post('/debug-speech', hasPermission('control.write'), (req, res) => {
-  if (typeof req.body === 'string') {
-    speech.emit('data', req.body.toString('utf-8'));
-  } else
-  if (typeof req.body.payload === 'string') {
-    speech.emit('data', req.body.payload.toString('utf-8'));
+app.post("/debug-speech", hasPermission("control.write"), (req, res) => {
+  if (typeof req.body === "string") {
+    speech.emit("data", req.body.toString("utf-8"));
+  } else if (typeof req.body.payload === "string") {
+    speech.emit("data", req.body.payload.toString("utf-8"));
   }
-  res.send('OK');
+  res.send("OK");
 });
 
-app.post('/speech', hasPermission('control.write'), (req, res) => {
-  if (typeof req.body === 'string') {
-    speech.emit('speech', req.body.toString('utf-8'));
-  } else
-  if (typeof req.body.payload === 'string') {
-    speech.emit('speech', req.body.payload.toString('utf-8'));
+app.post("/speech", hasPermission("control.write"), (req, res) => {
+  if (typeof req.body === "string") {
+    speech.emit("speech", req.body.toString("utf-8"));
+  } else if (typeof req.body.payload === "string") {
+    speech.emit("speech", req.body.payload.toString("utf-8"));
   }
-  res.send('OK');
+  res.send("OK");
 });
 
-app.use('/dora-chat', hasPermission('control.write'), DoraChat(router, {
-  credentialPath: config.googleSheet.credentialPath,
-  tokenPath: config.googleSheet.tokenPath,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  cacheDir: config.doraChat.dataDir,
-  wikipedia: config.doraChat.wikipedia,
-  weather: config.doraChat.weather,
-}));
+app.use(
+  "/dora-chat",
+  hasPermission("control.write"),
+  DoraChat(router, {
+    credentialPath: config.googleSheet.credentialPath,
+    tokenPath: config.googleSheet.tokenPath,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    cacheDir: config.doraChat.dataDir,
+    wikipedia: config.doraChat.wikipedia,
+    weather: config.doraChat.weather,
+  })
+);
 
 /*
   マイクによる音声認識の閾値を変更する
@@ -1139,39 +1224,39 @@ app.use('/dora-chat', hasPermission('control.write'), DoraChat(router, {
   curlコマンド使用例
   $ curl -X POST --data '200' http://192.168.X.X:3090/mic-threshold
 */
-app.post('/mic-threshold', hasPermission('control.write'), (req, res) => {
-  speech.emit('mic_threshold', req.body.toString('utf-8'));
-  res.send('OK');
-})
+app.post("/mic-threshold", hasPermission("control.write"), (req, res) => {
+  speech.emit("mic_threshold", req.body.toString("utf-8"));
+  res.send("OK");
+});
 
-app.use('/google', hasPermission('control.write'), googleRouter);
+app.use("/google", hasPermission("control.write"), googleRouter);
 
 function changeLed(payload) {
   if (mode_slave) {
-    gpioSocket.emit('led-command', payload);
+    gpioSocket.emit("led-command", payload);
   } else {
-    if (payload.action === 'auto') {
-      led_mode = 'auto';
+    if (payload.action === "auto") {
+      led_mode = "auto";
     }
-    if (payload.action === 'off') {
-      led_mode = 'manual';
-      servoAction('led-off');
-      last_led_action = 'led-off';
+    if (payload.action === "off") {
+      led_mode = "manual";
+      servoAction("led-off");
+      last_led_action = "led-off";
     }
-    if (payload.action === 'on') {
-      led_mode = 'manual';
-      servoAction('led-on');
-      last_led_action = 'led-on';
+    if (payload.action === "on") {
+      led_mode = "manual";
+      servoAction("led-on");
+      last_led_action = "led-on";
     }
-    if (payload.action === 'blink') {
-      led_mode = 'manual';
-      servoAction('led-blink');
-      last_led_action = 'led-blink';
+    if (payload.action === "blink") {
+      led_mode = "manual";
+      servoAction("led-blink");
+      last_led_action = "led-blink";
     }
-    if (payload.action === 'talk') {
-      led_mode = 'manual';
-      servoAction('led-talk');
-      last_led_action = 'led-talk';
+    if (payload.action === "talk") {
+      led_mode = "manual";
+      servoAction("led-talk");
+      last_led_action = "led-talk";
     }
   }
 }
@@ -1179,38 +1264,43 @@ function changeLed(payload) {
 let playsnd = {};
 
 function execSoundCommand(payload, callback) {
-  const sound = (typeof payload.play !== 'undefined') ? payload.play : payload.sound;
-  if (sound === 'stop') {
+  const sound =
+    typeof payload.play !== "undefined" ? payload.play : payload.sound;
+  if (sound === "stop") {
     const pids = Object.keys(playsnd);
     const _playsnd = playsnd;
     let count = pids.length;
     if (count > 0) {
       playsnd = {};
-      pids.forEach( pid => {
+      pids.forEach((pid) => {
         const playone = _playsnd[pid];
         if (playone) {
-          utils.kill(playone.pid, 'SIGTERM', function() {
-            count --;
+          utils.kill(playone.pid, "SIGTERM", function () {
+            count--;
             if (count <= 0) {
               if (callback) callback();
             }
           });
         }
-      })
+      });
     } else {
       if (callback) callback();
     }
-  } else
-  if (typeof sound !== 'undefined') {
-    const base = path.join(HOME, 'Sound');
+  } else if (typeof sound !== "undefined") {
+    const base = path.join(HOME, "Sound");
     const p = path.normalize(path.join(base, sound));
     if (p.indexOf(base) == 0) {
-      const cmd = (process.platform === 'darwin') ? 'afplay' : 'aplay';
-      const opt = (process.platform === 'darwin') ? [p] : ((config.voiceHat)?['-Dplug:softvol', p]:[p]);
+      const cmd = process.platform === "darwin" ? "afplay" : "aplay";
+      const opt =
+        process.platform === "darwin"
+          ? [p]
+          : config.voiceHat
+          ? ["-Dplug:softvol", p]
+          : [p];
       console.log(`/usr/bin/${cmd} ${p}`);
       const playone = spawn(`/usr/bin/${cmd}`, opt);
-      playone.on('close', function() {
-        console.log('close');
+      playone.on("close", function () {
+        console.log("close");
         delete playsnd[playone.pid];
         if (callback) callback();
       });
@@ -1223,53 +1313,55 @@ async function quizPacket(payload) {
   // if (payload.action === 'result') {
   //   payload.result = quizAnswers[payload.question];
   // }
-  if (payload.action === 'entry') {
-    payload.entry = Object.keys(robotData.quizEntry).map( key => {
-      return {
-        clientId: robotData.quizEntry[key].clientId,
-        name: robotData.quizEntry[key].name,
-      }
-    }).filter( v => v.name != quiz_master );
+  if (payload.action === "entry") {
+    payload.entry = Object.keys(robotData.quizEntry)
+      .map((key) => {
+        return {
+          clientId: robotData.quizEntry[key].clientId,
+          name: robotData.quizEntry[key].name,
+        };
+      })
+      .filter((v) => v.name != quiz_master);
     //payload.name = quiz_master;
   }
-  if (payload.action === 'quiz-entry-init') {
+  if (payload.action === "quiz-entry-init") {
     robotData.quizEntry = {};
     writeRobotData();
     const result = await quizPacket({
-      action: 'entry',
+      action: "entry",
       name: quiz_master,
     });
-    io.emit('quiz', result);
+    io.emit("quiz", result);
     setTimeout(() => {
-      io.emit('quiz-reload-entry');
+      io.emit("quiz-reload-entry");
     }, 3000);
     return result;
   }
-  if (payload.action === 'quiz-entry') {
-    const params = {}
-    if ('backgroundImage' in payload) {
+  if (payload.action === "quiz-entry") {
+    const params = {};
+    if ("backgroundImage" in payload) {
       params.backgroundImage = payload.backgroundImage;
     }
-    if ('backgroundColor' in payload) {
+    if ("backgroundColor" in payload) {
       params.backgroundColor = payload.backgroundColor;
     }
-    if ('quizMode' in payload) {
+    if ("quizMode" in payload) {
       params.quizMode = payload.quizMode;
     }
-    if ('closeButton' in payload) {
+    if ("closeButton" in payload) {
       params.closeButton = payload.closeButton;
     }
     storeQuizPayload(params);
   }
-  if (payload.action === 'quiz-init') {
+  if (payload.action === "quiz-init") {
     //クイズデータの保存
     if (USE_DB) {
       const startTime = new Date();
       if (payload.quizId) {
         if (payload.pages) {
-          for (var i=0;i<payload.pages.length;i++) {
+          for (var i = 0; i < payload.pages.length; i++) {
             const page = payload.pages[i];
-            if (page.action == 'quiz' && page.question) {
+            if (page.action == "quiz" && page.question) {
               const a = {
                 quizId: payload.quizId,
                 quizTitle: page.question,
@@ -1278,11 +1370,11 @@ async function quizPacket(payload) {
                 answers: page.answers,
                 category: page.category,
                 startTime,
-              }
+              };
               if (payload.quizName) {
                 a.quizName = payload.quizName;
               }
-              db.update('updateQuiz', a);
+              db.update("updateQuiz", a);
             }
           }
         }
@@ -1295,24 +1387,24 @@ async function quizPacket(payload) {
           robotData.quizList = {};
         }
         if (!robotData.quizList[payload.quizId]) {
-          robotData.quizList[payload.quizId] = {}
+          robotData.quizList[payload.quizId] = {};
         }
         if (payload.quizName) {
           robotData.quizList[payload.quizId].name = payload.quizName;
         }
         if (payload.pages) {
           if (!robotData.quizList[payload.quizId].quiz) {
-            robotData.quizList[payload.quizId].quiz = {}
+            robotData.quizList[payload.quizId].quiz = {};
           }
-          payload.pages.forEach( page => {
-            if (page.action == 'quiz' && page.question) {
+          payload.pages.forEach((page) => {
+            if (page.action == "quiz" && page.question) {
               robotData.quizList[payload.quizId].quiz[page.question] = {
                 choices: page.choices,
                 answers: page.answers,
                 category: page.category,
-              }
+              };
             }
-          })
+          });
         }
         if (!USE_DB) {
           writeRobotData();
@@ -1323,31 +1415,36 @@ async function quizPacket(payload) {
       }
     }
   }
-  if (payload.action === 'quiz-show') {
+  if (payload.action === "quiz-show") {
     //クイズの表示
-    payload.action = 'quiz-init';
+    payload.action = "quiz-init";
   }
-  if (payload.action === 'quiz-ranking') {
+  if (payload.action === "quiz-ranking") {
     if (USE_DB) {
-      if (typeof payload.quizId !== 'undefined') {
-        const { answers } = await db.findAnswers({ quizId: payload.quizId, startTime: payload.quizStartTime });
+      if (typeof payload.quizId !== "undefined") {
+        const { answers } = await db.findAnswers({
+          quizId: payload.quizId,
+          startTime: payload.quizStartTime,
+        });
         //ゲストプレイヤーはランキングから外す
         const ret = {};
         if (answers) {
-          Object.keys(answers).forEach( quizTitle => {
+          Object.keys(answers).forEach((quizTitle) => {
             const players = answers[quizTitle];
-            ret[quizTitle] = {}
+            ret[quizTitle] = {};
             if (players) {
-              Object.keys(players).forEach( clientId => {
+              Object.keys(players).forEach((clientId) => {
                 const player = players[clientId];
-                if (player.name.indexOf('ゲスト') != 0
-                && player.name.indexOf('guest') != 0
-                && player.name.indexOf('学生講師') != 0) {
+                if (
+                  player.name.indexOf("ゲスト") != 0 &&
+                  player.name.indexOf("guest") != 0 &&
+                  player.name.indexOf("学生講師") != 0
+                ) {
                   ret[quizTitle][clientId] = {
-                      name: player.name,
-                      answer: player.answer,
-                      time: player.time,
-                  }
+                    name: player.name,
+                    answer: player.answer,
+                    time: player.time,
+                  };
                 }
               });
             }
@@ -1358,26 +1455,28 @@ async function quizPacket(payload) {
         payload.quizAnswers = await db.answerAll();
       }
     } else {
-      if (typeof payload.quizId !== 'undefined') {
+      if (typeof payload.quizId !== "undefined") {
         payload.quizAnswers = robotData.quizAnswers[payload.quizId];
         //ゲストプレイヤーはランキングから外す
         const ret = {};
         if (payload.quizAnswers) {
-          Object.keys(payload.quizAnswers).forEach( quizId => {
+          Object.keys(payload.quizAnswers).forEach((quizId) => {
             const players = payload.quizAnswers[quizId];
-            ret[quizId] = {}
+            ret[quizId] = {};
             if (players) {
-              Object.keys(players).forEach( clientId => {
+              Object.keys(players).forEach((clientId) => {
                 const player = players[clientId];
                 if (player.quizStartTime === payload.quizStartTime) {
-                  if (player.name.indexOf('ゲスト') != 0
-                  && player.name.indexOf('guest') != 0
-                  && player.name.indexOf('学生講師') != 0) {
+                  if (
+                    player.name.indexOf("ゲスト") != 0 &&
+                    player.name.indexOf("guest") != 0 &&
+                    player.name.indexOf("学生講師") != 0
+                  ) {
                     ret[quizId][clientId] = {
-                        name: player.name,
-                        answer: player.answer,
-                        time: player.time,
-                    }
+                      name: player.name,
+                      answer: player.answer,
+                      time: player.time,
+                    };
                   }
                 }
               });
@@ -1392,80 +1491,85 @@ async function quizPacket(payload) {
     payload.name = quiz_master;
   }
   if (payload.members) {
-    payload.members = students.map( v => v.name );
+    payload.members = students.map((v) => v.name);
   }
   if (payload.area) {
     const readFile = (path) => {
-      return new Promise( resolve => {
+      return new Promise((resolve) => {
         fs.readFile(path, (err, data) => {
           resolve(data);
-        })
-      })
-    }
-    const photo = payload.photo.replace('images/', '');
+        });
+      });
+    };
+    const photo = payload.photo.replace("images/", "");
     const json = await readFile(path.join(PICT, photo));
     try {
       const data = JSON.parse(json);
       payload.photo = path.join(path.dirname(payload.photo), data.image);
-      if (path.extname(payload.photo) === '.json') {
-        payload.photo = payload.photo.replace(/.json$/, '');
+      if (path.extname(payload.photo) === ".json") {
+        payload.photo = payload.photo.replace(/.json$/, "");
       }
       payload.area = data.area;
-    } catch(err) {
-      if (path.extname(payload.photo) === '.json') {
-        payload.photo = payload.photo.replace(/.json$/, '');
+    } catch (err) {
+      if (path.extname(payload.photo) === ".json") {
+        payload.photo = payload.photo.replace(/.json$/, "");
       }
       payload.area = [];
     }
   }
   try {
     payload.quizMode = robotData.quizPayload.others.quizMode;
-  } catch(err) {
-  }
+  } catch (err) {}
   try {
     payload.closeButton = robotData.quizPayload.others.closeButton;
-  } catch(err) {
-  }
+  } catch (err) {}
   return payload;
 }
 
-function storeQuizPayload(payload)
-{
-console.log(`storeQuizPayload`,payload);
+function storeQuizPayload(payload) {
+  console.log(`storeQuizPayload`, payload);
   if (payload.name !== quiz_master) {
-    robotData.quizPayload['others'] = m(robotData.quizPayload['others'], payload);
+    robotData.quizPayload["others"] = m(
+      robotData.quizPayload["others"],
+      payload
+    );
   }
-  robotData.quizPayload[quiz_master] = m(robotData.quizPayload[quiz_master], payload);
+  robotData.quizPayload[quiz_master] = m(
+    robotData.quizPayload[quiz_master],
+    payload
+  );
   writeRobotData();
 }
 
-function loadQuizPayload(payload)
-{
+function loadQuizPayload(payload) {
   if (payload.name == quiz_master) {
     var val = robotData.quizPayload[quiz_master] || {};
   } else {
-    var val = robotData.quizPayload['others'] || {};
+    var val = robotData.quizPayload["others"] || {};
   }
-  val.members = students.map( v => v.name );
-console.log(`loadQuizPayload`,val);
-  return m(val, { initializeLoad: true, });
+  val.members = students.map((v) => v.name);
+  console.log(`loadQuizPayload`, val);
+  return m(val, { initializeLoad: true });
 }
 
-app.post('/result', hasPermission('result.read'), async (req, res) => {
-  if (req.body.type === 'answers') {
+app.post("/result", hasPermission("result.read"), async (req, res) => {
+  if (req.body.type === "answers") {
     if (req.body.quizId) {
       if (req.body.startTime) {
-        const showSum = (typeof req.body.showSum === 'undefined' || !req.body.showSum) ? false : true;
+        const showSum =
+          typeof req.body.showSum === "undefined" || !req.body.showSum
+            ? false
+            : true;
         //スタート時間が同じものだけを返す
         if (USE_DB) {
           if (showSum) {
             const result = {};
             const quizAnswers = quizAnswersCache[req.body.quizId];
             if (quizAnswers) {
-              Object.keys(quizAnswers).map( quiz => {
+              Object.keys(quizAnswers).map((quiz) => {
                 const qq = quizAnswers[quiz];
                 const tt = {};
-                Object.keys(qq).forEach( clientId => {
+                Object.keys(qq).forEach((clientId) => {
                   const answer = qq[clientId];
                   if (answer.quizStartTime === req.body.startTime) {
                     tt[clientId] = answer;
@@ -1475,22 +1579,27 @@ app.post('/result', hasPermission('result.read'), async (req, res) => {
                   result[quiz] = tt;
                 }
               });
-              const question = (robotData.quizList) ? robotData.quizList[req.body.quizId] : null;
+              const question = robotData.quizList
+                ? robotData.quizList[req.body.quizId]
+                : null;
               res.send({ answers: result, question: question });
             } else {
               res.send({ answers: result, question: null });
             }
           } else {
-            const retval = await db.findAnswers({ quizId: req.body.quizId, startTime: req.body.startTime });
+            const retval = await db.findAnswers({
+              quizId: req.body.quizId,
+              startTime: req.body.startTime,
+            });
             res.send(retval);
           }
         } else {
           const result = {};
           const quizAnswers = robotData.quizAnswers[req.body.quizId];
-          Object.keys(quizAnswers).map( quiz => {
+          Object.keys(quizAnswers).map((quiz) => {
             const qq = quizAnswers[quiz];
             const tt = {};
-            Object.keys(qq).forEach( clientId => {
+            Object.keys(qq).forEach((clientId) => {
               const answer = qq[clientId];
               if (answer.quizStartTime === req.body.startTime) {
                 tt[clientId] = answer;
@@ -1500,23 +1609,25 @@ app.post('/result', hasPermission('result.read'), async (req, res) => {
               result[quiz] = tt;
             }
           });
-          const question = (robotData.quizList) ? robotData.quizList[req.body.quizId] : null;
+          const question = robotData.quizList
+            ? robotData.quizList[req.body.quizId]
+            : null;
           res.send({ answers: result, question: question });
         }
       } else {
         //スタート時間のリストを返す
         if (USE_DB) {
-          const retval = await db.startTimeList({ quizId: req.body.quizId })
+          const retval = await db.startTimeList({ quizId: req.body.quizId });
           res.send(retval);
         } else {
           const quizAnswers = robotData.quizAnswers[req.body.quizId];
           const result = {};
-          Object.keys(quizAnswers).map( quiz => {
+          Object.keys(quizAnswers).map((quiz) => {
             const qq = quizAnswers[quiz];
-            Object.keys(qq).forEach( clientId => {
+            Object.keys(qq).forEach((clientId) => {
               result[qq[clientId].quizStartTime] = true;
-            })
-          })
+            });
+          });
           res.send({ startTimes: Object.keys(result) });
         }
       }
@@ -1524,160 +1635,161 @@ app.post('/result', hasPermission('result.read'), async (req, res) => {
       //クイズIDを返す
       if (USE_DB) {
         const list = await db.quizIdList();
-        res.send(list)
+        res.send(list);
       } else {
-        const list = { quizIds: Object.keys(robotData.quizAnswers)};
-        res.send(list)
+        const list = { quizIds: Object.keys(robotData.quizAnswers) };
+        res.send(list);
       }
     }
     return;
   }
-  res.send({ status: 'OK' });
-})
+  res.send({ status: "OK" });
+});
 
 let run_scenario = false;
 
 const postCommand = async (req, res, credential) => {
-  if (req.body.type === 'quiz') {
+  if (req.body.type === "quiz") {
     const payload = await quizPacket(req.body);
     storeQuizPayload(payload);
-    io.emit('quiz', payload);
-    if (req.body.action == 'quiz-ranking') {
+    io.emit("quiz", payload);
+    if (req.body.action == "quiz-ranking") {
       res.send(payload.quizAnswers);
       return;
     }
-    if (req.body.action === 'quiz-init') {
+    if (req.body.action === "quiz-init") {
       res.send(payload.quizStartTime);
       return;
     }
   }
-  if (req.body.type === 'speech') {
-    speech.emit('speech', req.body.speech);
+  if (req.body.type === "speech") {
+    speech.emit("speech", req.body.speech);
   }
-  if (req.body.type === 'led') {
+  if (req.body.type === "led") {
     changeLed(req.body);
   }
-  if (req.body.type === 'button') {
+  if (req.body.type === "button") {
     buttonClient.doCommand(req.body);
   }
-  if (req.body.type === 'cancel') {
-    speech.emit('button', true);
+  if (req.body.type === "cancel") {
+    speech.emit("button", true);
   }
-  if (req.body.type === 'movie') {
+  if (req.body.type === "movie") {
     if (playerSocket) {
-      playerSocket.emit('movie', req.body, (data) => {
+      playerSocket.emit("movie", req.body, (data) => {
         res.send(data);
       });
       return;
     } else {
-      res.send({ state: 'none' });
+      res.send({ state: "none" });
       return;
     }
   }
-  if (req.body.type === 'sound.sync') {
+  if (req.body.type === "sound.sync") {
     execSoundCommand(req.body, () => {
-      res.send({ state: 'ok', });
+      res.send({ state: "ok" });
     });
     return;
   }
-  if (req.body.type === 'sound') {
+  if (req.body.type === "sound") {
     execSoundCommand(req.body);
   }
-  if (req.body.type === 'save') {
-    const { action, } = req.body;
-    if (action === 'imageMap') {
-      const { filename, imageMap, } = req.body;
+  if (req.body.type === "save") {
+    const { action } = req.body;
+    if (action === "imageMap") {
+      const { filename, imageMap } = req.body;
       if (filename && imageMap) {
         let savefilePath = path.join(PICT, filename);
         if (path.resolve(savefilePath) === savefilePath) {
-          if (path.extname(savefilePath.toLowerCase()) !== '.json') {
-            savefilePath = `${savefilePath}.json`
+          if (path.extname(savefilePath.toLowerCase()) !== ".json") {
+            savefilePath = `${savefilePath}.json`;
           }
           const writeFile = (path, data) => {
-            return new Promise( resolve => {
+            return new Promise((resolve) => {
               console.log(`write imageMap ${path}`);
-              fs.writeFile(path, data, err => {
+              fs.writeFile(path, data, (err) => {
                 console.log(err);
                 resolve();
-              })
-            })
-          }
+              });
+            });
+          };
           await writeFile(savefilePath, imageMap);
           try {
             const { area } = JSON.parse(imageMap);
             storeQuizPayload({ area });
-          } catch(err) {
-          }
+          } catch (err) {}
         } else {
-          console.log(`invalid filename ${filename}`)
+          console.log(`invalid filename ${filename}`);
         }
       } else {
-        console.log(`invalid 'imageMap' save command `)
+        console.log(`invalid 'imageMap' save command `);
       }
-    } else
-    if (action === 'defaults') {
+    } else if (action === "defaults") {
       UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
-        UserDefaults.save(config.robotUserDefaultsPath, req.body.data, (err) => {
-          if (err) {
-            console.log(err);
-            res.send({ state: 'ng', });
-            return;
+        UserDefaults.save(
+          config.robotUserDefaultsPath,
+          req.body.data,
+          (err) => {
+            if (err) {
+              console.log(err);
+              res.send({ state: "ng" });
+              return;
+            }
+            res.send({ state: "ok" });
           }
-          res.send({ state: 'ok', });
-        })
+        );
       });
       return;
     }
-    res.send({ state: 'ng', });
+    res.send({ state: "ng" });
     return;
   }
-  if (req.body.type === 'load') {
-    const { action, } = req.body;
-    if (action === 'defaults') {
+  if (req.body.type === "load") {
+    const { action } = req.body;
+    if (action === "defaults") {
       UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
         if (err) {
           console.log(err);
-          res.send({ state: 'ng', });
+          res.send({ state: "ng" });
           return;
         }
-        res.send({ state: 'ok', data, });
-      })
+        res.send({ state: "ok", data });
+      });
       return;
     }
-    res.send({ state: 'ng', });
+    res.send({ state: "ng" });
     return;
   }
-  if (req.body.type === 'poweroff') {
+  if (req.body.type === "poweroff") {
     execPowerOff();
-    res.send({ state: 'ok' });
+    res.send({ state: "ok" });
     return;
   }
-  if (req.body.type === 'reboot') {
+  if (req.body.type === "reboot") {
     execReboot();
-    res.send({ state: 'ok' });
+    res.send({ state: "ok" });
     return;
   }
-  if (req.body.type === 'scenario') {
+  if (req.body.type === "scenario") {
     const { action } = req.body;
     function stopAll() {
       dora.stop();
       talk.stop();
       //servoAction('idle');
-      execSoundCommand({ sound: 'stop' }, () => {
-        buttonClient.emit('stop-speech-to-text', {});
-        buttonClient.emit('all-blink', {});
+      execSoundCommand({ sound: "stop" }, () => {
+        buttonClient.emit("stop-speech-to-text", {});
+        buttonClient.emit("all-blink", {});
         // buttonClient.emit('close-all', {});
-        speech.emit('data', 'stoped');
-        led_mode = 'auto';
-        servoAction('led-off');
-        last_led_action = 'led-off';
+        speech.emit("data", "stoped");
+        led_mode = "auto";
+        servoAction("led-off");
+        last_led_action = "led-off";
         if (playerSocket) {
-          playerSocket.emit('movie', { action: 'cancel', }, (data) => {
-          });
+          playerSocket.emit("movie", { action: "cancel" }, (data) => {});
         }
       });
     }
-    if (action == 'play') {
+    if (action == "play") {
       run_scenario = true;
       const play = ({ filename, range, name }, defaults) => {
         stopAll();
@@ -1688,7 +1800,7 @@ const postCommand = async (req, res, credential) => {
           if (!err.info.reason) {
             err.info.reason = err.toString();
           }
-          io.emit('scenario_status', {
+          io.emit("scenario_status", {
             err: err.toString(),
             lineNumber: err.info.lineNumber,
             code: err.info.code,
@@ -1697,124 +1809,151 @@ const postCommand = async (req, res, credential) => {
           run_scenario = false;
         }
         try {
-          const base = path.join(HOME, 'Documents');
-          const username = (name) ? path.basename(name) : null;
+          const base = path.join(HOME, "Documents");
+          const username = name ? path.basename(name) : null;
           fs.readFile(path.join(base, username, filename), (err, data) => {
             if (err) {
               emitError(err);
               return;
             }
-            dora.parse(data.toString(), filename, function (filename, callback) {
-              fs.readFile(path.join(base, username, filename), (err, data) => {
-                if (err) {
-                  emitError(err);
-                  return;
-                }
-                callback(data.toString());
-              });
-            }).then(()=> {
-              dora.credential = credential;
-console.log(robotData.voice);
-              dora.play({
-                username,
-                hostname: os.hostname(),
-                ip_address: ip.address(),
-                voice: {
-                  sensitivity: robotData.voice.threshold,
-                  level: robotData.voice.level,
-                },
-                speech: {
-                  languageCode: config.defaultVoice,
-                },
-                dora: {
-                  host: 'localhost',
-                  port: config.port,
-                },
-                defaults,
-              }, {
-                socket: localSocket,
-                range,
-              }, (err, msg) => {
-                if (err) {
-                  emitError(err);
-                  if (err.info) {
-                    if (err.info.lineNumber >= 1) {
-                      console.log(`${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
+            dora
+              .parse(data.toString(), filename, function (filename, callback) {
+                fs.readFile(
+                  path.join(base, username, filename),
+                  (err, data) => {
+                    if (err) {
+                      emitError(err);
+                      return;
+                    }
+                    callback(data.toString());
+                  }
+                );
+              })
+              .then(() => {
+                dora.credential = credential;
+                console.log(robotData.voice);
+                dora.play(
+                  {
+                    username,
+                    hostname: os.hostname(),
+                    ip_address: ip.address(),
+                    voice: {
+                      sensitivity: robotData.voice.threshold,
+                      level: robotData.voice.level,
+                    },
+                    speech: {
+                      languageCode: config.defaultVoice,
+                    },
+                    dora: {
+                      host: "localhost",
+                      port: config.port,
+                    },
+                    defaults,
+                  },
+                  {
+                    socket: localSocket,
+                    range,
+                  },
+                  (err, msg) => {
+                    if (err) {
+                      emitError(err);
+                      if (err.info) {
+                        if (err.info.lineNumber >= 1) {
+                          console.log(
+                            `${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`
+                          );
+                        } else {
+                          console.log(
+                            `エラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`
+                          );
+                        }
+                      } else {
+                        console.log(`エラーが発生しました。\n\n`);
+                      }
+                      run_scenario = false;
                     } else {
-                      console.log(`エラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`);
-                    }
-                  } else {
-                    console.log(`エラーが発生しました。\n\n`);
-                  }
-                  run_scenario = false;
-                } else {
-                  io.emit('scenario_status', {
-                    message: msg,
-                  });
-                  buttonClient.emit('stop-speech-to-text', {});
-                  buttonClient.emit('all-blink', {});
-                  // buttonClient.emit('close-all', {});
-                  speech.emit('data', 'stoped');
-                  if (typeof msg._nextscript !== 'undefined') {
-                    console.log(`msg._nextscript ${msg._nextscript}`);
-                    if (run_scenario) {
-                      play({
-                        filename: msg._nextscript,
-                        range: { start: 0, },
-                        name: name,
+                      io.emit("scenario_status", {
+                        message: msg,
                       });
+                      buttonClient.emit("stop-speech-to-text", {});
+                      buttonClient.emit("all-blink", {});
+                      // buttonClient.emit('close-all', {});
+                      speech.emit("data", "stoped");
+                      if (typeof msg._nextscript !== "undefined") {
+                        console.log(`msg._nextscript ${msg._nextscript}`);
+                        if (run_scenario) {
+                          play({
+                            filename: msg._nextscript,
+                            range: { start: 0 },
+                            name: name,
+                          });
+                        }
+                      }
+                      console.log(msg);
                     }
                   }
-                  console.log(msg);
-                }
+                );
+              })
+              .catch((err) => {
+                emitError(err);
               });
-            }).catch((err) => {
-              emitError(err);
-            });
           });
-        } catch(err) {
+        } catch (err) {
           emitError(err);
         }
-      }
+      };
       UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
         play(req.body, data);
       });
     }
-    if (action == 'stop') {
+    if (action == "stop") {
       run_scenario = false;
       stopAll();
     }
-    if (action == 'load') {
+    if (action == "load") {
       console.log(JSON.stringify(req.body));
       console.log(JSON.stringify(req.params));
-      const username = ('username' in req.body) ? req.body.username : 'default-user';
-      const uri = ('uri' in req.body) ? req.body.uri : null;
-      const filename = ('filename' in req.body && req.body.filename !== null) ? req.body.filename : (('filename' in req.params) ? req.params.filename : null);
-      const base = path.join(HOME, 'Documents');
-      mkdirp(path.join(base, username, '.cache'), async function(err) {
+      const username =
+        "username" in req.body ? req.body.username : "default-user";
+      const uri = "uri" in req.body ? req.body.uri : null;
+      const filename =
+        "filename" in req.body && req.body.filename !== null
+          ? req.body.filename
+          : "filename" in req.params
+          ? req.params.filename
+          : null;
+      const base = path.join(HOME, "Documents");
+      mkdirp(path.join(base, username, ".cache"), async function (err) {
         if (uri) {
           try {
             const body = await request({
               uri,
-              method: 'POST',
+              method: "POST",
               json: {
-                type: 'scenario',
-                action: 'load',
+                type: "scenario",
+                action: "load",
                 filename,
                 username,
               },
             });
-            if ('text' in body && 'filename' in body) {
-              fs.writeFile(path.join(base, username, '.cache', body.filename), body.text, (err) => {
-                if (err) console.log(err);
-                res.send({ status: (!err) ? 'OK' : err.code, next_script: `.cache/${body.filename}`, });
-              })
+            if ("text" in body && "filename" in body) {
+              fs.writeFile(
+                path.join(base, username, ".cache", body.filename),
+                body.text,
+                (err) => {
+                  if (err) console.log(err);
+                  res.send({
+                    status: !err ? "OK" : err.code,
+                    next_script: `.cache/${body.filename}`,
+                  });
+                }
+              );
             } else {
-              res.send({ status: 'Not found', });
+              res.send({ status: "Not found" });
             }
-          } catch(err) {
+          } catch (err) {
             console.log(err);
-            res.send({ status: 'Not found', });
+            res.send({ status: "Not found" });
           }
           return;
         } else {
@@ -1824,181 +1963,213 @@ console.log(robotData.voice);
             fs.readFile(p, (err, data) => {
               if (err) {
                 console.log(err);
-                res.send({ status: 'Err', });
+                res.send({ status: "Err" });
                 return;
               }
-              res.send({ status: 'OK', text: data.toString(), filename, });
+              res.send({ status: "OK", text: data.toString(), filename });
             });
           } else {
-            res.send({ status: 'Invalid filename', });
+            res.send({ status: "Invalid filename" });
           }
         }
-      })
+      });
       return;
     }
   }
-  res.send({ status: 'OK' });
-}
+  res.send({ status: "OK" });
+};
 
-app.post('/command/:filename', hasPermission('command.write'), async (req, res) => {
+app.post(
+  "/command/:filename",
+  hasPermission("command.write"),
+  async (req, res) => {
+    if (req.isAuthenticated()) {
+      createSignature(req.user.id, (signature) => {
+        postCommand(req, res, { user_id: req.user.id, signature });
+      });
+    } else {
+      postCommand(req, res, { localhostToken: localhostToken() });
+    }
+  }
+);
+
+app.post("/command", hasPermission("command.write"), async (req, res) => {
   if (req.isAuthenticated()) {
     createSignature(req.user.id, (signature) => {
       postCommand(req, res, { user_id: req.user.id, signature });
-    })
+    });
   } else {
-    postCommand(req, res, { localhostToken: localhostToken(), });
+    postCommand(req, res, { localhostToken: localhostToken() });
   }
-})
+});
 
-app.post('/command', hasPermission('command.write'), async (req, res) => {
-  if (req.isAuthenticated()) {
-    createSignature(req.user.id, (signature) => {
-      postCommand(req, res, { user_id: req.user.id, signature });
-    })
-  } else {
-    postCommand(req, res, { localhostToken: localhostToken(), });
-  }
-})
-
-app.post('/scenario', hasPermission('scenario.write'), (req, res) => {
-  const base = path.join(HOME, 'Documents');
-  const username = (req.body.name) ? path.basename(req.body.name) : null;
-  const filename = (req.body.filename) ? path.basename(req.body.filename) : null;
-  if (username === 'admin-user') {
-    if (req.body.action == 'save') {
-      if (filename === '生徒リスト') {
-        if (typeof req.body.text !== 'undefined') {
+app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
+  const base = path.join(HOME, "Documents");
+  const username = req.body.name ? path.basename(req.body.name) : null;
+  const filename = req.body.filename ? path.basename(req.body.filename) : null;
+  if (username === "admin-user") {
+    if (req.body.action == "save") {
+      if (filename === "生徒リスト") {
+        if (typeof req.body.text !== "undefined") {
           if (filename) {
-            mkdirp(HOME, function(err) {
+            mkdirp(HOME, function (err) {
               fs.writeFile(PART_LIST_FILE_PATH, req.body.text, (err) => {
                 let r = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
-                if (typeof r.students !== 'undefined') students = r.students;
-                res.send({ status: (!err) ? 'OK' : err.code, });
+                if (typeof r.students !== "undefined") students = r.students;
+                res.send({ status: !err ? "OK" : err.code });
               });
             });
           } else {
-            res.send({ status: 'Not found filename', });
+            res.send({ status: "Not found filename" });
           }
         } else {
-          res.send({ status: 'No data', });
+          res.send({ status: "No data" });
         }
-      } else if (filename === '出席CSV') {
-        res.send({ status: 'OK' });
-      } else if (filename === '日付リスト') {
-        if (typeof req.body.text !== 'undefined') {
+      } else if (filename === "出席CSV") {
+        res.send({ status: "OK" });
+      } else if (filename === "日付リスト") {
+        if (typeof req.body.text !== "undefined") {
           if (filename) {
-            mkdirp(HOME, function(err) {
-              fs.writeFile(path.join(HOME, 'date-list.txt'), req.body.text, (err) => {
-                res.send({ status: (!err) ? 'OK' : err.code, });
-              });
+            mkdirp(HOME, function (err) {
+              fs.writeFile(
+                path.join(HOME, "date-list.txt"),
+                req.body.text,
+                (err) => {
+                  res.send({ status: !err ? "OK" : err.code });
+                }
+              );
             });
           } else {
-            res.send({ status: 'Not found filename', });
+            res.send({ status: "Not found filename" });
           }
         } else {
-          res.send({ status: 'No data', });
+          res.send({ status: "No data" });
         }
       } else {
-        res.send({ status: 'OK' });
+        res.send({ status: "OK" });
       }
-    } else
-    if (req.body.action == 'load') {
-      if (filename === '生徒リスト') {
+    } else if (req.body.action == "load") {
+      if (filename === "生徒リスト") {
         fs.readFile(PART_LIST_FILE_PATH, (err, data) => {
-          res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
+          res.send({
+            status: !err ? "OK" : err.code,
+            text: data ? data.toString() : "",
+          });
         });
-      } else if (filename === '出席CSV') {
-        const { dates, students } = utils.attendance.load(null, PART_LIST_FILE_PATH, path.join(HOME, 'date-list.txt'));
+      } else if (filename === "出席CSV") {
+        const { dates, students } = utils.attendance.load(
+          null,
+          PART_LIST_FILE_PATH,
+          path.join(HOME, "date-list.txt")
+        );
         if (USE_DB) {
-          db.loadAttendance(dates).then( robotData => {
-            res.send({ status: 'OK', text: utils.attendance.csv(robotData, dates,  students)});
+          db.loadAttendance(dates).then((robotData) => {
+            res.send({
+              status: "OK",
+              text: utils.attendance.csv(robotData, dates, students),
+            });
           });
         } else {
-          res.send({ status: 'OK', text: utils.attendance.csv(robotData, dates,  students)});
+          res.send({
+            status: "OK",
+            text: utils.attendance.csv(robotData, dates, students),
+          });
         }
-      } else if (filename === '日付リスト') {
-        fs.readFile(path.join(HOME, 'date-list.txt'), (err, data) => {
-          res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
+      } else if (filename === "日付リスト") {
+        fs.readFile(path.join(HOME, "date-list.txt"), (err, data) => {
+          res.send({
+            status: !err ? "OK" : err.code,
+            text: data ? data.toString() : "",
+          });
         });
       } else {
-        res.send({ status: 'OK' });
+        res.send({ status: "OK" });
       }
     } else {
-      res.send({ status: 'OK' });
+      res.send({ status: "OK" });
     }
-  } else
-  if (students.some( m => m.name === username ) || config.editorAccessControl)
-  {
-    if (req.body.action == 'save' || req.body.action == 'create') {
-      if (typeof req.body.text !== 'undefined' || req.body.action == 'create') {
+  } else if (
+    students.some((m) => m.name === username) ||
+    config.editorAccessControl
+  ) {
+    if (req.body.action == "save" || req.body.action == "create") {
+      if (typeof req.body.text !== "undefined" || req.body.action == "create") {
         if (isValidFilename(filename)) {
-          mkdirp(path.join(base, username), function(err) {
-            if (req.body.action === 'create') {
+          mkdirp(path.join(base, username), function (err) {
+            if (req.body.action === "create") {
               console.log(`create ${path.join(base, username, filename)}`);
-              fs.open(path.join(base, username, filename), 'a', function (err, file) {
-                if (err) console.log(err);
-                res.send({ status: (!err) ? 'OK' : err.code, filename, });
-              });
+              fs.open(
+                path.join(base, username, filename),
+                "a",
+                function (err, file) {
+                  if (err) console.log(err);
+                  res.send({ status: !err ? "OK" : err.code, filename });
+                }
+              );
             } else {
               console.log(`save ${path.join(base, username, filename)}`);
-              fs.writeFile(path.join(base, username, filename), req.body.text, (err) => {
-                if (err) console.log(err);
-                res.send({ status: (!err) ? 'OK' : err.code, });
-              });
+              fs.writeFile(
+                path.join(base, username, filename),
+                req.body.text,
+                (err) => {
+                  if (err) console.log(err);
+                  res.send({ status: !err ? "OK" : err.code });
+                }
+              );
             }
           });
         } else {
-          res.send({ status: 'Not found filename', });
+          res.send({ status: "Not found filename" });
         }
       } else {
-        res.send({ status: 'No data', });
+        res.send({ status: "No data" });
       }
-    } else
-    if (req.body.action == 'load') {
+    } else if (req.body.action == "load") {
       if (isValidFilename(filename)) {
-        mkdirp(path.join(base, username), function(err) {
+        mkdirp(path.join(base, username), function (err) {
           console.log(`load ${path.join(base, username, filename)}`);
           fs.readFile(path.join(base, username, filename), (err, data) => {
             if (err) console.log(err);
-            res.send({ status: (!err) ? 'OK' : err.code, text: (data) ? data.toString() : '', });
+            res.send({
+              status: !err ? "OK" : err.code,
+              text: data ? data.toString() : "",
+            });
           });
         });
       } else {
-        res.send({ status: 'Not found filename', });
+        res.send({ status: "Not found filename" });
       }
-    } else
-    if (req.body.action == 'remove') {
+    } else if (req.body.action == "remove") {
       if (isValidFilename(filename)) {
         console.log(`unlink ${path.join(base, username, filename)}`);
         fs.unlink(path.join(base, username, filename), function (err) {
           if (err) console.log(err);
-          res.send({ status: (!err) ? 'OK' : err.code, });
+          res.send({ status: !err ? "OK" : err.code });
         });
       } else {
-        res.send({ status: 'Not found filename', });
+        res.send({ status: "Not found filename" });
       }
-    } else
-    if (req.body.action == 'list') {
-      mkdirp(path.join(base, username), function(err) {
+    } else if (req.body.action == "list") {
+      mkdirp(path.join(base, username), function (err) {
         console.log(`list ${path.join(base, username)}`);
         readdirFileOnly(path.join(base, username), (err, items) => {
           if (err) console.log(err);
-          res.send({ status: (!err) ? 'OK' : err.code, items, });
+          res.send({ status: !err ? "OK" : err.code, items });
         });
       });
     } else {
-      res.send({ status: 'OK' });
+      res.send({ status: "OK" });
     }
   } else {
     res.send({ status: `Invalid username: ${username}` });
   }
-})
+});
 
-const camera = new (require('./robot-camera'))();
+const camera = new (require("./robot-camera"))();
 
-camera.on('change', hasPermission('control.write'), (payload) => {
-  console.log('camera changed');
-  speech.emit('camera', payload);
+camera.on("change", hasPermission("control.write"), (payload) => {
+  console.log("camera changed");
+  speech.emit("camera", payload);
 });
 
 /*
@@ -2007,49 +2178,58 @@ camera.on('change', hasPermission('control.write'), (payload) => {
   curlコマンド使用例
   $ curl -X POST --data '[{"id":100, "area":200}]' --header "content-type:application/json" http://localhost:3090/camera
 */
-app.post('/camera', hasPermission('control.write'), (req, res) => {
+app.post("/camera", hasPermission("control.write"), (req, res) => {
   camera.up(req.body);
-  res.send({ status: 'OK' });
+  res.send({ status: "OK" });
 });
 
 function nomalizeBar(bar) {
-  const b = {}
+  const b = {};
   const barAttrMembers = [
-    "x", "y", "title", "uuid", "text", "width", "height", "info", "rgba", "type",
-  ]
-  barAttrMembers.forEach( key => {
-    if (typeof bar[key] !== 'undefined') {
+    "x",
+    "y",
+    "title",
+    "uuid",
+    "text",
+    "width",
+    "height",
+    "info",
+    "rgba",
+    "type",
+  ];
+  barAttrMembers.forEach((key) => {
+    if (typeof bar[key] !== "undefined") {
       b[key] = bar[key];
     }
-  })
-  if (b.text == null) b.text = '';
-  if (b.title == null) b.title = '';
+  });
+  if (b.text == null) b.text = "";
+  if (b.title == null) b.title = "";
   return b;
 }
 
-app.post('/bar/all', hasPermission('control.write'), async (req, res) => {
+app.post("/bar/all", hasPermission("control.write"), async (req, res) => {
   const { bars } = req.body;
   if (bars) {
     if (USE_DB) {
       const barData = await db.loadBars();
-      const b = []
-      bars.forEach( d => {
-        barData.forEach( bar => {
+      const b = [];
+      bars.forEach((d) => {
+        barData.forEach((bar) => {
           if (bar.uuid === d.uuid) {
             b.push(bar);
           }
-        })
-      })
+        });
+      });
       res.json(b);
     } else {
-      const b = []
-      bars.forEach( d => {
-        robotData.barData.forEach( bar => {
+      const b = [];
+      bars.forEach((d) => {
+        robotData.barData.forEach((bar) => {
           if (bar.uuid === d.uuid) {
             b.push(bar);
           }
-        })
-      })
+        });
+      });
       res.json(b);
     }
   } else {
@@ -2061,17 +2241,17 @@ app.post('/bar/all', hasPermission('control.write'), async (req, res) => {
   }
 });
 
-app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
-  const bars = [ ...req.body.barData ];
+app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
+  const bars = [...req.body.barData];
   const { saveOnly, create } = req.body;
   const newBars = [];
   if (USE_DB) {
-    const b = {}
+    const b = {};
     const barData = await db.loadBars();
-    barData.forEach( bar => {
+    barData.forEach((bar) => {
       b[bar.uuid] = bar;
-    })
-    bars.forEach( bar => {
+    });
+    bars.forEach((bar) => {
       if (bar) {
         if (create) {
           bar = nomalizeBar(bar);
@@ -2083,64 +2263,65 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
             return;
           }
         }
-        Object.keys(defaultBarData).forEach( key => {
-          if (typeof bar[key] === 'undefined') {
+        Object.keys(defaultBarData).forEach((key) => {
+          if (typeof bar[key] === "undefined") {
             bar[key] = defaultBarData[key];
           }
-        })
+        });
         const t = b[bar.uuid];
         if (t) {
           //更新
-          if (bar.y === 'auto') {
+          if (bar.y === "auto") {
             delete bar.y;
           }
           barData.push(bar);
           newBars.push(bar);
-        } else
-        if (create) {
+        } else if (create) {
           //追加
-          if (bar.y === 'auto') {
+          if (bar.y === "auto") {
             bar.y = 0;
-            const q = barData.filter( b => b.x == bar.x).sort((a, b) => {
-              if (a.y < b.y) return -1;
-              if (a.y > b.y) return  1;
-              return 0;
-            })
-            q.forEach( b => {
+            const q = barData
+              .filter((b) => b.x == bar.x)
+              .sort((a, b) => {
+                if (a.y < b.y) return -1;
+                if (a.y > b.y) return 1;
+                return 0;
+              });
+            q.forEach((b) => {
               if (b.x === bar.x && b.y === bar.y) {
                 bar.y += 24;
               }
-            })
+            });
           }
           barData.push(bar);
           newBars.push(bar);
         }
       }
-    })
-    for (var i=0;i<newBars.length;i++) {
+    });
+    for (var i = 0; i < newBars.length; i++) {
       const bar = newBars[i];
       await db.updateBar(bar, defaultBarData);
     }
     if (!saveOnly) {
-      iob.emit('update-schedule');
+      iob.emit("update-schedule");
     }
   } else {
-    const b = {}
-    robotData.barData.forEach( bar => {
+    const b = {};
+    robotData.barData.forEach((bar) => {
       b[bar.uuid] = bar;
-    })
-    bars.forEach( bar => {
+    });
+    bars.forEach((bar) => {
       if (bar) {
         if (create) {
           bar = nomalizeBar(bar);
           if (!bar.uuid) {
             bar.uuid = uuidv4();
           }
-          Object.keys(defaultBarData).forEach( key => {
-            if (typeof bar[key] === 'undefined') {
+          Object.keys(defaultBarData).forEach((key) => {
+            if (typeof bar[key] === "undefined") {
               bar[key] = defaultBarData[key];
             }
-          })
+          });
         } else {
           if (!bar.uuid) {
             return;
@@ -2149,90 +2330,88 @@ app.post('/bar/update', hasPermission('control.write'), async (req, res) => {
         const t = b[bar.uuid];
         if (t) {
           //更新
-          if (bar.y === 'auto') {
+          if (bar.y === "auto") {
             delete bar.y;
           }
-          Object.keys(bar).forEach( key => {
+          Object.keys(bar).forEach((key) => {
             t[key] = bar[key];
-          })
+          });
           newBars.push(t);
-        } else
-        if (create) {
+        } else if (create) {
           //追加
-          if (bar.y === 'auto') {
+          if (bar.y === "auto") {
             bar.y = 0;
-            const q = robotData.barData.filter( b => b.x == bar.x).sort((a, b) => {
-              if (a.y < b.y) return -1;
-              if (a.y > b.y) return  1;
-              return 0;
-            })
-            q.forEach( b => {
+            const q = robotData.barData
+              .filter((b) => b.x == bar.x)
+              .sort((a, b) => {
+                if (a.y < b.y) return -1;
+                if (a.y > b.y) return 1;
+                return 0;
+              });
+            q.forEach((b) => {
               if (b.x === bar.x && b.y === bar.y) {
                 bar.y += 24;
               }
-            })
+            });
           }
           robotData.barData.push(bar);
           newBars.push(bar);
         }
       }
-    })
+    });
     writeRobotData();
     if (!saveOnly) {
-      iob.emit('update-schedule', { bars: newBars, } );
+      iob.emit("update-schedule", { bars: newBars });
     }
   }
-  res.send({ status: 'OK', bars: newBars, });
+  res.send({ status: "OK", bars: newBars });
 });
 
-app.post('/bar/delete', hasPermission('control.write'), (req, res) => {
-  const bars = [ ...req.body.barData ];
+app.post("/bar/delete", hasPermission("control.write"), (req, res) => {
+  const bars = [...req.body.barData];
   const { saveOnly } = req.body;
   if (USE_DB) {
-    bars.forEach( async (bar) => {
+    bars.forEach(async (bar) => {
       await db.deleteBar(bar);
-    })
+    });
     if (!saveOnly) {
-      iob.emit('update-schedule');
+      iob.emit("update-schedule");
     }
   } else {
-    const b = []
-    robotData.barData.forEach( bar => {
-      if (!bars.some( b => {
-        return b.uuid === bar.uuid;
-      })) {
+    const b = [];
+    robotData.barData.forEach((bar) => {
+      if (
+        !bars.some((b) => {
+          return b.uuid === bar.uuid;
+        })
+      ) {
         b.push(bar);
       }
-    })
+    });
     robotData.barData = b;
     writeRobotData();
     if (!saveOnly) {
-      iob.emit('update-schedule');
+      iob.emit("update-schedule");
     }
   }
-  res.send({ status: 'OK' });
+  res.send({ status: "OK" });
 });
 
-app.post('/bar/findOne', hasPermission('control.write'), async (req, res) => {
-  const { x, y, title, } = req.body;
+app.post("/bar/findOne", hasPermission("control.write"), async (req, res) => {
+  const { x, y, title } = req.body;
   let cbar = [];
   if (USE_DB) {
-    if (typeof title !== 'undefined' && title !== null) {
+    if (typeof title !== "undefined" && title !== null) {
       cbar = await db.findBars({
-        [db.Op.or]: [
-          { title, },
-          { uuid: title, },
-        ],
+        [db.Op.or]: [{ title }, { uuid: title }],
       });
-    } else
-    if (typeof x !== 'undefined' && x !== null) {
+    } else if (typeof x !== "undefined" && x !== null) {
       cbar = await db.findBars({
         x: {
           [db.Op.lte]: x,
         },
       });
-    } else
-    if (typeof y !== 'undefined' && y !== null) {
+    } else if (typeof y !== "undefined" && y !== null) {
       cbar = await db.findBars({
         y: {
           [db.Op.lte]: y,
@@ -2242,391 +2421,435 @@ app.post('/bar/findOne', hasPermission('control.write'), async (req, res) => {
       cbar = await db.loadBars();
     }
   } else {
-    cbar = [ ...robotData.barData ];
+    cbar = [...robotData.barData];
   }
-  if (typeof x !== 'undefined' && x !== null) {
-    cbar = cbar.filter( b => {
-      return (b.x <= x && x < b.x+b.width);
-    })
+  if (typeof x !== "undefined" && x !== null) {
+    cbar = cbar.filter((b) => {
+      return b.x <= x && x < b.x + b.width;
+    });
   }
-  if (typeof y !== 'undefined' && y !== null) {
-    cbar = cbar.filter( b => {
-      return (b.y <= y && y < b.y+b.height);
-    })
+  if (typeof y !== "undefined" && y !== null) {
+    cbar = cbar.filter((b) => {
+      return b.y <= y && y < b.y + b.height;
+    });
   }
-  if (typeof title !== 'undefined' && title !== null) {
-    cbar = cbar.filter( b => {
-      return (b.title.indexOf(title) >= 0 || b.uuid.indexOf(title) >= 0);
-    })
+  if (typeof title !== "undefined" && title !== null) {
+    cbar = cbar.filter((b) => {
+      return b.title.indexOf(title) >= 0 || b.uuid.indexOf(title) >= 0;
+    });
   }
-  cbar = cbar.sort( (a,b) => {
+  cbar = cbar.sort((a, b) => {
     if (a.y < b.y) return -1;
-    if (a.y > b.y) return  1;
+    if (a.y > b.y) return 1;
     if (a.x < b.x) return -1;
-    if (a.x > b.x) return  1;
+    if (a.x > b.x) return 1;
     return 0;
-  })
+  });
   if (cbar.length > 0) {
-    res.send({ ...nomalizeBar(cbar[0]), status: 'found' });
+    res.send({ ...nomalizeBar(cbar[0]), status: "found" });
   } else {
-    res.send({ status: 'not found', });
+    res.send({ status: "not found" });
   }
 });
 
-app.post('/bar/move-screen', hasPermission('control.write'), async (req, res) => {
-  const { time, uuid, } = req.body;
-  if (uuid) {
-    iob.emit('move-to-center', { uuid });
-  } else
-  if (time) {
-    iob.emit('move-to-day', { time });
-  } else {
-    function DayToString(d) {
-      return `${d.getFullYear()}-${('00'+(d.getMonth()+1)).slice(-2)}-${('00'+d.getDate()).slice(-2)}`;
+app.post(
+  "/bar/move-screen",
+  hasPermission("control.write"),
+  async (req, res) => {
+    const { time, uuid } = req.body;
+    if (uuid) {
+      iob.emit("move-to-center", { uuid });
+    } else if (time) {
+      iob.emit("move-to-day", { time });
+    } else {
+      function DayToString(d) {
+        return `${d.getFullYear()}-${("00" + (d.getMonth() + 1)).slice(-2)}-${(
+          "00" + d.getDate()
+        ).slice(-2)}`;
+      }
+      iob.emit("move-to-day", { time: DayToString(new Date()) });
     }
-    iob.emit('move-to-day', { time: DayToString(new Date()), });
+    res.send({ status: "OK" });
   }
-  res.send({ status: 'OK' });
-});
+);
 
-app.post('/calendar', hasPermission('control.write'), async (req, res) => {
-  const calendarData = ('calendarData' in req.body) ? { ...req.body.calendarData } : null;
+app.post("/calendar", hasPermission("control.write"), async (req, res) => {
+  const calendarData =
+    "calendarData" in req.body ? { ...req.body.calendarData } : null;
   if (calendarData) {
     robotData.calendarData = calendarData;
     writeRobotData();
   }
-  res.send({ status: 'OK' });
+  res.send({ status: "OK" });
 });
 
-app.get('/calendar', async (req, res) => {
+app.get("/calendar", async (req, res) => {
   res.send(robotData.calendarData);
 });
 
-app.post('/autostart', hasPermission('control.write'), async (req, res) => {
-  const autostart = ('autostart' in req.body) ? { ...req.body.autostart } : null;
+app.post("/autostart", hasPermission("control.write"), async (req, res) => {
+  const autostart = "autostart" in req.body ? { ...req.body.autostart } : null;
   if (autostart) {
     robotData.autoStart = autostart;
     writeRobotData();
   }
-  res.send({ status: 'OK' });
+  res.send({ status: "OK" });
 });
 
-app.get('/autostart', async (req, res) => {
+app.get("/autostart", async (req, res) => {
   if (robotData.autoStart.username && robotData.autoStart.filename) {
     res.send(robotData.autoStart);
-  } else
-  if (config.startScript && config.startScript.auto) {
+  } else if (config.startScript && config.startScript.auto) {
     res.send({
       username: config.startScript.username,
-      filename: config.startScript.filename
+      filename: config.startScript.filename,
     });
   } else {
     res.send({});
   }
 });
 
-app.post('/file/upload/pictures/:subdir', hasPermission('control.write'), async (req, res) => {
-  upload(req, res, PICT, req.params.subdir);
-});
+app.post(
+  "/file/upload/pictures/:subdir",
+  hasPermission("control.write"),
+  async (req, res) => {
+    upload(req, res, PICT, req.params.subdir);
+  }
+);
 
-app.post('/file/readDir/pictures/:subdir', hasPermission('control.write'), async (req, res) => {
-  readDir(req, res, PICT, req.params.subdir);
-});
+app.post(
+  "/file/readDir/pictures/:subdir",
+  hasPermission("control.write"),
+  async (req, res) => {
+    readDir(req, res, PICT, req.params.subdir);
+  }
+);
 
-app.post('/file/delete/pictures/:subdir/:filename', hasPermission('control.write'), async (req, res) => {
-  deleteFile(req, res, PICT, req.params.subdir, req.params.filename);
-});
+app.post(
+  "/file/delete/pictures/:subdir/:filename",
+  hasPermission("control.write"),
+  async (req, res) => {
+    deleteFile(req, res, PICT, req.params.subdir, req.params.filename);
+  }
+);
 
-const server = require('http').Server(app);
-const io = require('socket.io')(server);
-const ioa = io.of('audio');
-const iob = io.of('bar');
-const iop = io.of('player');
+const server = require("http").Server(app);
+const io = require("socket.io")(server);
+const ioa = io.of("audio");
+const iob = io.of("bar");
+const iop = io.of("player");
 var playerSocket = null;
 
 const quiz_masters = {};
 const soundAnalyzer = {};
 const imageServers = {};
 
-iop.on('connection', function (socket) {
-  console.log('connected io player', socket.conn.remoteAddress);
+iop.on("connection", function (socket) {
+  console.log("connected io player", socket.conn.remoteAddress);
   playerSocket = socket;
-  const localhostCheck = (payload={}) => {
+  const localhostCheck = (payload = {}) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken();
     }
-  }
-  socket.on('disconnect', function () {
+  };
+  socket.on("disconnect", function () {
     playerSocket = null;
-    console.log('disconnect io player');
+    console.log("disconnect io player");
     delete imageServers[socket.id];
-    io.emit('imageServers', imageServers);
+    io.emit("imageServers", imageServers);
   });
-  socket.on('notify', function(payload) {
+  socket.on("notify", function (payload) {
     localhostCheck(payload);
-    checkPermission(payload, '', (verified) => {
+    checkPermission(payload, "", (verified) => {
       if (verified) {
         const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
-        if (ip != null && payload.role === 'imageServer') {
+        if (ip != null && payload.role === "imageServer") {
           payload.host = ip[1];
           imageServers[socket.id] = payload;
-          io.emit('imageServers', imageServers);
+          io.emit("imageServers", imageServers);
         }
       }
-    })
+    });
   });
 });
 
-ioa.on('connection', function (socket) {
-  console.log('connected io audio', socket.conn.remoteAddress);
+ioa.on("connection", function (socket) {
+  console.log("connected io audio", socket.conn.remoteAddress);
   const localhostCheck = (payload) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken();
     }
-  }
-  socket.on('disconnect', function () {
-    console.log('disconnect io audio');
+  };
+  socket.on("disconnect", function () {
+    console.log("disconnect io audio");
     delete soundAnalyzer[socket.id];
     if (Object.keys(soundAnalyzer).length == 0) {
       //停止
-      speech.emit('stopStreamData');
+      speech.emit("stopStreamData");
     }
   });
-  socket.on('speech-config', (payload) => {
+  socket.on("speech-config", (payload) => {
     localhostCheck(payload);
-    checkPermission(payload, '', (verified) => {
+    checkPermission(payload, "", (verified) => {
       if (verified) {
         const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
-        if (ip != null && payload.role === 'waveAnalyzer') {
-          ['level', 'threshold'].forEach( key => {
-            if (typeof payload[key] !== 'undefined') {
+        if (ip != null && payload.role === "waveAnalyzer") {
+          ["level", "threshold"].forEach((key) => {
+            if (typeof payload[key] !== "undefined") {
               robotData.voice[key] = payload[key];
             }
-          })
-          writeRobotData()
+          });
+          writeRobotData();
           if (speech.stream) speech.stream.changeParameters(payload);
         }
       }
-    })
-  })
-  socket.on('start-stream-data', (payload) => {
+    });
+  });
+  socket.on("start-stream-data", (payload) => {
     localhostCheck(payload);
-    checkPermission(payload, '', (verified) => {
+    checkPermission(payload, "", (verified) => {
       if (verified) {
         const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
-        if (ip != null && payload.role === 'waveAnalyzer') {
+        if (ip != null && payload.role === "waveAnalyzer") {
           if (Object.keys(soundAnalyzer).length == 0) {
-            speech.emit('startStreamData');
+            speech.emit("startStreamData");
           }
           soundAnalyzer[socket.id] = socket;
         }
       }
-    })
-  })
+    });
+  });
 });
 
-io.on('connection', function (socket) {
-  console.log('connected io', socket.conn.remoteAddress);
+io.on("connection", function (socket) {
+  console.log("connected io", socket.conn.remoteAddress);
   const localhostCheck = (payload) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken();
     }
-  }
-  socket.on('disconnect', function () {
+  };
+  socket.on("disconnect", function () {
     mode_slave = false;
     speech.recording = false;
-    console.log('disconnect');
+    console.log("disconnect");
     delete quiz_masters[socket.id];
     console.log(Object.keys(quiz_masters));
   });
-  socket.on('start-slave', function (payload) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("start-slave", function (payload) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         mode_slave = true;
       }
-    })
+    });
   });
-  socket.on('docomo-chat', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("docomo-chat", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         try {
-          docomo_chat({
-            message: payload.message,
-            speed: payload.speed || null,
-            volume: payload.volume || null,
-            tone: payload.tone || null,
-            direction: payload.direction || null,
-            voice: payload.voice || null,
-            silence: payload.silence || null,
-          }, (err, data) => {
-            if (callback) callback(data);
-          });
+          docomo_chat(
+            {
+              message: payload.message,
+              speed: payload.speed || null,
+              volume: payload.volume || null,
+              tone: payload.tone || null,
+              direction: payload.direction || null,
+              voice: payload.voice || null,
+              silence: payload.silence || null,
+            },
+            (err, data) => {
+              if (callback) callback(data);
+            }
+          );
           return;
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         }
       }
       if (callback) callback({});
-    })
+    });
   });
-  socket.on('dora-chat', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("dora-chat", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         try {
-          dora_chat({
-            message: payload.message,
-            action: payload.action || '',
-            sheetId: payload.sheetId || null,
-            sheetName: payload.sheetName || null,
-            download: payload.download || null,
-            useMecab: payload.useMecab || null,
-          }, (err, data) => {
-            if (callback) callback(data);
-          });
+          dora_chat(
+            {
+              message: payload.message,
+              action: payload.action || "",
+              sheetId: payload.sheetId || null,
+              sheetName: payload.sheetName || null,
+              download: payload.download || null,
+              useMecab: payload.useMecab || null,
+            },
+            (err, data) => {
+              if (callback) callback(data);
+            }
+          );
           return;
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         }
       }
       if (callback) callback({});
-    })
+    });
   });
-  socket.on('text-to-speech', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("text-to-speech", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         try {
-          text_to_speech({
-            ...payload,
-          }, (err) => {
-            if (callback) callback('OK');
-          });
+          text_to_speech(
+            {
+              ...payload,
+            },
+            (err) => {
+              if (callback) callback("OK");
+            }
+          );
           return;
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         }
       }
-      if (callback) callback('NG');
-    })
+      if (callback) callback("NG");
+    });
   });
-  socket.on('stop-text-to-speech', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("stop-text-to-speech", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         talk.flush();
-        if (callback) callback('OK');
+        if (callback) callback("OK");
         return;
       }
-      if (callback) callback('NG');
-    })
+      if (callback) callback("NG");
+    });
   });
-  socket.on('stop-speech',  function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("stop-speech", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
-        if (payload.option === 'stop-sound') {
-          execSoundCommand({ sound: 'stop' }, () => {
-            buttonClient.emit('stop-speech-to-text', {});
-            speech.emit('data', 'stoped');
+        if (payload.option === "stop-sound") {
+          execSoundCommand({ sound: "stop" }, () => {
+            buttonClient.emit("stop-speech-to-text", {});
+            speech.emit("data", "stoped");
             talk.stop(() => {
-              if (callback) callback('OK');
+              if (callback) callback("OK");
             });
           });
         } else {
-          buttonClient.emit('stop-speech-to-text', {});
-          speech.emit('data', 'stoped');
+          buttonClient.emit("stop-speech-to-text", {});
+          speech.emit("data", "stoped");
           talk.stop(() => {
-            if (callback) callback('OK');
+            if (callback) callback("OK");
           });
         }
         return;
       }
-      if (callback) callback('NG');
-    })
+      if (callback) callback("NG");
+    });
   });
-  socket.on('speech-to-text', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("speech-to-text", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         try {
-          speech_to_text({
-            timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
-            threshold: (typeof payload.sensitivity === 'undefined') ? 2000 : payload.sensitivity,
-            level: (typeof payload.level === 'undefined') ? 100 : payload.level,
-            languageCode: (typeof payload.languageCode === 'undefined') ? 'ja-JP' : payload.languageCode,
-            alternativeLanguageCodes: (typeof payload.alternativeLanguageCodes === 'undefined') ? null : payload.alternativeLanguageCodes,
-            recording: (typeof payload.recording === 'undefined') ? true : payload.recording,
-          }, (err, data) => {
-            if (callback) callback(data);
-          });
+          speech_to_text(
+            {
+              timeout:
+                typeof payload.timeout === "undefined"
+                  ? 30000
+                  : payload.timeout,
+              threshold:
+                typeof payload.sensitivity === "undefined"
+                  ? 2000
+                  : payload.sensitivity,
+              level: typeof payload.level === "undefined" ? 100 : payload.level,
+              languageCode:
+                typeof payload.languageCode === "undefined"
+                  ? "ja-JP"
+                  : payload.languageCode,
+              alternativeLanguageCodes:
+                typeof payload.alternativeLanguageCodes === "undefined"
+                  ? null
+                  : payload.alternativeLanguageCodes,
+              recording:
+                typeof payload.recording === "undefined"
+                  ? true
+                  : payload.recording,
+            },
+            (err, data) => {
+              if (callback) callback(data);
+            }
+          );
           return;
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         }
       }
-      if (callback) callback('NG');
-    })
+      if (callback) callback("NG");
+    });
   });
-  socket.on('stop-speech-to-text', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("stop-speech-to-text", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
-        speech.emit('data', 'stoped');
-        if (callback) callback('OK');
+        speech.emit("data", "stoped");
+        if (callback) callback("OK");
         return;
       }
-      if (callback) callback('NG');
-    })
+      if (callback) callback("NG");
+    });
   });
-  socket.on('command', function(payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("command", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'command.write', (verified) => {
+    checkPermission(payload, "command.write", (verified) => {
       try {
         const base = config.commandDirPath;
         const cmd = path.normalize(path.join(base, payload.command));
-        const args = payload.args || '';
+        const args = payload.args || "";
         if (cmd.indexOf(base) == 0) {
         } else {
-          console.log('NG');
+          console.log("NG");
           if (callback) callback();
           return;
         }
@@ -2639,91 +2862,91 @@ io.on('connection', function (socket) {
         });
         if (callback) callback();
         return;
-      } catch(err) {
+      } catch (err) {
         console.error(err);
       }
       if (callback) callback();
-    })
+    });
   });
-  socket.on('message', function(payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("message", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
-        console.log('message', payload);
+        console.log("message", payload);
       }
       if (callback) callback();
-    })
+    });
   });
-  socket.on('quiz-command', function(payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("quiz-command", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', async (verified) => {
+    checkPermission(payload, "control.write", async (verified) => {
       if (verified) {
         const result = await quizPacket(payload);
         storeQuizPayload(result);
-        io.emit('quiz', result);
+        io.emit("quiz", result);
       }
       if (callback) callback();
-    })
+    });
   });
-  socket.on('led-command', function(payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("led-command", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         changeLed(payload);
       }
       if (callback) callback();
-    })
+    });
   });
-  socket.on('sound-command', (payload, callback) => {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("sound-command", (payload, callback) => {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         execSoundCommand(payload);
       }
       if (callback) callback();
-    })
-  })
-  socket.on('button-command', function(payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+    });
+  });
+  socket.on("button-command", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
+    checkPermission(payload, "control.write", (verified) => {
       if (verified) {
         buttonClient.doCommand(payload);
       }
       if (callback) callback();
-    })
+    });
   });
-  socket.on('quiz', function(payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("quiz", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, '', async (verified) => {
+    checkPermission(payload, "", async (verified) => {
       if (verified) {
         payload.time = new Date();
-        if (typeof payload.question === 'undefined') {
+        if (typeof payload.question === "undefined") {
           //参加登録
-          if (typeof payload.clientId !== 'undefined') {
+          if (typeof payload.clientId !== "undefined") {
             robotData.quizEntry[payload.clientId] = payload;
             console.log(payload.name);
             if (payload.name === quiz_master) {
@@ -2731,24 +2954,33 @@ io.on('connection', function (socket) {
             }
             writeRobotData();
             const quizPayload = await quizPacket({
-              action: 'entry',
+              action: "entry",
               name: quiz_master,
-            })
-            Object.keys(quiz_masters).forEach( key => {
-              quiz_masters[key].emit('quiz', quizPayload);
             });
-            socket.emit('quiz', loadQuizPayload(payload));
-            socket.emit('imageServers', imageServers);
+            Object.keys(quiz_masters).forEach((key) => {
+              quiz_masters[key].emit("quiz", quizPayload);
+            });
+            socket.emit("quiz", loadQuizPayload(payload));
+            socket.emit("imageServers", imageServers);
           }
         } else {
-          const speechButton = (typeof payload.speechButton === 'undefined' || !payload.speechButton) ? false : true;
+          const speechButton =
+            typeof payload.speechButton === "undefined" || !payload.speechButton
+              ? false
+              : true;
           if (speechButton) {
             console.log(`emit speech ${payload.answer}`);
-            speech.emit('speech', payload.answer);
+            speech.emit("speech", payload.answer);
           }
           if (payload.name === quiz_master) return;
-          const showSum = (typeof payload.showSum === 'undefined' || !payload.showSum) ? false : true;
-          const noSave = (typeof payload.noSave === 'undefined' || !payload.noSave) ? false : true;
+          const showSum =
+            typeof payload.showSum === "undefined" || !payload.showSum
+              ? false
+              : true;
+          const noSave =
+            typeof payload.noSave === "undefined" || !payload.noSave
+              ? false
+              : true;
           if (USE_DB) {
             if (showSum) {
               const quizId = payload.quizId;
@@ -2759,8 +2991,8 @@ io.on('connection', function (socket) {
                 quizAnswersCache[quizId][payload.question] = {};
               }
               const p = { ...payload };
-              delete p.question
-              delete p.quizId
+              delete p.question;
+              delete p.quizId;
               quizAnswersCache[quizId][payload.question][payload.clientId] = p;
             }
             const a = {
@@ -2771,8 +3003,8 @@ io.on('connection', function (socket) {
               answerString: payload.answer,
               time: payload.time,
               startTime: payload.quizStartTime,
-            }
-            if (!noSave) await db.update('updateAnswer', a);
+            };
+            if (!noSave) await db.update("updateAnswer", a);
           } else {
             const quizId = payload.quizId;
             if (robotData.quizAnswers[quizId] == null) {
@@ -2782,89 +3014,105 @@ io.on('connection', function (socket) {
               robotData.quizAnswers[quizId][payload.question] = {};
             }
             const p = { ...payload };
-            delete p.question
-            delete p.quizId
-            robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
+            delete p.question;
+            delete p.quizId;
+            robotData.quizAnswers[quizId][payload.question][
+              payload.clientId
+            ] = p;
             if (!noSave) writeRobotData();
           }
-          Object.keys(quiz_masters).forEach( key => {
-            quiz_masters[key].emit('quiz', {
-              action: 'refresh',
+          Object.keys(quiz_masters).forEach((key) => {
+            quiz_masters[key].emit("quiz", {
+              action: "refresh",
               name: quiz_master,
             });
           });
         }
       }
       if (callback) callback();
-    })
+    });
   });
-  socket.on('quiz-button', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("quiz-button", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'quiz-button.write', (verified) => {
+    checkPermission(payload, "quiz-button.write", (verified) => {
       if (verified) {
         try {
-          quiz_button({
-            timeout: (typeof payload.timeout === 'undefined') ? 30000 : payload.timeout,
-          }, (err, data) => {
-            if (callback) callback(data);
-          });
+          quiz_button(
+            {
+              timeout:
+                typeof payload.timeout === "undefined"
+                  ? 30000
+                  : payload.timeout,
+            },
+            (err, data) => {
+              if (callback) callback(data);
+            }
+          );
           return;
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         }
       }
       if (callback) callback();
-    })
+    });
   });
-  socket.on('stop-quiz-button', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("stop-quiz-button", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'quiz-button.write', (verified) => {
+    checkPermission(payload, "quiz-button.write", (verified) => {
       if (verified) {
-        buttonClient.emit('button', 'stoped');
+        buttonClient.emit("button", "stoped");
       }
-      if (callback) callback('OK');
-    })
+      if (callback) callback("OK");
+    });
   });
-  socket.on('dora-event', function (payload, callback) {
-    if (typeof payload === 'undefined') {
-      if (callback) callback('NG');
+  socket.on("dora-event", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG");
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, 'control.write', (verified) => {
-      if ('action' in payload) {
-        if (payload.action === 'log') {
-          io.emit('scenario_log', {
+    checkPermission(payload, "control.write", (verified) => {
+      if ("action" in payload) {
+        if (payload.action === "log") {
+          io.emit("scenario_log", {
             message: payload.message,
             lineNumber: payload.lineNumber,
             filename: payload.filename,
           });
         }
       }
-      if (callback) callback('OK');
-    })
+      if (callback) callback("OK");
+    });
   });
 });
 
-const startServer = function() {
+const startServer = function () {
   if (USE_DB) {
-    return RobotDB(`${HOME}/robot-server.db`, {
-      operatorsAliases: false,
-    }, async (err, db) => {
-      server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
-    })
+    return RobotDB(
+      `${HOME}/robot-server.db`,
+      {
+        operatorsAliases: false,
+      },
+      async (err, db) => {
+        server.listen(config.port, () =>
+          console.log(`robot-server listening on port ${config.port}!`)
+        );
+      }
+    );
   }
-  server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
-  return {}
-}
+  server.listen(config.port, () =>
+    console.log(`robot-server listening on port ${config.port}!`)
+  );
+  return {};
+};
 
 const db = startServer();
 
@@ -2873,42 +3121,42 @@ var shutdownLEDTimer = null;
 var doShutdown = false;
 
 function execPowerOff() {
-  gpioSocket.emit('led-command', { action: 'on' });
+  gpioSocket.emit("led-command", { action: "on" });
   //シャットダウン
   doShutdown = true;
-  servoAction('stop');
+  servoAction("stop");
   setTimeout(() => {
-    if (process.platform === 'darwin') {
+    if (process.platform === "darwin") {
       process.exit(0);
     } else {
-      const _playone = spawn('/usr/bin/sudo', ['shutdown', '-f', 'now']);
-      _playone.on('close', function(code) {
-        console.log('shutdown done');
+      const _playone = spawn("/usr/bin/sudo", ["shutdown", "-f", "now"]);
+      _playone.on("close", function (code) {
+        console.log("shutdown done");
       });
     }
     doShutdown = false;
-  }, 5000)
+  }, 5000);
 }
 
 function execReboot() {
-  gpioSocket.emit('led-command', { action: 'on' });
+  gpioSocket.emit("led-command", { action: "on" });
   //シャットダウン
   doShutdown = true;
-  servoAction('stop');
+  servoAction("stop");
   setTimeout(() => {
-    if (process.platform === 'darwin') {
+    if (process.platform === "darwin") {
       process.exit(0);
     } else {
-      const _playone = spawn('/usr/bin/sudo', ['reboot']);
-      _playone.on('close', function(code) {
-        console.log('shutdown done');
+      const _playone = spawn("/usr/bin/sudo", ["reboot"]);
+      _playone.on("close", function (code) {
+        console.log("shutdown done");
       });
     }
     doShutdown = false;
-  }, 5000)
+  }, 5000);
 }
 
-gpioSocket.on('button', (payload) => {
+gpioSocket.on("button", (payload) => {
   // console.log(payload);
   if (shutdownTimer) {
     clearTimeout(shutdownTimer);
@@ -2922,7 +3170,7 @@ gpioSocket.on('button', (payload) => {
     if (config.usePowerOffButton) {
       if (shutdownTimer) clearTimeout(shutdownTimer);
       shutdownTimer = setTimeout(() => {
-        gpioSocket.emit('led-command', { action: 'power' });
+        gpioSocket.emit("led-command", { action: "power" });
         //さらに５秒間押し続け
         if (shutdownLEDTimer) {
           clearTimeout(shutdownLEDTimer);
@@ -2930,8 +3178,8 @@ gpioSocket.on('button', (payload) => {
         }
         shutdownLEDTimer = setTimeout(() => {
           execPowerOff();
-        }, 5*1000);
-      }, 5*1000);
+        }, 5 * 1000);
+      }, 5 * 1000);
     }
   } else {
     if (!doShutdown) {
@@ -2941,25 +3189,25 @@ gpioSocket.on('button', (payload) => {
     }
   }
   if (!doShutdown) {
-    io.emit('button', payload);
-    speech.emit('button', payload.state);
+    io.emit("button", payload);
+    speech.emit("button", payload.state);
   }
 });
 
-gpioSocket.on('gamepad', (payload) => {
-  speech.emit('gamepad', payload);
+gpioSocket.on("gamepad", (payload) => {
+  speech.emit("gamepad", payload);
 });
 
-const ioClient = require('socket.io-client');
+const ioClient = require("socket.io-client");
 const localSocket = ioClient(`http://localhost:${config.port}`);
 
-localSocket.on('connect', () => {
-  console.log('connected');
+localSocket.on("connect", () => {
+  console.log("connected");
 });
 
 const checkScenarioFile = (name, filename, callback) => {
-  const base = path.join(HOME, 'Documents');
-  const username = (name) ? path.basename(name) : null;
+  const base = path.join(HOME, "Documents");
+  const username = name ? path.basename(name) : null;
   const p = path.join(base, username, filename);
   fs.stat(p, (err, stat) => {
     if (err) {
@@ -2968,8 +3216,8 @@ const checkScenarioFile = (name, filename, callback) => {
     if (stat.isFile()) {
       callback();
     }
-  })
-}
+  });
+};
 
 function startSenario(username, filename) {
   checkScenarioFile(username, filename, () => {
@@ -2979,8 +3227,8 @@ function startSenario(username, filename) {
         postCommand(
           {
             body: {
-              type: 'scenario',
-              action: 'play',
+              type: "scenario",
+              action: "play",
               filename,
               range: {
                 start: 0,
@@ -2993,17 +3241,16 @@ function startSenario(username, filename) {
           },
           { user_id: username, signature }
         );
-      })
-    }, 5000)
-  })
+      });
+    }, 5000);
+  });
 }
 
 if (robotData.autoStart.username && robotData.autoStart.filename) {
   const username = robotData.autoStart.username;
   const filename = robotData.autoStart.filename;
   startSenario(username, filename);
-} else
-if (config.startScript && config.startScript.auto) {
+} else if (config.startScript && config.startScript.auto) {
   const username = config.startScript.username;
   const filename = config.startScript.filename;
   startSenario(username, filename);
