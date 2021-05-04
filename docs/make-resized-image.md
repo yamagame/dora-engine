@@ -1,22 +1,14 @@
-# リサイズされたOSイメージを作る方法
+# リサイズされた OS イメージを作る方法
 
-Raspberry Piの縮小されたOSイメージをRaspberry Piで作成する方法です。
+Raspberry Pi の縮小された OS イメージを Raspberry Pi で作成する方法です。
 
-十分な空き容量(作成するイメージのサイズ)のあるRaspbianで作業します。
-
-### コマンドをインストールする
-
-dcfldd と gparted をインストールします。
-
-```bash
-$ sudo apt-get install dcfldd gparted
-```
+十分な空き容量(作成するイメージのサイズ)のある Raspbian で作業します。
 
 ### メモリカードリーダーを接続
 
-縮小したいOSイメージが書き込まれた microSDカードを、カードリーダーで Raspberry Pi に接続します。
+縮小したい OS イメージが書き込まれた microSD カードを、カードリーダーで Raspberry Pi に接続します。
 
-### fdiskで確認
+### fdisk で確認
 
 以下のコマンドでカードリーダーのデバイスを調べます。
 以下の例では、sda1 と sda2 が microSD カードのデバイスです。
@@ -31,7 +23,7 @@ Device     Boot Start      End  Sectors  Size Id Type
 /dev/sda2       98304 30930943 30832640 14.7G 83 Linux
 ```
 
-小さくしたいのは、/dev/sda2です。
+小さくしたいのは、/dev/sda2 です。
 
 ### デバイスをアンマウントする。
 
@@ -50,7 +42,7 @@ $ sudo umount /dev/sda2
 $ sudo e2fsck -f /dev/sda2
 ```
 
-resize2fsコマンドを使用するには、e2fsckコマンドを実行する必要があります。
+resize2fs コマンドを使用するには、e2fsck コマンドを実行する必要があります。
 
 ### 縮小リサイズする
 
@@ -74,7 +66,7 @@ Updating inode references     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The filesystem on /dev/sda2 is now 1464086 (4k) blocks long.
 ```
 
-「1ブロック4096バイトで、1464086ブロックのサイズになった」とあります。
+「1 ブロック 4096 バイトで、1464086 ブロックのサイズになった」とあります。
 
 ### パーテーションをリサイズする
 
@@ -84,16 +76,80 @@ The filesystem on /dev/sda2 is now 1464086 (4k) blocks long.
 $ sudo umount /dev/sda2
 ```
 
-下記、ページを参考にして、sda2パーテーションを小さくします。
+parted を使ってリサイズします。
 
-[https://arakan60.mydns.jp/04kousaku/03-05sdcopyshrunk.html](https://arakan60.mydns.jp/04kousaku/03-05sdcopyshrunk.html)
+※下記はパーテーションの拡張の例ですが縮小に関しても、sda2 の最終セクタを指定してリサイズする方法は同様です。
 
-エラーになる場合は、サイズが小さくなりすぎている場合があります。
+```bash
+$ sudo parted
+GNU Parted 3.2
+Using /dev/sda
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+```
 
-### fdiskでディスクの状態を見る
+正確なセクタ指定をするためにユニットを詳細表示に変更します。
 
-以下の例では、sda2の終わりが11976703セクタです。
-1セクタは512バイトですから、ディスクの先頭から11976703*512バイトが使用されていることになります。
+```bash
+(parted) unit s
+```
+
+セクタを確認します。
+
+```bash
+(parted) print free
+Model: Generic- SD/MMC (scsi)
+Disk /dev/sda: 31116288s
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags:
+
+Number  Start     End        Size       Type     File system  Flags
+        32s       8191s      8160s               Free Space
+ 1      8192s     532479s    524288s    primary  fat32        lba
+ 2      532480s   6000000s   5467521s   primary  ext4
+        6000001s  31116287s  25116287s           Free Space
+```
+
+2 番のパーテーションを拡げます。一度パーテーションを削除してから作り直します。
+開始セクタと最終セクタを間違えないように入力します。ここでは開始セクタは 532480s で、最終セクタは 31116287s を指定しています。
+
+```bash
+(parted) rm 2
+(parted) mkpart
+Partition type?  primary/extended? primary
+File system type?  [ext2]? ext4
+Start? 532480s
+End? 31116287s
+```
+
+サイズを確認します。
+
+```bash
+(parted) print free
+Model: Generic- SD/MMC (scsi)
+Disk /dev/sda: 31116288s
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags:
+
+Number  Start    End        Size       Type     File system  Flags
+        32s      8191s      8160s               Free Space
+ 1      8192s    532479s    524288s    primary  fat32        lba
+ 2      532480s  31116287s  30583808s  primary  ext4         lba
+
+```
+
+parted を終了します。
+
+```bash
+(parted) q
+Information: You may need to update /etc/fstab.
+```
+
+### fdisk でディスクの状態を見る
+
+以下の例では、sda2 の終わりが 11976703 セクタです。
+1 セクタは 512 バイトですから、ディスクの先頭から 11976703\*512 バイトが使用されていることになります。
 
 ```bash
 $ sudo fdisk -l /dev/sda
@@ -111,17 +167,17 @@ Device     Boot Start      End  Sectors  Size Id Type
 
 ### ブロックサイズを計算する
 
-作成したいイメージは11976703*512バイトです。
-読み書きするブロックサイズを32Kbyteとすると、(11976703*512)/(32*1024)+1=187136ブロックのイメージを作成します。
+作成したいイメージは 11976703*512 バイトです。
+読み書きするブロックサイズを 32Kbyte とすると、(11976703*512)/(32\*1024)+1=187136 ブロックのイメージを作成します。
 
 以下のコマンドでブロックは計算できます。
 
 ```bash
-$ echo $(((11976703*512)/(32*1024)+1))
+$ echo $((( 11976703 *512)/(32*1024)+1))
 187136
 ```
 
-+1を加えているのは、割り算が切り捨てだからです。
++1 を加えているのは、割り算が切り捨てだからです。
 
 ### ディスクイメージを作成
 
@@ -130,17 +186,17 @@ $ echo $(((11976703*512)/(32*1024)+1))
 念のため、計算したブロック数でイメージを作成します。
 
 ```bash
-$ sudo dcfldd if=/dev/sda of=~/Documents/cardbot-os.img count=187136 bs=32k
+$ sudo dd if=/dev/sda of=~/Documents/cardbot-os.img count=187136 bs=32k
 ```
 
-ifで読み込み元を、ofで書き出し先を指定します。
-countは読み書きするブロック数です。bsは1ブロックのブロックサイズです。
+if で読み込み元を、of で書き出し先を指定します。
+count は読み書きするブロック数です。bs は 1 ブロックのブロックサイズです。
 
-### ディスクイメージをmicroSDカードに書き込む
+### ディスクイメージを microSD カードに書き込む
 
-フォーマットされたmicroSDカードを、カードリーダーで Raspberry Pi に接続します。
+フォーマットされた microSD カードを、カードリーダーで Raspberry Pi に接続します。
 
-microSDカードのドライブを以下のコマンドで調べます。
+microSD カードのドライブを以下のコマンドで調べます。
 
 ```bash
 $ sudo fdisk -l
@@ -149,10 +205,10 @@ $ sudo fdisk -l
 以下のコマンドでイメージを書き込みます。
 
 ```bash
-$ sudo dcfldd if=~/Documents/cardbot-os.img of=/dev/sda
+$ sudo dd if=~/Documents/cardbot-os.img of=/dev/sda
 ```
 
-ifで読み込み元を、ofで書き出し先を指定します。
+if で読み込み元を、of で書き出し先を指定します。
 
 ### ディスクイメージのマウント
 
@@ -166,5 +222,5 @@ start-block と block-size を掛け合わせたものを offset で指定して
 マウント先のディレクトリはあらかじめ作成しておきます。
 
 ```bash
-$ sudo mount -o loop,offset=65536 cardbot-os.img /mnt/tmp
+$ sudo mount -o loop,offset=`expr 98304 '*' 512` cardbot-os.img /mnt
 ```
