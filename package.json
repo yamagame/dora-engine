@@ -43,7 +43,7 @@
     "sqlite3": "^4.0.0",
     "wav": "^1.0.2"
   },
-  "optionDependencies": {
+  "optionalDependencies": {
     "mic": "git+https://github.com/yamagame/mic.git",
     "raspi": "^6.0.1",
     "raspi-gpio": "^6.2.2",
