@@ -9,7 +9,7 @@
 ## 特徴
 
 - 音声認識、音声合成機能を持つ Raspberry Pi を使った手作りできるコミュニケーションロボットです。
-- 部品代は AquesTalk Pi を含めて2万円ほどです。
+- 部品代は AquesTalk Pi を含めて 2 万円ほどです。
 - 専用スクリプト言語を使ってロボットのコントロールを簡単に行えます。
 - 外部のパソコンなしにロボット単体で画像と連携したプレゼンテーションができます。
 - 外装はダンボールですのでお好みに合わせて自由に変更できます。
@@ -52,16 +52,16 @@
 
 ## ロボットの設計図
 
-設計図は1.5mm厚ダンボール用と3mm厚ダンボール用の２つがあります。
-ロボットは設計図の各ページをA4サイズで印刷して、厚紙パーツはそのまま切り取り、ダンボールパーツはダンボールに貼り付けて切り取ります。
+設計図は 1.5mm 厚ダンボール用と 3mm 厚ダンボール用の２つがあります。
+ロボットは設計図の各ページを A4 サイズで印刷して、厚紙パーツはそのまま切り取り、ダンボールパーツはダンボールに貼り付けて切り取ります。
 
-- 3mm厚ダンボール用
+- 3mm 厚ダンボール用
 
-    [http://bit.ly/2LkGgn4](http://bit.ly/2LkGgn4)
+  [http://bit.ly/2LkGgn4](http://bit.ly/2LkGgn4)
 
-- 1.5mm厚ダンボール用
+- 1.5mm 厚ダンボール用
 
-    [http://bit.ly/2mmmfBG](http://bit.ly/2mmmfBG)
+  [http://bit.ly/2mmmfBG](http://bit.ly/2mmmfBG)
 
 設計図は[クリエイティブコモンズライセンス](https://creativecommons.org/)で公開しています。
 
@@ -115,15 +115,7 @@ $ ./setup-autolaunch.sh
 
 再起動します。
 
-### 8GByteのSDカードを使用している場合
-
-SDカードの容量が足りませんので、以下のコマンドで wolfram-engine を削除して空き容量を確保します。
-
-```
-$ sudo apt-get purge wolfram-engine -y
-```
-
-### /boot/config.txtを編集する
+### /boot/config.txt を編集する
 
 以下の項目をコメントアウトして無効化します。
 
@@ -139,7 +131,7 @@ dtoverlay=i2s-mmap
 dtoverlay=googlevoicehat-soundcard
 ```
 
-### /etc/asound.confを作成
+### /etc/asound.conf を作成
 
 ```
 options snd_rpi_googlemihat_soundcard index=0
@@ -192,11 +184,11 @@ $ aplay -Dplug:softvol test.wav
 
 デフォルトの音声合成は Open JTalk になってます。AquesTalk Pi を使用する場合は以下の手順で準備します。
 
-ブラウザで以下のURLを開きます。
+ブラウザで以下の URL を開きます。
 
 [https://www.a-quest.com/products/aquestalkpi.html](https://www.a-quest.com/products/aquestalkpi.html)
 
-Download のセクションから、使用許諾を読んで「同意してDownload」ボタンをクリックします。
+Download のセクションから、使用許諾を読んで「同意して Download」ボタンをクリックします。
 
 Downloads フォルダにファイルがダウンロードされますので、以下のコマンドを入力して解凍します。
 
@@ -245,7 +237,7 @@ $ ./talk-f1.sh こんにちは
 /text-to-speech
 ```
 
-[Google Text-to-Speech](https://cloud.google.com/text-to-speech/) は最長で60秒間音声認識します。60秒以上になるとエラーになります。そのため、DoraEngine では初期設定では30秒で音声認識はタイムアウトします。
+[Google Text-to-Speech](https://cloud.google.com/text-to-speech/) は最長で 60 秒間音声認識します。60 秒以上になるとエラーになります。そのため、DoraEngine では初期設定では 30 秒で音声認識はタイムアウトします。
 
 ## Google Translation API の準備
 
@@ -259,7 +251,7 @@ $ ./talk-f1.sh こんにちは
   <img style="border:solid 1px lightgray;" src="./images/presentation.png"/>
 </p>
 
-ブラウザで以下のURLを開きます。
+ブラウザで以下の URL を開きます。
 
 ```
 http://[dora-engineのIPアドレス]:3090/
@@ -275,7 +267,7 @@ http://[dora-engineのIPアドレス]:3090/
 
 シナリオエディターを使ってロボットをコントロールすることができます。
 
-ブラウザで以下のURLを開きます。
+ブラウザで以下の URL を開きます。
 
 ```
 http://[dora-engineのIPアドレス]:3090/scenario-editor/
@@ -293,7 +285,7 @@ http://[dora-engineのIPアドレス]:3090/scenario-editor/
   <img style="border:solid 1px lightgray;" src="./images/scheduler.png"/>
 </p>
 
-ブラウザで以下のURLを開きます。
+ブラウザで以下の URL を開きます。
 
 ```
 http://[dora-engineのIPアドレス]:3090/scheduler/
@@ -313,34 +305,42 @@ http://[dora-engineのIPアドレス]:3090/scheduler/
 
 スケジューラにキーボードフォーカスが当たっている状態で、以下のキー操作ができます。
 
-- Tキー  今日の日付に移動します
-- Gキー  バーを順に選択して選択したバーが画面の中央に表示されます。
-- DELキー 選択したバーを削除します。
+- T キー 今日の日付に移動します
+- G キー バーを順に選択して選択したバーが画面の中央に表示されます。
+- DEL キー 選択したバーを削除します。
 
 ## 関連プロジェクト
 
 ### Dora Script
+
 [https://github.com/yamagame/dora](https://github.com/yamagame/dora)
 
 ### Dora Editor
+
 [https://github.com/yamagame/dora-editor](https://github.com/yamagame/dora-editor)
 
 ### Dora Admin
+
 [https://github.com/yamagame/dora-admin](https://github.com/yamagame/dora-admin)
 
 ### Dora Quiz
+
 [https://github.com/yamagame/dora-quiz](https://github.com/yamagame/dora-quiz)
 
 ### Dora Wave
+
 [https://github.com/yamagame/dora-wave](https://github.com/yamagame/dora-wave)
 
 ### Dora Scheduler
+
 [https://github.com/yamagame/dora-scheduler](https://github.com/yamagame/dora-scheduler)
 
 ### Dora Script Sample
+
 [https://github.com/yamagame/dora-script-sample](https://github.com/yamagame/dora-script-sample)
 
 ### ドキュメント詳細
+
 [https://yamagame.github.io/dora-engine-doc/](https://yamagame.github.io/dora-engine-doc/)
 
 ## ライセンス
