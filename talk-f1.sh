@@ -1,3 +1,3 @@
 #!/bin/bash
 echo $@
-../Downloads/aquestalkpi/AquesTalkPi $@ | aplay -Dplug:softvol
+../Downloads/aquestalkpi/AquesTalkPi $@ | aplay
