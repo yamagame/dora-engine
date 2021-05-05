@@ -3,7 +3,6 @@ const os = require("os");
 const ip = require("ip");
 const express = require("express");
 const router = require("express").Router();
-const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const request = require("request-promise");
 const speech = (() =>
@@ -557,10 +556,10 @@ app.use((req, res, next) => {
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json({ type: "application/json" }));
-app.use(bodyParser.raw({ type: "application/*" }));
-app.use(bodyParser.text());
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ type: "application/json" }));
+app.use(express.raw({ type: "application/*" }));
+app.use(express.text());
 
 app.use(cookieParser());
 
