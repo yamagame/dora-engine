@@ -4,7 +4,7 @@ const ip = require("ip");
 const express = require("express");
 const router = require("express").Router();
 const cookieParser = require("cookie-parser");
-const request = require("request-promise");
+const axios = require("axios");
 const speech = (() =>
   process.env["SPEECH"] === "off" ? new EventEmitter() : require("./speech"))();
 const talk = require("./talk");
@@ -365,10 +365,10 @@ dora.request = async function (command, options, params) {
     if (options.restype) opt.restype = options.restype;
   }
   params.localhostToken = localhostToken();
-  const body = await request({
+  const body = await axios({
     uri: `http://localhost:${config.port}/${command}`,
     method: opt.method,
-    json: params,
+    data: params,
   });
   console.log(body);
   return body;
@@ -472,12 +472,12 @@ function chat(message, tone, callback) {
     json.clientData.option.t = tone;
   }
 
-  request({
+  axios({
     method: "POST",
     url:
       "https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY=" +
       APIKEY,
-    json,
+    data: json,
   })
     .then((body) => {
       callback(null, body);
