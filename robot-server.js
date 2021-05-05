@@ -53,7 +53,7 @@ const HOME =
     : process.env.HOME;
 const PICT =
   process.platform === "darwin"
-    ? path.join(process.env.HOME, "Pictures", workFolder)
+    ? path.join(process.env.HOME,  "Documents", workFolder, "Pictures")
     : path.join(process.env.HOME, "Pictures");
 const PART_LIST_FILE_PATH = path.join(HOME, "quiz-student.txt");
 
@@ -366,7 +366,7 @@ dora.request = async function (command, options, params) {
   }
   params.localhostToken = localhostToken();
   const body = await axios({
-    uri: `http://localhost:${config.port}/${command}`,
+    url: `http://localhost:${config.port}/${command}`,
     method: opt.method,
     data: params,
   });
