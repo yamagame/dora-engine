@@ -53,7 +53,7 @@ const HOME =
     : process.env.HOME;
 const PICT =
   process.platform === "darwin"
-    ? path.join(process.env.HOME,  "Documents", workFolder, "Pictures")
+    ? path.join(process.env.HOME, "Documents", workFolder, "Pictures")
     : path.join(process.env.HOME, "Pictures");
 const PART_LIST_FILE_PATH = path.join(HOME, "quiz-student.txt");
 
@@ -285,7 +285,7 @@ dora.loadModule("button", function (DORA, config) {
           params.sensitivity = msg.sensitivity;
         }
         node.recording = true;
-        socket.emit("speech-to-text", params, (res) => {
+        socket.emit("speech-to-text", params, res => {
           if (!node.recording) return;
           node.recording = false;
           if (res == "[timeout]") {
@@ -479,12 +479,12 @@ function chat(message, tone, callback) {
       APIKEY,
     data: json,
   })
-    .then((body) => {
+    .then(body => {
       callback(null, body);
       robotData.chatRecvTime = body.serverSendTime;
       writeRobotData();
     })
-    .catch((err) => {
+    .catch(err => {
       callback(err, null);
     });
 }
@@ -508,7 +508,7 @@ function servoAction(action, payload, callback) {
     return;
   }
   let done = false;
-  gpioSocket.emit("message", { action, ...payload }, (payload) => {
+  gpioSocket.emit("message", { action, ...payload }, payload => {
     if (done) return;
     done = true;
     //console.log(payload);
@@ -532,14 +532,14 @@ talk.on("talk", function () {
 });
 
 speech.on("data", function (data) {
-  Object.keys(soundAnalyzer).forEach((key) => {
+  Object.keys(soundAnalyzer).forEach(key => {
     const socket = soundAnalyzer[key];
     socket.emit("speech-data", data);
   });
 });
 
 speech.on("wave-data", function (data) {
-  Object.keys(soundAnalyzer).forEach((key) => {
+  Object.keys(soundAnalyzer).forEach(key => {
     const socket = soundAnalyzer[key];
     socket.emit("wave-data", data);
   });
@@ -607,7 +607,7 @@ passport.use(
       setTimeout(function () {
         let auth = {};
         const checkPass = () => {
-          return config.adminAuth.some((a) => {
+          return config.adminAuth.some(a => {
             if (
               name === a.username &&
               bcrypt.compareSync(password, a.password)
@@ -642,7 +642,7 @@ passport.use(
       setTimeout(function () {
         let auth = {};
         const checkPass = () => {
-          return config.adminAuth.some((a) => {
+          return config.adminAuth.some(a => {
             if (a.guest) {
               if (
                 name === a.username &&
@@ -746,7 +746,7 @@ app.post("/login-guest-client", function (req, res, next) {
         if (err) {
           return next(err);
         }
-        createSignature(username, (signature) => {
+        createSignature(username, signature => {
           res.send({
             user_id: username,
             signature,
@@ -759,7 +759,7 @@ app.post("/login-guest-client", function (req, res, next) {
 
 app.post("/access-token", isLogined(), function (req, res) {
   if (req.user) {
-    createSignature(req.user.id, (signature) => {
+    createSignature(req.user.id, signature => {
       res.json({ user_id: req.user.id, signature });
     });
   } else {
@@ -804,7 +804,7 @@ function docomo_chat(payload, callback) {
             {
               ...payload,
             },
-            (mode) => {
+            mode => {
               if (mode === "idle") {
                 servoAction("idle");
                 if (callback) callback(err, utt);
@@ -874,7 +874,7 @@ function text_to_speech(payload, callback) {
           {
             ...payload,
           },
-          (mode) => {
+          mode => {
             if (mode === "idle") {
               servoAction("idle");
               playing = false;
@@ -948,7 +948,7 @@ function speech_to_text(payload, callback) {
     }
   }
 
-  const dataListener = (payload) => {
+  const dataListener = payload => {
     if (!done) {
       stopRecording();
       removeListener();
@@ -961,7 +961,7 @@ function speech_to_text(payload, callback) {
     done = true;
   };
 
-  const speechListener = (payload) => {
+  const speechListener = payload => {
     if (!done) {
       var retval = {
         speechRequest: true,
@@ -978,7 +978,7 @@ function speech_to_text(payload, callback) {
     done = true;
   };
 
-  const buttonListener = (payload) => {
+  const buttonListener = payload => {
     if (payload) {
       if (!done) {
         stopRecording();
@@ -993,7 +993,7 @@ function speech_to_text(payload, callback) {
     }
   };
 
-  const listenerButton = (payload) => {
+  const listenerButton = payload => {
     if (!done) {
       const data = {
         ...payload,
@@ -1010,7 +1010,7 @@ function speech_to_text(payload, callback) {
     done = true;
   };
 
-  const listenerSpeech = (payload) => {
+  const listenerSpeech = payload => {
     if (!done) {
       const data = {};
       data.speechRequest = true;
@@ -1026,7 +1026,7 @@ function speech_to_text(payload, callback) {
     done = true;
   };
 
-  const cameraListener = (payload) => {
+  const cameraListener = payload => {
     if (!done) {
       stopRecording();
       removeListener();
@@ -1039,7 +1039,7 @@ function speech_to_text(payload, callback) {
     done = true;
   };
 
-  const gamepadListener = (payload) => {
+  const gamepadListener = payload => {
     if (!done) {
       const data = {
         gamepad: true,
@@ -1135,7 +1135,7 @@ app.post("/text-to-speech", hasPermission("control.write"), (req, res) => {
     {
       ...req.body,
     },
-    (err) => {
+    err => {
       res.send("OK");
     }
   );
@@ -1271,7 +1271,7 @@ function execSoundCommand(payload, callback) {
     let count = pids.length;
     if (count > 0) {
       playsnd = {};
-      pids.forEach((pid) => {
+      pids.forEach(pid => {
         const playone = _playsnd[pid];
         if (playone) {
           utils.kill(playone.pid, "SIGTERM", function () {
@@ -1291,11 +1291,7 @@ function execSoundCommand(payload, callback) {
     if (p.indexOf(base) == 0) {
       const cmd = process.platform === "darwin" ? "afplay" : "aplay";
       const opt =
-        process.platform === "darwin"
-          ? [p]
-          : config.voiceHat
-          ? ["-Dplug:softvol", p]
-          : [p];
+        process.platform === "darwin" ? [p] : config.voiceHat ? [p] : [p];
       console.log(`/usr/bin/${cmd} ${p}`);
       const playone = spawn(`/usr/bin/${cmd}`, opt);
       playone.on("close", function () {
@@ -1314,13 +1310,13 @@ async function quizPacket(payload) {
   // }
   if (payload.action === "entry") {
     payload.entry = Object.keys(robotData.quizEntry)
-      .map((key) => {
+      .map(key => {
         return {
           clientId: robotData.quizEntry[key].clientId,
           name: robotData.quizEntry[key].name,
         };
       })
-      .filter((v) => v.name != quiz_master);
+      .filter(v => v.name != quiz_master);
     //payload.name = quiz_master;
   }
   if (payload.action === "quiz-entry-init") {
@@ -1395,7 +1391,7 @@ async function quizPacket(payload) {
           if (!robotData.quizList[payload.quizId].quiz) {
             robotData.quizList[payload.quizId].quiz = {};
           }
-          payload.pages.forEach((page) => {
+          payload.pages.forEach(page => {
             if (page.action == "quiz" && page.question) {
               robotData.quizList[payload.quizId].quiz[page.question] = {
                 choices: page.choices,
@@ -1428,11 +1424,11 @@ async function quizPacket(payload) {
         //ゲストプレイヤーはランキングから外す
         const ret = {};
         if (answers) {
-          Object.keys(answers).forEach((quizTitle) => {
+          Object.keys(answers).forEach(quizTitle => {
             const players = answers[quizTitle];
             ret[quizTitle] = {};
             if (players) {
-              Object.keys(players).forEach((clientId) => {
+              Object.keys(players).forEach(clientId => {
                 const player = players[clientId];
                 if (
                   player.name.indexOf("ゲスト") != 0 &&
@@ -1459,11 +1455,11 @@ async function quizPacket(payload) {
         //ゲストプレイヤーはランキングから外す
         const ret = {};
         if (payload.quizAnswers) {
-          Object.keys(payload.quizAnswers).forEach((quizId) => {
+          Object.keys(payload.quizAnswers).forEach(quizId => {
             const players = payload.quizAnswers[quizId];
             ret[quizId] = {};
             if (players) {
-              Object.keys(players).forEach((clientId) => {
+              Object.keys(players).forEach(clientId => {
                 const player = players[clientId];
                 if (player.quizStartTime === payload.quizStartTime) {
                   if (
@@ -1490,11 +1486,11 @@ async function quizPacket(payload) {
     payload.name = quiz_master;
   }
   if (payload.members) {
-    payload.members = students.map((v) => v.name);
+    payload.members = students.map(v => v.name);
   }
   if (payload.area) {
-    const readFile = (path) => {
-      return new Promise((resolve) => {
+    const readFile = path => {
+      return new Promise(resolve => {
         fs.readFile(path, (err, data) => {
           resolve(data);
         });
@@ -1546,7 +1542,7 @@ function loadQuizPayload(payload) {
   } else {
     var val = robotData.quizPayload["others"] || {};
   }
-  val.members = students.map((v) => v.name);
+  val.members = students.map(v => v.name);
   console.log(`loadQuizPayload`, val);
   return m(val, { initializeLoad: true });
 }
@@ -1565,10 +1561,10 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
             const result = {};
             const quizAnswers = quizAnswersCache[req.body.quizId];
             if (quizAnswers) {
-              Object.keys(quizAnswers).map((quiz) => {
+              Object.keys(quizAnswers).map(quiz => {
                 const qq = quizAnswers[quiz];
                 const tt = {};
-                Object.keys(qq).forEach((clientId) => {
+                Object.keys(qq).forEach(clientId => {
                   const answer = qq[clientId];
                   if (answer.quizStartTime === req.body.startTime) {
                     tt[clientId] = answer;
@@ -1595,10 +1591,10 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
         } else {
           const result = {};
           const quizAnswers = robotData.quizAnswers[req.body.quizId];
-          Object.keys(quizAnswers).map((quiz) => {
+          Object.keys(quizAnswers).map(quiz => {
             const qq = quizAnswers[quiz];
             const tt = {};
-            Object.keys(qq).forEach((clientId) => {
+            Object.keys(qq).forEach(clientId => {
               const answer = qq[clientId];
               if (answer.quizStartTime === req.body.startTime) {
                 tt[clientId] = answer;
@@ -1621,9 +1617,9 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
         } else {
           const quizAnswers = robotData.quizAnswers[req.body.quizId];
           const result = {};
-          Object.keys(quizAnswers).map((quiz) => {
+          Object.keys(quizAnswers).map(quiz => {
             const qq = quizAnswers[quiz];
-            Object.keys(qq).forEach((clientId) => {
+            Object.keys(qq).forEach(clientId => {
               result[qq[clientId].quizStartTime] = true;
             });
           });
@@ -1675,7 +1671,7 @@ const postCommand = async (req, res, credential) => {
   }
   if (req.body.type === "movie") {
     if (playerSocket) {
-      playerSocket.emit("movie", req.body, (data) => {
+      playerSocket.emit("movie", req.body, data => {
         res.send(data);
       });
       return;
@@ -1704,9 +1700,9 @@ const postCommand = async (req, res, credential) => {
             savefilePath = `${savefilePath}.json`;
           }
           const writeFile = (path, data) => {
-            return new Promise((resolve) => {
+            return new Promise(resolve => {
               console.log(`write imageMap ${path}`);
-              fs.writeFile(path, data, (err) => {
+              fs.writeFile(path, data, err => {
                 console.log(err);
                 resolve();
               });
@@ -1725,18 +1721,14 @@ const postCommand = async (req, res, credential) => {
       }
     } else if (action === "defaults") {
       UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
-        UserDefaults.save(
-          config.robotUserDefaultsPath,
-          req.body.data,
-          (err) => {
-            if (err) {
-              console.log(err);
-              res.send({ state: "ng" });
-              return;
-            }
-            res.send({ state: "ok" });
+        UserDefaults.save(config.robotUserDefaultsPath, req.body.data, err => {
+          if (err) {
+            console.log(err);
+            res.send({ state: "ng" });
+            return;
           }
-        );
+          res.send({ state: "ok" });
+        });
       });
       return;
     }
@@ -1784,7 +1776,7 @@ const postCommand = async (req, res, credential) => {
         servoAction("led-off");
         last_led_action = "led-off";
         if (playerSocket) {
-          playerSocket.emit("movie", { action: "cancel" }, (data) => {});
+          playerSocket.emit("movie", { action: "cancel" }, data => {});
         }
       });
     }
@@ -1893,7 +1885,7 @@ const postCommand = async (req, res, credential) => {
                   }
                 );
               })
-              .catch((err) => {
+              .catch(err => {
                 emitError(err);
               });
           });
@@ -1908,6 +1900,9 @@ const postCommand = async (req, res, credential) => {
     if (action == "stop") {
       run_scenario = false;
       stopAll();
+    }
+    if (action === "sound-stop") {
+      talk.stop();
     }
     if (action == "load") {
       console.log(JSON.stringify(req.body));
@@ -1939,7 +1934,7 @@ const postCommand = async (req, res, credential) => {
               fs.writeFile(
                 path.join(base, username, ".cache", body.filename),
                 body.text,
-                (err) => {
+                err => {
                   if (err) console.log(err);
                   res.send({
                     status: !err ? "OK" : err.code,
@@ -1983,7 +1978,7 @@ app.post(
   hasPermission("command.write"),
   async (req, res) => {
     if (req.isAuthenticated()) {
-      createSignature(req.user.id, (signature) => {
+      createSignature(req.user.id, signature => {
         postCommand(req, res, { user_id: req.user.id, signature });
       });
     } else {
@@ -1994,7 +1989,7 @@ app.post(
 
 app.post("/command", hasPermission("command.write"), async (req, res) => {
   if (req.isAuthenticated()) {
-    createSignature(req.user.id, (signature) => {
+    createSignature(req.user.id, signature => {
       postCommand(req, res, { user_id: req.user.id, signature });
     });
   } else {
@@ -2012,7 +2007,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
         if (typeof req.body.text !== "undefined") {
           if (filename) {
             mkdirp(HOME, function (err) {
-              fs.writeFile(PART_LIST_FILE_PATH, req.body.text, (err) => {
+              fs.writeFile(PART_LIST_FILE_PATH, req.body.text, err => {
                 let r = utils.attendance.load(null, PART_LIST_FILE_PATH, null);
                 if (typeof r.students !== "undefined") students = r.students;
                 res.send({ status: !err ? "OK" : err.code });
@@ -2033,7 +2028,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
               fs.writeFile(
                 path.join(HOME, "date-list.txt"),
                 req.body.text,
-                (err) => {
+                err => {
                   res.send({ status: !err ? "OK" : err.code });
                 }
               );
@@ -2062,7 +2057,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
           path.join(HOME, "date-list.txt")
         );
         if (USE_DB) {
-          db.loadAttendance(dates).then((robotData) => {
+          db.loadAttendance(dates).then(robotData => {
             res.send({
               status: "OK",
               text: utils.attendance.csv(robotData, dates, students),
@@ -2088,7 +2083,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
       res.send({ status: "OK" });
     }
   } else if (
-    students.some((m) => m.name === username) ||
+    students.some(m => m.name === username) ||
     config.editorAccessControl
   ) {
     if (req.body.action == "save" || req.body.action == "create") {
@@ -2110,7 +2105,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
               fs.writeFile(
                 path.join(base, username, filename),
                 req.body.text,
-                (err) => {
+                err => {
                   if (err) console.log(err);
                   res.send({ status: !err ? "OK" : err.code });
                 }
@@ -2166,7 +2161,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
 
 const camera = new (require("./robot-camera"))();
 
-camera.on("change", hasPermission("control.write"), (payload) => {
+camera.on("change", hasPermission("control.write"), payload => {
   console.log("camera changed");
   speech.emit("camera", payload);
 });
@@ -2196,7 +2191,7 @@ function nomalizeBar(bar) {
     "rgba",
     "type",
   ];
-  barAttrMembers.forEach((key) => {
+  barAttrMembers.forEach(key => {
     if (typeof bar[key] !== "undefined") {
       b[key] = bar[key];
     }
@@ -2212,8 +2207,8 @@ app.post("/bar/all", hasPermission("control.write"), async (req, res) => {
     if (USE_DB) {
       const barData = await db.loadBars();
       const b = [];
-      bars.forEach((d) => {
-        barData.forEach((bar) => {
+      bars.forEach(d => {
+        barData.forEach(bar => {
           if (bar.uuid === d.uuid) {
             b.push(bar);
           }
@@ -2222,8 +2217,8 @@ app.post("/bar/all", hasPermission("control.write"), async (req, res) => {
       res.json(b);
     } else {
       const b = [];
-      bars.forEach((d) => {
-        robotData.barData.forEach((bar) => {
+      bars.forEach(d => {
+        robotData.barData.forEach(bar => {
           if (bar.uuid === d.uuid) {
             b.push(bar);
           }
@@ -2247,10 +2242,10 @@ app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
   if (USE_DB) {
     const b = {};
     const barData = await db.loadBars();
-    barData.forEach((bar) => {
+    barData.forEach(bar => {
       b[bar.uuid] = bar;
     });
-    bars.forEach((bar) => {
+    bars.forEach(bar => {
       if (bar) {
         if (create) {
           bar = nomalizeBar(bar);
@@ -2262,7 +2257,7 @@ app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
             return;
           }
         }
-        Object.keys(defaultBarData).forEach((key) => {
+        Object.keys(defaultBarData).forEach(key => {
           if (typeof bar[key] === "undefined") {
             bar[key] = defaultBarData[key];
           }
@@ -2280,13 +2275,13 @@ app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
           if (bar.y === "auto") {
             bar.y = 0;
             const q = barData
-              .filter((b) => b.x == bar.x)
+              .filter(b => b.x == bar.x)
               .sort((a, b) => {
                 if (a.y < b.y) return -1;
                 if (a.y > b.y) return 1;
                 return 0;
               });
-            q.forEach((b) => {
+            q.forEach(b => {
               if (b.x === bar.x && b.y === bar.y) {
                 bar.y += 24;
               }
@@ -2306,17 +2301,17 @@ app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
     }
   } else {
     const b = {};
-    robotData.barData.forEach((bar) => {
+    robotData.barData.forEach(bar => {
       b[bar.uuid] = bar;
     });
-    bars.forEach((bar) => {
+    bars.forEach(bar => {
       if (bar) {
         if (create) {
           bar = nomalizeBar(bar);
           if (!bar.uuid) {
             bar.uuid = uuidv4();
           }
-          Object.keys(defaultBarData).forEach((key) => {
+          Object.keys(defaultBarData).forEach(key => {
             if (typeof bar[key] === "undefined") {
               bar[key] = defaultBarData[key];
             }
@@ -2332,7 +2327,7 @@ app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
           if (bar.y === "auto") {
             delete bar.y;
           }
-          Object.keys(bar).forEach((key) => {
+          Object.keys(bar).forEach(key => {
             t[key] = bar[key];
           });
           newBars.push(t);
@@ -2341,13 +2336,13 @@ app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
           if (bar.y === "auto") {
             bar.y = 0;
             const q = robotData.barData
-              .filter((b) => b.x == bar.x)
+              .filter(b => b.x == bar.x)
               .sort((a, b) => {
                 if (a.y < b.y) return -1;
                 if (a.y > b.y) return 1;
                 return 0;
               });
-            q.forEach((b) => {
+            q.forEach(b => {
               if (b.x === bar.x && b.y === bar.y) {
                 bar.y += 24;
               }
@@ -2370,7 +2365,7 @@ app.post("/bar/delete", hasPermission("control.write"), (req, res) => {
   const bars = [...req.body.barData];
   const { saveOnly } = req.body;
   if (USE_DB) {
-    bars.forEach(async (bar) => {
+    bars.forEach(async bar => {
       await db.deleteBar(bar);
     });
     if (!saveOnly) {
@@ -2378,9 +2373,9 @@ app.post("/bar/delete", hasPermission("control.write"), (req, res) => {
     }
   } else {
     const b = [];
-    robotData.barData.forEach((bar) => {
+    robotData.barData.forEach(bar => {
       if (
-        !bars.some((b) => {
+        !bars.some(b => {
           return b.uuid === bar.uuid;
         })
       ) {
@@ -2423,17 +2418,17 @@ app.post("/bar/findOne", hasPermission("control.write"), async (req, res) => {
     cbar = [...robotData.barData];
   }
   if (typeof x !== "undefined" && x !== null) {
-    cbar = cbar.filter((b) => {
+    cbar = cbar.filter(b => {
       return b.x <= x && x < b.x + b.width;
     });
   }
   if (typeof y !== "undefined" && y !== null) {
-    cbar = cbar.filter((b) => {
+    cbar = cbar.filter(b => {
       return b.y <= y && y < b.y + b.height;
     });
   }
   if (typeof title !== "undefined" && title !== null) {
-    cbar = cbar.filter((b) => {
+    cbar = cbar.filter(b => {
       return b.title.indexOf(title) >= 0 || b.uuid.indexOf(title) >= 0;
     });
   }
@@ -2559,7 +2554,7 @@ iop.on("connection", function (socket) {
   });
   socket.on("notify", function (payload) {
     localhostCheck(payload);
-    checkPermission(payload, "", (verified) => {
+    checkPermission(payload, "", verified => {
       if (verified) {
         const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
         if (ip != null && payload.role === "imageServer") {
@@ -2574,7 +2569,7 @@ iop.on("connection", function (socket) {
 
 ioa.on("connection", function (socket) {
   console.log("connected io audio", socket.conn.remoteAddress);
-  const localhostCheck = (payload) => {
+  const localhostCheck = payload => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken();
     }
@@ -2587,13 +2582,13 @@ ioa.on("connection", function (socket) {
       speech.emit("stopStreamData");
     }
   });
-  socket.on("speech-config", (payload) => {
+  socket.on("speech-config", payload => {
     localhostCheck(payload);
-    checkPermission(payload, "", (verified) => {
+    checkPermission(payload, "", verified => {
       if (verified) {
         const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
         if (ip != null && payload.role === "waveAnalyzer") {
-          ["level", "threshold"].forEach((key) => {
+          ["level", "threshold"].forEach(key => {
             if (typeof payload[key] !== "undefined") {
               robotData.voice[key] = payload[key];
             }
@@ -2604,9 +2599,9 @@ ioa.on("connection", function (socket) {
       }
     });
   });
-  socket.on("start-stream-data", (payload) => {
+  socket.on("start-stream-data", payload => {
     localhostCheck(payload);
-    checkPermission(payload, "", (verified) => {
+    checkPermission(payload, "", verified => {
       if (verified) {
         const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/);
         if (ip != null && payload.role === "waveAnalyzer") {
@@ -2622,7 +2617,7 @@ ioa.on("connection", function (socket) {
 
 io.on("connection", function (socket) {
   console.log("connected io", socket.conn.remoteAddress);
-  const localhostCheck = (payload) => {
+  const localhostCheck = payload => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken();
     }
@@ -2640,7 +2635,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         mode_slave = true;
       }
@@ -2652,7 +2647,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         try {
           docomo_chat(
@@ -2683,7 +2678,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         try {
           dora_chat(
@@ -2713,14 +2708,14 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         try {
           text_to_speech(
             {
               ...payload,
             },
-            (err) => {
+            err => {
               if (callback) callback("OK");
             }
           );
@@ -2738,7 +2733,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         talk.flush();
         if (callback) callback("OK");
@@ -2753,7 +2748,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         if (payload.option === "stop-sound") {
           execSoundCommand({ sound: "stop" }, () => {
@@ -2781,7 +2776,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         try {
           speech_to_text(
@@ -2826,7 +2821,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         speech.emit("data", "stoped");
         if (callback) callback("OK");
@@ -2841,7 +2836,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "command.write", (verified) => {
+    checkPermission(payload, "command.write", verified => {
       try {
         const base = config.commandDirPath;
         const cmd = path.normalize(path.join(base, payload.command));
@@ -2873,7 +2868,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         console.log("message", payload);
       }
@@ -2886,7 +2881,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", async (verified) => {
+    checkPermission(payload, "control.write", async verified => {
       if (verified) {
         const result = await quizPacket(payload);
         storeQuizPayload(result);
@@ -2901,7 +2896,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         changeLed(payload);
       }
@@ -2914,7 +2909,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         execSoundCommand(payload);
       }
@@ -2927,7 +2922,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if (verified) {
         buttonClient.doCommand(payload);
       }
@@ -2940,7 +2935,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "", async (verified) => {
+    checkPermission(payload, "", async verified => {
       if (verified) {
         payload.time = new Date();
         if (typeof payload.question === "undefined") {
@@ -2956,7 +2951,7 @@ io.on("connection", function (socket) {
               action: "entry",
               name: quiz_master,
             });
-            Object.keys(quiz_masters).forEach((key) => {
+            Object.keys(quiz_masters).forEach(key => {
               quiz_masters[key].emit("quiz", quizPayload);
             });
             socket.emit("quiz", loadQuizPayload(payload));
@@ -3015,12 +3010,11 @@ io.on("connection", function (socket) {
             const p = { ...payload };
             delete p.question;
             delete p.quizId;
-            robotData.quizAnswers[quizId][payload.question][
-              payload.clientId
-            ] = p;
+            robotData.quizAnswers[quizId][payload.question][payload.clientId] =
+              p;
             if (!noSave) writeRobotData();
           }
-          Object.keys(quiz_masters).forEach((key) => {
+          Object.keys(quiz_masters).forEach(key => {
             quiz_masters[key].emit("quiz", {
               action: "refresh",
               name: quiz_master,
@@ -3037,7 +3031,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "quiz-button.write", (verified) => {
+    checkPermission(payload, "quiz-button.write", verified => {
       if (verified) {
         try {
           quiz_button(
@@ -3065,7 +3059,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "quiz-button.write", (verified) => {
+    checkPermission(payload, "quiz-button.write", verified => {
       if (verified) {
         buttonClient.emit("button", "stoped");
       }
@@ -3078,7 +3072,7 @@ io.on("connection", function (socket) {
       return;
     }
     localhostCheck(payload);
-    checkPermission(payload, "control.write", (verified) => {
+    checkPermission(payload, "control.write", verified => {
       if ("action" in payload) {
         if (payload.action === "log") {
           io.emit("scenario_log", {
@@ -3155,7 +3149,7 @@ function execReboot() {
   }, 5000);
 }
 
-gpioSocket.on("button", (payload) => {
+gpioSocket.on("button", payload => {
   // console.log(payload);
   if (shutdownTimer) {
     clearTimeout(shutdownTimer);
@@ -3193,7 +3187,7 @@ gpioSocket.on("button", (payload) => {
   }
 });
 
-gpioSocket.on("gamepad", (payload) => {
+gpioSocket.on("gamepad", payload => {
   speech.emit("gamepad", payload);
 });
 
@@ -3222,7 +3216,7 @@ function startSenario(username, filename) {
   checkScenarioFile(username, filename, () => {
     setTimeout(() => {
       console.log(`request scenario ${username}:${filename}`);
-      createSignature(username, (signature) => {
+      createSignature(username, signature => {
         postCommand(
           {
             body: {
