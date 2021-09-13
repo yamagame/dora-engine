@@ -1,0 +1,7 @@
+# お腹のボタン押下をシミュレート
+POST http://localhost:3090/command HTTP/1.1
+content-type: application/json
+
+{
+  "type": "cancel"
+}
