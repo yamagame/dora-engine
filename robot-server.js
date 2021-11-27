@@ -877,6 +877,7 @@ function text_to_speech(payload, callback) {
 
 function speech_to_text(payload, callback) {
   let done = false;
+  speech.eventWating = true;
 
   //led_mode = 'auto';
 
@@ -887,6 +888,7 @@ function speech_to_text(payload, callback) {
 
   const stopRecording = () => {
     speech.recording = false;
+    speech.eventWating = false;
     speech.emit("stopRecording");
     robotData.recordingTime = speech.recordingTime;
     writeRobotData();
@@ -946,7 +948,7 @@ function speech_to_text(payload, callback) {
 
   const speechListener = payload => {
     if (!done) {
-      var retval = {
+      const retval = {
         speechRequest: true,
         payload,
       };
@@ -1174,6 +1176,25 @@ app.post("/speech", hasPermission("control.write"), (req, res) => {
     speech.emit("speech", req.body.payload.toString("utf-8"));
   }
   res.send("OK");
+});
+
+app.post("/text-to-speech/start", hasPermission("control.write"), (req, res) => {
+  if (speech.eventWating) {
+    res.json({ status: "OK" });
+  } else {
+    res.json({ status: "NG" });
+  }
+  if (typeof req.body === "string") {
+    speech.emit("speech", req.body.toString("utf-8"));
+  } else if (typeof req.body.payload === "string") {
+    speech.emit("speech", req.body.payload.toString("utf-8"));
+  }
+});
+
+app.post("/text-to-speech/stop", hasPermission("control.write"), (req, res) => {
+  postCommand({ body: { type: "scenario", action: "sound-stop" } }, res, {
+    localhostToken: localhostToken(),
+  });
 });
 
 app.use(
