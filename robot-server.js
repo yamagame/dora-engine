@@ -98,10 +98,7 @@ const isLogined = function (view) {
 
 function isValidFilename(filename) {
   if (filename) {
-    return (
-      path.basename(filename) === filename &&
-      path.normalize(filename) === filename
-    );
+    return path.basename(filename) === filename && path.normalize(filename) === filename;
   }
   return false;
 }
@@ -404,8 +401,7 @@ if (typeof robotData.quizPayload === "undefined") robotData.quizPayload = {};
 if (typeof robotData.quizList === "undefined") robotData.quizList = {};
 if (typeof robotData.recordingTime !== "undefined")
   speech.recordingTime = parseInt(robotData.recordingTime);
-if (typeof robotData.voice === "undefined")
-  robotData.voice = { level: 100, threshold: 2000 };
+if (typeof robotData.voice === "undefined") robotData.voice = { level: 100, threshold: 2000 };
 if (typeof robotData.barData === "undefined") robotData.barData = [];
 if (typeof robotData.calendarData === "undefined") robotData.calendarData = {};
 if (typeof robotData.autoStart === "undefined") robotData.autoStart = {};
@@ -474,9 +470,7 @@ function chat(message, tone, callback) {
 
   axios({
     method: "POST",
-    url:
-      "https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY=" +
-      APIKEY,
+    url: "https://api.apigw.smt.docomo.ne.jp/naturalChatting/v1/dialogue?APIKEY=" + APIKEY,
     data: json,
   })
     .then(body => {
@@ -608,10 +602,7 @@ passport.use(
         let auth = {};
         const checkPass = () => {
           return config.adminAuth.some(a => {
-            if (
-              name === a.username &&
-              bcrypt.compareSync(password, a.password)
-            ) {
+            if (name === a.username && bcrypt.compareSync(password, a.password)) {
               auth = a;
               return true;
             }
@@ -644,10 +635,7 @@ passport.use(
         const checkPass = () => {
           return config.adminAuth.some(a => {
             if (a.guest) {
-              if (
-                name === a.username &&
-                bcrypt.compareSync(password, a.password)
-              ) {
+              if (name === a.username && bcrypt.compareSync(password, a.password)) {
                 auth = a;
                 return true;
               }
@@ -671,15 +659,11 @@ passport.use(
 );
 
 app.get("/admin-page", isLogined("admin"), function (req, res, next) {
-  fs.createReadStream(
-    path.join(__dirname, "public/admin-page/index.html")
-  ).pipe(res);
+  fs.createReadStream(path.join(__dirname, "public/admin-page/index.html")).pipe(res);
 });
 
 app.get("/scenario-editor", isLogined("editor"), function (req, res, next) {
-  fs.createReadStream(
-    path.join(__dirname, "public/scenario-editor/index.html")
-  ).pipe(res);
+  fs.createReadStream(path.join(__dirname, "public/scenario-editor/index.html")).pipe(res);
 });
 
 app.use((req, res, next) => {
@@ -707,8 +691,7 @@ app.get("/login/:view", csrfProtection, function (req, res, next) {
 
 app.post("/login/:view", csrfProtection, function (req, res, next) {
   passport.authenticate("local", {
-    successRedirect:
-      req.params.view == "admin" ? "/admin-page" : "/scenario-editor",
+    successRedirect: req.params.view == "admin" ? "/admin-page" : "/scenario-editor",
     failureRedirect: `/login/${req.params.view}`,
   })(req, res, next);
 });
@@ -1147,18 +1130,10 @@ app.post("/speech-to-text", hasPermission("control.write"), (req, res) => {
 
   speech_to_text(
     {
-      timeout:
-        typeof req.body.payload.timeout === "undefined"
-          ? 30000
-          : req.body.payload.timeout,
+      timeout: typeof req.body.payload.timeout === "undefined" ? 30000 : req.body.payload.timeout,
       threshold:
-        typeof req.body.payload.sensitivity === "undefined"
-          ? 2000
-          : req.body.payload.sensitivity,
-      level:
-        typeof req.body.payload.level === "undefined"
-          ? 100
-          : req.body.payload.level,
+        typeof req.body.payload.sensitivity === "undefined" ? 2000 : req.body.payload.sensitivity,
+      level: typeof req.body.payload.level === "undefined" ? 100 : req.body.payload.level,
       languageCode:
         typeof req.body.payload.languageCode === "undefined"
           ? "ja-JP"
@@ -1168,9 +1143,7 @@ app.post("/speech-to-text", hasPermission("control.write"), (req, res) => {
           ? null
           : req.body.payload.alternativeLanguageCodes,
       recording:
-        typeof req.body.payload.recording === "undefined"
-          ? true
-          : req.body.payload.recording,
+        typeof req.body.payload.recording === "undefined" ? true : req.body.payload.recording,
     },
     (err, data) => {
       res.send(data);
@@ -1263,8 +1236,7 @@ function changeLed(payload) {
 let playsnd = {};
 
 function execSoundCommand(payload, callback) {
-  const sound =
-    typeof payload.play !== "undefined" ? payload.play : payload.sound;
+  const sound = typeof payload.play !== "undefined" ? payload.play : payload.sound;
   if (sound === "stop") {
     const pids = Object.keys(playsnd);
     const _playsnd = playsnd;
@@ -1290,8 +1262,7 @@ function execSoundCommand(payload, callback) {
     const p = path.normalize(path.join(base, sound));
     if (p.indexOf(base) == 0) {
       const cmd = process.platform === "darwin" ? "afplay" : "aplay";
-      const opt =
-        process.platform === "darwin" ? [p] : config.voiceHat ? [p] : [p];
+      const opt = process.platform === "darwin" ? [p] : config.voiceHat ? [p] : [p];
       console.log(`/usr/bin/${cmd} ${p}`);
       const playone = spawn(`/usr/bin/${cmd}`, opt);
       playone.on("close", function () {
@@ -1524,15 +1495,9 @@ async function quizPacket(payload) {
 function storeQuizPayload(payload) {
   console.log(`storeQuizPayload`, payload);
   if (payload.name !== quiz_master) {
-    robotData.quizPayload["others"] = m(
-      robotData.quizPayload["others"],
-      payload
-    );
+    robotData.quizPayload["others"] = m(robotData.quizPayload["others"], payload);
   }
-  robotData.quizPayload[quiz_master] = m(
-    robotData.quizPayload[quiz_master],
-    payload
-  );
+  robotData.quizPayload[quiz_master] = m(robotData.quizPayload[quiz_master], payload);
   writeRobotData();
 }
 
@@ -1551,10 +1516,7 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
   if (req.body.type === "answers") {
     if (req.body.quizId) {
       if (req.body.startTime) {
-        const showSum =
-          typeof req.body.showSum === "undefined" || !req.body.showSum
-            ? false
-            : true;
+        const showSum = typeof req.body.showSum === "undefined" || !req.body.showSum ? false : true;
         //スタート時間が同じものだけを返す
         if (USE_DB) {
           if (showSum) {
@@ -1574,9 +1536,7 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
                   result[quiz] = tt;
                 }
               });
-              const question = robotData.quizList
-                ? robotData.quizList[req.body.quizId]
-                : null;
+              const question = robotData.quizList ? robotData.quizList[req.body.quizId] : null;
               res.send({ answers: result, question: question });
             } else {
               res.send({ answers: result, question: null });
@@ -1604,9 +1564,7 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
               result[quiz] = tt;
             }
           });
-          const question = robotData.quizList
-            ? robotData.quizList[req.body.quizId]
-            : null;
+          const question = robotData.quizList ? robotData.quizList[req.body.quizId] : null;
           res.send({ answers: result, question: question });
         }
       } else {
@@ -1809,16 +1767,13 @@ const postCommand = async (req, res, credential) => {
             }
             dora
               .parse(data.toString(), filename, function (filename, callback) {
-                fs.readFile(
-                  path.join(base, username, filename),
-                  (err, data) => {
-                    if (err) {
-                      emitError(err);
-                      return;
-                    }
-                    callback(data.toString());
+                fs.readFile(path.join(base, username, filename), (err, data) => {
+                  if (err) {
+                    emitError(err);
+                    return;
                   }
-                );
+                  callback(data.toString());
+                });
               })
               .then(() => {
                 dora.credential = credential;
@@ -1907,8 +1862,7 @@ const postCommand = async (req, res, credential) => {
     if (action == "load") {
       console.log(JSON.stringify(req.body));
       console.log(JSON.stringify(req.params));
-      const username =
-        "username" in req.body ? req.body.username : "default-user";
+      const username = "username" in req.body ? req.body.username : "default-user";
       const uri = "uri" in req.body ? req.body.uri : null;
       const filename =
         "filename" in req.body && req.body.filename !== null
@@ -1931,17 +1885,13 @@ const postCommand = async (req, res, credential) => {
               },
             });
             if ("text" in body && "filename" in body) {
-              fs.writeFile(
-                path.join(base, username, ".cache", body.filename),
-                body.text,
-                err => {
-                  if (err) console.log(err);
-                  res.send({
-                    status: !err ? "OK" : err.code,
-                    next_script: `.cache/${body.filename}`,
-                  });
-                }
-              );
+              fs.writeFile(path.join(base, username, ".cache", body.filename), body.text, err => {
+                if (err) console.log(err);
+                res.send({
+                  status: !err ? "OK" : err.code,
+                  next_script: `.cache/${body.filename}`,
+                });
+              });
             } else {
               res.send({ status: "Not found" });
             }
@@ -1973,19 +1923,15 @@ const postCommand = async (req, res, credential) => {
   res.send({ status: "OK" });
 };
 
-app.post(
-  "/command/:filename",
-  hasPermission("command.write"),
-  async (req, res) => {
-    if (req.isAuthenticated()) {
-      createSignature(req.user.id, signature => {
-        postCommand(req, res, { user_id: req.user.id, signature });
-      });
-    } else {
-      postCommand(req, res, { localhostToken: localhostToken() });
-    }
+app.post("/command/:filename", hasPermission("command.write"), async (req, res) => {
+  if (req.isAuthenticated()) {
+    createSignature(req.user.id, signature => {
+      postCommand(req, res, { user_id: req.user.id, signature });
+    });
+  } else {
+    postCommand(req, res, { localhostToken: localhostToken() });
   }
-);
+});
 
 app.post("/command", hasPermission("command.write"), async (req, res) => {
   if (req.isAuthenticated()) {
@@ -2025,13 +1971,9 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
         if (typeof req.body.text !== "undefined") {
           if (filename) {
             mkdirp(HOME, function (err) {
-              fs.writeFile(
-                path.join(HOME, "date-list.txt"),
-                req.body.text,
-                err => {
-                  res.send({ status: !err ? "OK" : err.code });
-                }
-              );
+              fs.writeFile(path.join(HOME, "date-list.txt"), req.body.text, err => {
+                res.send({ status: !err ? "OK" : err.code });
+              });
             });
           } else {
             res.send({ status: "Not found filename" });
@@ -2082,34 +2024,23 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
     } else {
       res.send({ status: "OK" });
     }
-  } else if (
-    students.some(m => m.name === username) ||
-    config.editorAccessControl
-  ) {
+  } else if (students.some(m => m.name === username) || config.editorAccessControl) {
     if (req.body.action == "save" || req.body.action == "create") {
       if (typeof req.body.text !== "undefined" || req.body.action == "create") {
         if (isValidFilename(filename)) {
           mkdirp(path.join(base, username), function (err) {
             if (req.body.action === "create") {
               console.log(`create ${path.join(base, username, filename)}`);
-              fs.open(
-                path.join(base, username, filename),
-                "a",
-                function (err, file) {
-                  if (err) console.log(err);
-                  res.send({ status: !err ? "OK" : err.code, filename });
-                }
-              );
+              fs.open(path.join(base, username, filename), "a", function (err, file) {
+                if (err) console.log(err);
+                res.send({ status: !err ? "OK" : err.code, filename });
+              });
             } else {
               console.log(`save ${path.join(base, username, filename)}`);
-              fs.writeFile(
-                path.join(base, username, filename),
-                req.body.text,
-                err => {
-                  if (err) console.log(err);
-                  res.send({ status: !err ? "OK" : err.code });
-                }
-              );
+              fs.writeFile(path.join(base, username, filename), req.body.text, err => {
+                if (err) console.log(err);
+                res.send({ status: !err ? "OK" : err.code });
+              });
             }
           });
         } else {
@@ -2446,30 +2377,25 @@ app.post("/bar/findOne", hasPermission("control.write"), async (req, res) => {
   }
 });
 
-app.post(
-  "/bar/move-screen",
-  hasPermission("control.write"),
-  async (req, res) => {
-    const { time, uuid } = req.body;
-    if (uuid) {
-      iob.emit("move-to-center", { uuid });
-    } else if (time) {
-      iob.emit("move-to-day", { time });
-    } else {
-      function DayToString(d) {
-        return `${d.getFullYear()}-${("00" + (d.getMonth() + 1)).slice(-2)}-${(
-          "00" + d.getDate()
-        ).slice(-2)}`;
-      }
-      iob.emit("move-to-day", { time: DayToString(new Date()) });
+app.post("/bar/move-screen", hasPermission("control.write"), async (req, res) => {
+  const { time, uuid } = req.body;
+  if (uuid) {
+    iob.emit("move-to-center", { uuid });
+  } else if (time) {
+    iob.emit("move-to-day", { time });
+  } else {
+    function DayToString(d) {
+      return `${d.getFullYear()}-${("00" + (d.getMonth() + 1)).slice(-2)}-${(
+        "00" + d.getDate()
+      ).slice(-2)}`;
     }
-    res.send({ status: "OK" });
+    iob.emit("move-to-day", { time: DayToString(new Date()) });
   }
-);
+  res.send({ status: "OK" });
+});
 
 app.post("/calendar", hasPermission("control.write"), async (req, res) => {
-  const calendarData =
-    "calendarData" in req.body ? { ...req.body.calendarData } : null;
+  const calendarData = "calendarData" in req.body ? { ...req.body.calendarData } : null;
   if (calendarData) {
     robotData.calendarData = calendarData;
     writeRobotData();
@@ -2503,21 +2429,13 @@ app.get("/autostart", async (req, res) => {
   }
 });
 
-app.post(
-  "/file/upload/pictures/:subdir",
-  hasPermission("control.write"),
-  async (req, res) => {
-    upload(req, res, PICT, req.params.subdir);
-  }
-);
+app.post("/file/upload/pictures/:subdir", hasPermission("control.write"), async (req, res) => {
+  upload(req, res, PICT, req.params.subdir);
+});
 
-app.post(
-  "/file/readDir/pictures/:subdir",
-  hasPermission("control.write"),
-  async (req, res) => {
-    readDir(req, res, PICT, req.params.subdir);
-  }
-);
+app.post("/file/readDir/pictures/:subdir", hasPermission("control.write"), async (req, res) => {
+  readDir(req, res, PICT, req.params.subdir);
+});
 
 app.post(
   "/file/delete/pictures/:subdir/:filename",
@@ -2781,27 +2699,16 @@ io.on("connection", function (socket) {
         try {
           speech_to_text(
             {
-              timeout:
-                typeof payload.timeout === "undefined"
-                  ? 30000
-                  : payload.timeout,
-              threshold:
-                typeof payload.sensitivity === "undefined"
-                  ? 2000
-                  : payload.sensitivity,
+              timeout: typeof payload.timeout === "undefined" ? 30000 : payload.timeout,
+              threshold: typeof payload.sensitivity === "undefined" ? 2000 : payload.sensitivity,
               level: typeof payload.level === "undefined" ? 100 : payload.level,
               languageCode:
-                typeof payload.languageCode === "undefined"
-                  ? "ja-JP"
-                  : payload.languageCode,
+                typeof payload.languageCode === "undefined" ? "ja-JP" : payload.languageCode,
               alternativeLanguageCodes:
                 typeof payload.alternativeLanguageCodes === "undefined"
                   ? null
                   : payload.alternativeLanguageCodes,
-              recording:
-                typeof payload.recording === "undefined"
-                  ? true
-                  : payload.recording,
+              recording: typeof payload.recording === "undefined" ? true : payload.recording,
             },
             (err, data) => {
               if (callback) callback(data);
@@ -2959,22 +2866,14 @@ io.on("connection", function (socket) {
           }
         } else {
           const speechButton =
-            typeof payload.speechButton === "undefined" || !payload.speechButton
-              ? false
-              : true;
+            typeof payload.speechButton === "undefined" || !payload.speechButton ? false : true;
           if (speechButton) {
             console.log(`emit speech ${payload.answer}`);
             speech.emit("speech", payload.answer);
           }
           if (payload.name === quiz_master) return;
-          const showSum =
-            typeof payload.showSum === "undefined" || !payload.showSum
-              ? false
-              : true;
-          const noSave =
-            typeof payload.noSave === "undefined" || !payload.noSave
-              ? false
-              : true;
+          const showSum = typeof payload.showSum === "undefined" || !payload.showSum ? false : true;
+          const noSave = typeof payload.noSave === "undefined" || !payload.noSave ? false : true;
           if (USE_DB) {
             if (showSum) {
               const quizId = payload.quizId;
@@ -3010,8 +2909,7 @@ io.on("connection", function (socket) {
             const p = { ...payload };
             delete p.question;
             delete p.quizId;
-            robotData.quizAnswers[quizId][payload.question][payload.clientId] =
-              p;
+            robotData.quizAnswers[quizId][payload.question][payload.clientId] = p;
             if (!noSave) writeRobotData();
           }
           Object.keys(quiz_masters).forEach(key => {
@@ -3036,10 +2934,7 @@ io.on("connection", function (socket) {
         try {
           quiz_button(
             {
-              timeout:
-                typeof payload.timeout === "undefined"
-                  ? 30000
-                  : payload.timeout,
+              timeout: typeof payload.timeout === "undefined" ? 30000 : payload.timeout,
             },
             (err, data) => {
               if (callback) callback(data);
@@ -3101,9 +2996,7 @@ const startServer = function () {
       }
     );
   }
-  server.listen(config.port, () =>
-    console.log(`robot-server listening on port ${config.port}!`)
-  );
+  server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`));
   return {};
 };
 
