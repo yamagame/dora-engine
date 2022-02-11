@@ -2458,6 +2458,10 @@ app.post("/file/readDir/pictures/:subdir", hasPermission("control.write"), async
   readDir(req, res, PICT, req.params.subdir);
 });
 
+app.post("/file/list/pictures/:subdir", hasPermission("control.write"), async (req, res) => {
+  readDir(req, res, PICT, req.params.subdir);
+});
+
 app.post(
   "/file/delete/pictures/:subdir/:filename",
   hasPermission("control.write"),
@@ -3109,7 +3113,7 @@ const ioClient = require("socket.io-client");
 const localSocket = ioClient(`http://localhost:${config.port}`);
 
 localSocket.on("connect", () => {
-  console.log("connected");
+  console.log("localSocket connected");
 });
 
 const checkScenarioFile = (name, filename, callback) => {

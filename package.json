@@ -1,6 +1,6 @@
 {
   "name": "dora-engine",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "index.js",
   "dependencies": {
@@ -36,7 +36,8 @@
     "ps-tree": "^1.1.0",
     "pug": "^3.0.2",
     "sequelize": "^5.16.0",
-    "socket.io": "^2.0.4",
+    "socket.io": "^4.4.1",
+    "socket.io-client": "^4.4.1",
     "sqlite3": "^4.0.0",
     "wav": "^1.0.2"
   },
@@ -47,7 +48,7 @@
     "raspi-soft-pwm": "^6.0.2"
   },
   "devDependencies": {
-    "mocha": "^8.3.2"
+    "jest": "^27.5.1"
   },
   "scripts": {
     "start": "SPEECH=off MACINTOSH=on node robot-server.js",
