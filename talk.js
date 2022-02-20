@@ -41,7 +41,7 @@ function Talk() {
     const name = params.name;
     const conts =
       ["default", "", null].indexOf(languageCode) >= 0
-        ? words.split(/\n|,|、|。|@|＠|？|\s|\?/g)
+        ? words.split(/\n|、|。|@|＠|？|\?/g)
         : [words];
     const playone = () => {
       if (conts.length <= 0 || this.playing === false) {
