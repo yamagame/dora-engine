@@ -37,7 +37,6 @@ function Talk() {
     const ssmlGender = params.ssmlGender;
     const speakingRate = params.speakingRate;
     const pitch = params.pitch;
-    const voiceId = params.voiceId;
     const name = params.name;
     const conts =
       ["default", "", null].indexOf(languageCode) >= 0
@@ -87,27 +86,16 @@ function Talk() {
               playone();
             });
           } else {
-            if (voice == "marisa") {
-              startCallback();
-              this._playone = spawn(path.join(__dirname, "talk-mac-Otoya.sh"), [
-                `-r`,
-                speed * macvoice_speedrate,
-                `　${text}`,
-              ]);
-              this._playone.on("close", function (code) {
-                playone();
-              });
-            } else {
-              startCallback();
-              this._playone = spawn(path.join(__dirname, "talk-mac-Kyoko.sh"), [
-                `-r`,
-                speed * macvoice_speedrate,
-                `　${text}`,
-              ]);
-              this._playone.on("close", function (code) {
-                playone();
-              });
-            }
+            startCallback();
+            this._playone = spawn(path.join(__dirname, "talk-mac.sh"), [
+              `-r`,
+              speed * macvoice_speedrate,
+              `　${text}`,
+              voice === "reimu" ? "" : voice || "",
+            ]);
+            this._playone.on("close", function (code) {
+              playone();
+            });
           }
         } else {
           if (languageCode === "open-jTalk") {
@@ -157,7 +145,6 @@ function Talk() {
         if (ssmlGender) params.ssmlGender = ssmlGender;
         if (speakingRate !== null) params.speakingRate = speakingRate;
         if (pitch !== null) params.pitch = pitch;
-        if (voiceId !== null) params.voiceId = voiceId;
         if (name) params.name = name;
         this._playone = `http://localhost:${config.port}/google`;
         //音声データのダウンロードのみ
