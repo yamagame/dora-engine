@@ -90,7 +90,7 @@ function Talk() {
             this._playone = spawn(path.join(__dirname, "talk-mac.sh"), [
               `-r`,
               speed * macvoice_speedrate,
-              `　${text}`,
+              text,
               voice === "reimu" ? "" : voice || "",
             ]);
             this._playone.on("close", function (code) {
