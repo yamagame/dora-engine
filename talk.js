@@ -1,7 +1,7 @@
 const EventEmitter = require("events");
 const spawn = require("child_process").spawn;
 const path = require("path");
-const macvoice_speedrate = 180 / 100;
+const macvoice_speedrate = 210 / 100;
 const config = require("./config");
 const request = require("request");
 const { localhostToken } = require("./accessCheck");
