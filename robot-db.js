@@ -1,188 +1,212 @@
-const RobotDB = function(databasePath, options, callback) {
-  const Sequelize = require('sequelize');
+const RobotDB = function (databasePath, options, callback) {
+  const Sequelize = require("sequelize");
   const sequelize = new Sequelize(`sqlite:${databasePath}`, options);
   const Op = Sequelize.Op;
 
   const updateQUE = [];
   let updating = false;
 
-  const Quiz = sequelize.define('quiz', {
-    quizId: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    startTime: {
-      type: Sequelize.DATE,
-      allowNull: false,
-    },
-    name: {
-      type: Sequelize.STRING,
-    },
-  }, {
-    indexes: [
-      {
-        fields: ['quizId'],
+  const Quiz = sequelize.define(
+    "quiz",
+    {
+      quizId: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
-    ],
-  });
+      startTime: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+      name: {
+        type: Sequelize.STRING,
+      },
+    },
+    {
+      indexes: [
+        {
+          fields: ["quizId"],
+        },
+      ],
+    }
+  );
 
-  const QuizItem = sequelize.define('quizItem', {
-    quizId: {
-      type: Sequelize.INTEGER,
-      references: {
-        model: Quiz,
-        key: 'id',
+  const QuizItem = sequelize.define(
+    "quizItem",
+    {
+      quizId: {
+        type: Sequelize.INTEGER,
+        references: {
+          model: Quiz,
+          key: "id",
+        },
+        allowNull: false,
       },
-      allowNull: false,
-    },
-    order: {
-      type: Sequelize.INTEGER,
-    },
-    title: {
-      type: Sequelize.TEXT,
-      allowNull: false,
-    },
-    choices: {
-      type: Sequelize.JSON,
-    },
-    answers: {
-      type: Sequelize.JSON,
-    },
-  }, {
-    indexes: [
-      {
-        fields: ['quizId'],
+      order: {
+        type: Sequelize.INTEGER,
       },
-    ],
-  });
+      title: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      choices: {
+        type: Sequelize.JSON,
+      },
+      answers: {
+        type: Sequelize.JSON,
+      },
+    },
+    {
+      indexes: [
+        {
+          fields: ["quizId"],
+        },
+      ],
+    }
+  );
 
-  const Answer = sequelize.define('answer', {
-    quizItemId: {
-      type: Sequelize.INTEGER,
-      references: {
-        model: QuizItem,
-        key: 'id',
+  const Answer = sequelize.define(
+    "answer",
+    {
+      quizItemId: {
+        type: Sequelize.INTEGER,
+        references: {
+          model: QuizItem,
+          key: "id",
+        },
+        allowNull: false,
       },
-      allowNull: false,
-    },
-    username: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    clientId: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    answer: {
-      type: Sequelize.TEXT,
-      allowNull: false,
-    },
-    time: {
-      type: Sequelize.DATE,
-      allowNull: false,
-    },
-  }, {
-    indexes: [
-      {
-        fields: ['quizItemId'],
+      username: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
-    ],
-  });
+      clientId: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      answer: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      time: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+    },
+    {
+      indexes: [
+        {
+          fields: ["quizItemId"],
+        },
+      ],
+    }
+  );
 
-  const Attendance = sequelize.define('attendance', {
-    clientId: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    username: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    time: {
-      type: Sequelize.DATE,
-      allowNull: false,
-    },
-  }, {
-    indexes: [
-      {
-        fields: ['time'],
+  const Attendance = sequelize.define(
+    "attendance",
+    {
+      clientId: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
-    ],
-  });
+      username: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      time: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+    },
+    {
+      indexes: [
+        {
+          fields: ["time"],
+        },
+      ],
+    }
+  );
 
-  const User = sequelize.define('user', {
-    username: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    kananame: {
-      type: Sequelize.STRING,
-    },
-    password: {
-      type: Sequelize.TEXT,
-    },
-    role: {
-      type: Sequelize.STRING,
-    },
-    idnumber: {
-      type: Sequelize.STRING,
-    },
-    info: {
-      type: Sequelize.JSON,
-    },
-  }, {
-    indexes: [
-      {
-        fields: ['username'],
+  const User = sequelize.define(
+    "user",
+    {
+      username: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
-    ],
-  });
+      kananame: {
+        type: Sequelize.STRING,
+      },
+      password: {
+        type: Sequelize.TEXT,
+      },
+      role: {
+        type: Sequelize.STRING,
+      },
+      idnumber: {
+        type: Sequelize.STRING,
+      },
+      info: {
+        type: Sequelize.JSON,
+      },
+    },
+    {
+      indexes: [
+        {
+          fields: ["username"],
+        },
+      ],
+    }
+  );
 
-  const Bar = sequelize.define('bar', {
-    uuid: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-      unique: true,
-    },
-    x: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    y: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    width: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    height: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    rgba: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    type: {
-      type: Sequelize.STRING,
-    },
-    title: {
-      type: Sequelize.TEXT,
-    },
-    text: {
-      type: Sequelize.TEXT,
-    },
-    info: {
-      type: Sequelize.JSON,
-    },
-  }, {
-    indexes: [
-      {
-        fields: ['uuid'],
+  const Bar = sequelize.define(
+    "bar",
+    {
+      uuid: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        unique: true,
       },
-    ],
-  });
+      x: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      y: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      width: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      height: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      rgba: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      type: {
+        type: Sequelize.STRING,
+      },
+      title: {
+        type: Sequelize.TEXT,
+      },
+      text: {
+        type: Sequelize.TEXT,
+      },
+      info: {
+        type: Sequelize.JSON,
+      },
+    },
+    {
+      indexes: [
+        {
+          fields: ["uuid"],
+        },
+      ],
+    }
+  );
 
   async function findAnswers({ quizId, startTime }) {
     const quiz = await Quiz.findOne({
@@ -195,44 +219,59 @@ const RobotDB = function(databasePath, options, callback) {
       where: {
         quizId: quiz.id,
       },
-      attributes: ['answers', 'choices', 'title', 'quizId', 'id'],
+      attributes: ["answers", "choices", "title", "quizId", "id"],
     });
     const items = {};
     let r = [];
-    for (var i=0;i<quizItems.length;i++) {
+    for (var i = 0; i < quizItems.length; i++) {
       const v = await Answer.findAll({
         where: {
           quizItemId: quizItems[i].id,
         },
-        attributes: ['time', 'answer', 'clientId', 'username', 'quizItemId', 'id'],
+        attributes: [
+          "time",
+          "answer",
+          "clientId",
+          "username",
+          "quizItemId",
+          "id",
+        ],
       });
       items[quizItems[i].id] = quizItems[i];
       r = r.concat(v);
     }
     const answers = {};
-    r.forEach( v => {
+    r.forEach(v => {
       const a = {
         name: v.username,
         answer: v.answer,
         time: v.time,
         quizStartTime: startTime,
-      }
+      };
       const title = items[v.quizItemId].title;
-      if (typeof answers[title] === 'undefined') answers[title] = {}
+      if (typeof answers[title] === "undefined") answers[title] = {};
       answers[title][v.clientId] = a;
-    })
+    });
     const question = {};
-    quizItems.forEach( v => {
+    quizItems.forEach(v => {
       const a = {
-        choices: (v.choices) ? v.choices : [],
-        answers: (v.answers) ? v.answers : [],
-      }
+        choices: v.choices ? v.choices : [],
+        answers: v.answers ? v.answers : [],
+      };
       question[v.title] = a;
     });
-    return { answers, question: { quiz: question }, };
+    return { answers, question: { quiz: question } };
   }
 
-  async function updateAnswer({ quizId, quizTitle, username, clientId, answerString, time, startTime }) {
+  async function updateAnswer({
+    quizId,
+    quizTitle,
+    username,
+    clientId,
+    answerString,
+    time,
+    startTime,
+  }) {
     const quiz = await Quiz.findOrCreate({
       where: {
         quizId,
@@ -283,7 +322,15 @@ const RobotDB = function(databasePath, options, callback) {
     await attend[0].save();
   }
 
-  async function updateQuiz({ quizId, startTime, quizName = '', quizOrder, quizTitle, choices = [], answers = [] }) {
+  async function updateQuiz({
+    quizId,
+    startTime,
+    quizName = "",
+    quizOrder,
+    quizTitle,
+    choices = [],
+    answers = [],
+  }) {
     const quiz = await Quiz.findOrCreate({
       where: {
         quizId,
@@ -330,38 +377,42 @@ const RobotDB = function(databasePath, options, callback) {
       }
       updating = true;
       const d = updateQUE.shift();
-      if (d.type === 'updateAnswer') {
-        updateAnswer(d.data).then(() => {
-          update();
-        }).catch( err => {
-          update();
-        });
-      } else
-      if (d.type === 'updateQuiz') {
-        updateQuiz(d.data).then(() => {
-          update();
-        }).catch( err => {
-          update();
-        });
+      if (d.type === "updateAnswer") {
+        updateAnswer(d.data)
+          .then(() => {
+            update();
+          })
+          .catch(err => {
+            update();
+          });
+      } else if (d.type === "updateQuiz") {
+        updateQuiz(d.data)
+          .then(() => {
+            update();
+          })
+          .catch(err => {
+            update();
+          });
       } else {
         update();
       }
-    }
+    };
     if (updating) return;
     update();
   }
 
   async function startTimeList({ quizId }) {
     const quiz = await Quiz.findAll({
-      where: { quizId, },
-      order: [
-        ['startTime'],
-      ],
-      attributes: ['startTime'],
+      where: { quizId },
+      order: [["startTime"]],
+      attributes: ["startTime"],
     });
     const startTimes = [];
-    for (var i=0;i<quiz.length;i++) {
-      const retval = await this.findAnswers({ quizId, startTime: quiz[i].startTime });
+    for (var i = 0; i < quiz.length; i++) {
+      const retval = await this.findAnswers({
+        quizId,
+        startTime: quiz[i].startTime,
+      });
       if (retval && retval.answers && Object.keys(retval.answers).length > 0) {
         startTimes.push(quiz[i].startTime);
       }
@@ -371,43 +422,41 @@ const RobotDB = function(databasePath, options, callback) {
 
   async function quizIdList() {
     const t = await Quiz.findAll({
-      attributes: ['quizId'],
-      order: [
-        ['startTime'],
-      ],
-    }).map( v => v.quizId );
-    const r = {}
-    t.forEach( v => {
+      attributes: ["quizId"],
+      order: [["startTime"]],
+    }).map(v => v.quizId);
+    const r = {};
+    t.forEach(v => {
       r[v] = true;
     });
-    return { quizIds: Object.keys(r), };
+    return { quizIds: Object.keys(r) };
   }
 
   async function loadAttendance() {
     const quizAnswers = {
       q: {},
     };
-    await Attendance.findAll().map( v => {
+    await Attendance.findAll().map(v => {
       if (!quizAnswers.q[v.time]) quizAnswers.q[v.time] = {};
       quizAnswers.q[v.time][v.clientId] = {
         time: v.time,
         name: v.username,
-      }
+      };
     });
-    console.log(JSON.stringify(quizAnswers, null, '  '));
+    console.log(JSON.stringify(quizAnswers, null, "  "));
     return {
       quizAnswers,
     };
   }
 
   async function loadBars() {
-    return await Bar.findAll()
+    return await Bar.findAll();
   }
 
   async function createBar(bar, defaultBarData) {
     const barItem = await Bar.create({
       ...defaultBarData,
-      ...bar
+      ...bar,
     });
     return barItem;
   }
@@ -420,11 +469,11 @@ const RobotDB = function(databasePath, options, callback) {
         },
         defaults: defaultBarData,
       });
-      Object.keys(defaultBarData).forEach( key => {
-        if (typeof bar[key] !== 'undefined') {
+      Object.keys(defaultBarData).forEach(key => {
+        if (typeof bar[key] !== "undefined") {
           barItem[0][key] = bar[key];
         }
-      })
+      });
       await barItem[0].save();
     }
   }
@@ -442,7 +491,7 @@ const RobotDB = function(databasePath, options, callback) {
   async function findBars(where) {
     return await Bar.findAll({
       where,
-    })
+    });
   }
 
   t = {
@@ -465,95 +514,112 @@ const RobotDB = function(databasePath, options, callback) {
     deleteBar,
     findBars,
     Op,
-  }
+  };
 
-  const a = [
-    Quiz, QuizItem, Answer, Attendance, User, Bar,
-  ];
-  const sync = function() {
+  const a = [Quiz, QuizItem, Answer, Attendance, User, Bar];
+  const sync = function () {
     if (a.length <= 0) {
       callback(null, t);
       return;
     }
     const b = a.shift();
-    b.sync().then(() => {
-      sync();
-    }).catch(err => {
-      callback(err, null);
-    });
-  }
+    b.sync()
+      .then(() => {
+        sync();
+      })
+      .catch(err => {
+        callback(err, null);
+      });
+  };
   sync();
 
   return t;
-}
+};
 
 module.exports = RobotDB;
 
 if (require.main === module) {
-  const fs = require('fs');
-  const path = require('path');
-  const config = require('./config');
-  const workFolder = 'DoraEngine';  //for macOS(development)
-  const HOME = (process.platform === 'darwin') ? path.join(process.env.HOME, 'Documents', workFolder) : process.env.HOME;
-  const robotDataPath = path.join(HOME, 'robot-data.json');
+  const fs = require("fs");
+  const path = require("path");
+  const config = require("./config");
+  const workFolder = "DoraEngine"; //for macOS(development)
+  const HOME =
+    process.platform === "darwin"
+      ? path.join(process.env.HOME, "Documents", workFolder)
+      : process.env.HOME;
+  const robotDataPath = path.join(HOME, "robot-data.json");
 
   const robotJson = fs.readFileSync(robotDataPath);
   const robotData = JSON.parse(robotJson);
 
-  const sqeuelize = RobotDB(`${HOME}/robot-server.db`, {
-    operatorsAliases: false,
-  }, async (err, db) => {
+  const sqeuelize = RobotDB(
+    `${HOME}/robot-server.db`,
+    {
+      operatorsAliases: false,
+    },
+    async (err, db) => {
+      const q = {};
 
-    const q = {};
-
-    //問題をデータベースにコピー
-    Object.keys(robotData.quizList).forEach( quizId => {
-      const { quiz } = robotData.quizList[quizId];
-      Object.keys(quiz).forEach( (quizTitle, i) => {
-        const quizItem = quiz[quizTitle];
-        if (typeof q[quizId] === 'undefined') q[quizId] = {};
-        q[quizId][quizTitle] = {
-          quizId: quizId,
-          quizName: quizTitle,
-          quizOrder: i,
-          quizTitle: quizTitle,
-          choices: quizItem.choices,
-          answers: quizItem.answers,
-        };
+      //問題をデータベースにコピー
+      Object.keys(robotData.quizList).forEach(quizId => {
+        const { quiz } = robotData.quizList[quizId];
+        Object.keys(quiz).forEach((quizTitle, i) => {
+          const quizItem = quiz[quizTitle];
+          if (typeof q[quizId] === "undefined") q[quizId] = {};
+          q[quizId][quizTitle] = {
+            quizId: quizId,
+            quizName: quizTitle,
+            quizOrder: i,
+            quizTitle: quizTitle,
+            choices: quizItem.choices,
+            answers: quizItem.answers,
+          };
+        });
       });
-    });
 
-    const a = [];
+      const a = [];
 
-    //解答をデータベースにコピー
-    Object.keys(robotData.quizAnswers).forEach( quizId => {
-      const quizItem = robotData.quizAnswers[quizId];
-      Object.keys(quizItem).forEach( quizTitle => {
-        const answers = quizItem[quizTitle];
-        Object.keys(answers).forEach( (clientId) => {
-          const answer = answers[clientId];
-          a.push({
-            quizId,
-            quizTitle,
-            username: answer.name,
-            clientId: clientId,
-            answerString: answer.answer,
-            time: answer.time,
-            startTime: answer.quizStartTime,
-            choices: (q[quizId] && q[quizId][quizTitle]) ? q[quizId][quizTitle].choices : null,
-            answers: (q[quizId] && q[quizId][quizTitle]) ? q[quizId][quizTitle].answers : null,
-            quizOrder: (q[quizId] && q[quizId][quizTitle]) ? q[quizId][quizTitle].quizOrder : null,
-            quizName: (q[quizId] && q[quizId][quizTitle]) ? q[quizId][quizTitle].quizName : null,
+      //解答をデータベースにコピー
+      Object.keys(robotData.quizAnswers).forEach(quizId => {
+        const quizItem = robotData.quizAnswers[quizId];
+        Object.keys(quizItem).forEach(quizTitle => {
+          const answers = quizItem[quizTitle];
+          Object.keys(answers).forEach(clientId => {
+            const answer = answers[clientId];
+            a.push({
+              quizId,
+              quizTitle,
+              username: answer.name,
+              clientId: clientId,
+              answerString: answer.answer,
+              time: answer.time,
+              startTime: answer.quizStartTime,
+              choices:
+                q[quizId] && q[quizId][quizTitle]
+                  ? q[quizId][quizTitle].choices
+                  : null,
+              answers:
+                q[quizId] && q[quizId][quizTitle]
+                  ? q[quizId][quizTitle].answers
+                  : null,
+              quizOrder:
+                q[quizId] && q[quizId][quizTitle]
+                  ? q[quizId][quizTitle].quizOrder
+                  : null,
+              quizName:
+                q[quizId] && q[quizId][quizTitle]
+                  ? q[quizId][quizTitle].quizName
+                  : null,
+            });
           });
         });
       });
-    });
 
-    for (var i=0;i<a.length;i++) {
-      await db.updateQuiz(a[i]);
-      await db.updateAnswer(a[i]);
-    }
-/*
+      for (var i = 0; i < a.length; i++) {
+        await db.updateQuiz(a[i]);
+        await db.updateAnswer(a[i]);
+      }
+      /*
     const list = await db.quizIdList();
     console.log(JSON.stringify(list));
 
@@ -566,5 +632,6 @@ if (require.main === module) {
     const answerAll = await db.Answer.findAll();
     // console.log(JSON.stringify(answerAll));
 */
-  });
+    }
+  );
 }

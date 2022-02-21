@@ -1,10 +1,13 @@
-const crypto = require('crypto');
-const fs = require('fs');
-const jws = require('jws');
-const config = require('./config');
+const crypto = require("crypto");
+const fs = require("fs");
+const jws = require("jws");
+const config = require("./config");
 const bcrypt = (() => {
-  try { return require('bcrypt'); }
-  catch(e) { return require('bcryptjs'); }
+  try {
+    return require("bcrypt");
+  } catch (e) {
+    return require("bcryptjs");
+  }
 })();
 
 function getCredential(path) {
@@ -21,9 +24,9 @@ const localhostIPs = config.localhostIPs;
 
 function getClientIp(req) {
   var ipAddress;
-  var forwardedIpsStr = req.headers['x-forwarded-for'];
+  var forwardedIpsStr = req.headers["x-forwarded-for"];
   if (forwardedIpsStr) {
-    var forwardedIps = forwardedIpsStr.split(',');
+    var forwardedIps = forwardedIpsStr.split(",");
     ipAddress = forwardedIps[0];
   }
   if (!ipAddress) {
@@ -37,42 +40,42 @@ function getClientIp(req) {
 const allowAddresses = [ '::1', ];
 app.use( checkIPs(allowAddresses, 'allow') );
 */
-function checkIPs(ips, mode='allow') {
+function checkIPs(ips, mode = "allow") {
   return (req, res, next) => {
     const ipaddress = getClientIp(req);
-    if (mode === 'allow') {
+    if (mode === "allow") {
       if (ips.indexOf(ipaddress) !== -1) return next();
     } else {
       if (ips.indexOf(ipaddress) === -1) return next();
     }
     console.log(`deny ipaddress ${ipaddress}`);
     res.statusCode = 401;
-    res.end('Unauthorized');
-  }
+    res.end("Unauthorized");
+  };
 }
 
-const localIPCheck = (req) => {
+const localIPCheck = req => {
   const ipaddress = getClientIp(req);
-  return (localhostIPs.indexOf(ipaddress) !== -1);
-}
+  return localhostIPs.indexOf(ipaddress) !== -1;
+};
 
 function createSignature(secretKey, callback) {
   if (!config.credentialAccessControl) {
-    return callback('');
+    return callback("");
   }
   if (privateKey) {
     const stream = jws.createSign({
-      header: { alg: 'RS256' },
+      header: { alg: "RS256" },
       privateKey,
       payload: secretKey,
-    })
-    stream.on('done', function(signature) {
+    });
+    stream.on("done", function (signature) {
       callback(signature);
-    })
-    stream.on('error', function(err) {
+    });
+    stream.on("error", function (err) {
       console.error(err);
       callback(null);
-    })
+    });
   } else {
     callback(bcrypt.hashSync(secretKey, 8));
   }
@@ -84,21 +87,21 @@ function verifySignature(secretKey, signature, callback) {
   }
   if (publicKey) {
     const stream = jws.createVerify({
-      algorithm: 'RS256',
+      algorithm: "RS256",
       publicKey,
       signature,
-    })
-    stream.on('done', function(verified, obj) {
+    });
+    stream.on("done", function (verified, obj) {
       if (verified) {
         callback(obj.payload === secretKey);
         return;
       }
       callback(false);
-    })
-    stream.on('error', function(err) {
+    });
+    stream.on("error", function (err) {
       console.error(err);
       callback(false);
-    })
+    });
   } else {
     callback(bcrypt.compareSync(secretKey, signature));
   }
@@ -107,53 +110,55 @@ function verifySignature(secretKey, signature, callback) {
 let locahostTokenCache = null;
 function localhostToken() {
   if (locahostTokenCache) return locahostTokenCache;
-  const token = (length) => {
+  const token = length => {
     const c = "ABCDEFGHIJKLMNOPQRSTUZWXYZabcdefghijklmnopqrstuvwxyz1234567890";
     const token = [];
-    for (var i=0;i<length;i++) {
-        token.push(c[Math.floor(Math.random()*c.length)]);
+    for (var i = 0; i < length; i++) {
+      token.push(c[Math.floor(Math.random() * c.length)]);
     }
     return token.join("");
-  }
+  };
   locahostTokenCache = token(53);
   return locahostTokenCache;
 }
 
 function testPermission(scope, permission) {
-  if (permission === '') return true;
+  if (permission === "") return true;
   if (Array.isArray(permission)) {
-    if (permission.some( p => !testPermission(scope, p) )) return false;
+    if (permission.some(p => !testPermission(scope, p))) return false;
     return true;
   }
   if (Array.isArray(scope)) {
     if (scope.length === 0) return false;
-    if (scope.some( s => testPermission(s, permission) )) return true;
+    if (scope.some(s => testPermission(s, permission))) return true;
     return false;
   }
-  if (scope === '*' || scope === permission) return true;
-  if (scope === 'read' || scope === '*.read') return /^((.+)\.)?read$/.test(permission);
-  if (scope === 'write' || scope === '*.write') return /^((.+)\.)?write$/.test(permission);
+  if (scope === "*" || scope === permission) return true;
+  if (scope === "read" || scope === "*.read")
+    return /^((.+)\.)?read$/.test(permission);
+  if (scope === "write" || scope === "*.write")
+    return /^((.+)\.)?write$/.test(permission);
   return false;
 }
 
 function hasPermission(permission) {
-  return (req, res, next ) => {
+  return (req, res, next) => {
     if (!config.credentialAccessControl) {
       return next();
     }
     if (config.allowLocalhostAccess && localIPCheck(req)) {
       return next();
     }
-    const hasLocalhostToken = (req) => {
-      if ('body' in req && 'localhostToken' in req.body) {
-        return (req.body.localhostToken === localhostToken());
+    const hasLocalhostToken = req => {
+      if ("body" in req && "localhostToken" in req.body) {
+        return req.body.localhostToken === localhostToken();
       }
       return false;
-    }
+    };
     const unauthorized = () => {
       res.statusCode = 401;
-      res.end('Unauthorized');
-    }
+      res.end("Unauthorized");
+    };
     if (req.isAuthenticated()) {
       //ログインしていれば
       if (req.user.authInfo) {
@@ -161,7 +166,7 @@ function hasPermission(permission) {
           return next();
         }
       }
-      console.log('not login');
+      console.log("not login");
       unauthorized();
     } else {
       //ログインしていなければ
@@ -170,71 +175,73 @@ function hasPermission(permission) {
         if (testPermission(config.localhostPermissions, permission)) {
           return next();
         }
-        console.log('not localhost');
+        console.log("not localhost");
         unauthorized();
       } else {
         //publicKeyで検証
-        if ('body' in req && 'user_id' in req.body && 'signature' in req.body) {
-          verifySignature(req.body.user_id, req.body.signature, (verified) => {
+        if ("body" in req && "user_id" in req.body && "signature" in req.body) {
+          verifySignature(req.body.user_id, req.body.signature, verified => {
             if (verified) {
-              if (testPermission('*', permission)) {
+              if (testPermission("*", permission)) {
                 return next();
               }
             }
-            console.log('invalid signature');
+            console.log("invalid signature");
             unauthorized();
-          })
+          });
         } else {
-          console.log('not has signature');
+          console.log("not has signature");
           unauthorized();
         }
       }
     }
-  }
+  };
 }
 
-function checkPermission(payload={}, permission, callback) {
+function checkPermission(payload = {}, permission, callback) {
   if (!config.credentialAccessControl) {
     return callback(true);
   }
-  const { user_id, signature, } = payload;
-  const hasLocalhostToken = (payload) => {
-    if ('localhostToken' in payload) {
-      return (payload.localhostToken === localhostToken());
+  const { user_id, signature } = payload;
+  const hasLocalhostToken = payload => {
+    if ("localhostToken" in payload) {
+      return payload.localhostToken === localhostToken();
     }
     return false;
-  }
+  };
   const authSuccess = () => {
     let user = null;
-    if (user_id && config.adminAuth.some( n => {
-      user = n;
-      return n.username === user_id;
-    })) {
+    if (
+      user_id &&
+      config.adminAuth.some(n => {
+        user = n;
+        return n.username === user_id;
+      })
+    ) {
       callback(testPermission(user.permissions, permission));
     } else {
       callback(testPermission(config.defualtUserPermissions, permission));
     }
-  }
+  };
   if (hasLocalhostToken(payload)) {
-    if (testPermission('*', permission)) {
+    if (testPermission("*", permission)) {
       callback(true);
       return;
     }
   }
   try {
-    if (typeof user_id === 'undefined' || typeof signature === 'undefined') {
+    if (typeof user_id === "undefined" || typeof signature === "undefined") {
       callback(false);
       return;
     }
-    verifySignature(user_id, signature, (verified) => {
+    verifySignature(user_id, signature, verified => {
       if (verified) {
         return authSuccess();
       }
       callback(false);
     });
     return;
-  } catch(err) {
-  }
+  } catch (err) {}
   callback(false);
 }
 
@@ -248,12 +255,12 @@ module.exports = {
   testPermission,
   hasPermission,
   checkPermission,
-}
+};
 
 if (require.main === module) {
-  createSignature('admin', (signature) => {
-    verifySignature('admin', signature, (verified) => {
+  createSignature("admin", signature => {
+    verifySignature("admin", signature, verified => {
       console.log(`verified ${verified}`);
-    })
+    });
   });
 }
