@@ -41,7 +41,9 @@ function Talk() {
     const name = params.name;
     const conts =
       ["default", "", null].indexOf(languageCode) >= 0
-        ? words.split(/\n|、|。|@|＠|？|\?/g)
+        ? this.macvoice
+          ? words.split(/\n|。|@|＠|？|\?/g)
+          : words.split(/\n|,|、|。|@|＠|？|\s|\?/g)
         : [words];
     const playone = () => {
       if (conts.length <= 0 || this.playing === false) {
@@ -109,7 +111,19 @@ function Talk() {
               playone();
             });
           } else {
-            if (voice == "marisa") {
+            if (voice == "reimu") {
+              startCallback();
+              this._playone = spawn(path.join(__dirname, "talk-f1.sh"), [
+                `-s`,
+                speed,
+                `-g`,
+                volume,
+                `　${text}`,
+              ]);
+              this._playone.on("close", function (code) {
+                playone();
+              });
+            } else if (voice == "marisa") {
               startCallback();
               this._playone = spawn(path.join(__dirname, "talk-f2.sh"), [
                 `-s`,
@@ -123,12 +137,13 @@ function Talk() {
               });
             } else {
               startCallback();
-              this._playone = spawn(path.join(__dirname, "talk-f1.sh"), [
+              this._playone = spawn(path.join(__dirname, "talk.sh"), [
                 `-s`,
                 speed,
                 `-g`,
                 volume,
-                `　${text}`,
+                `${text}`,
+                voice === "reimu" ? "" : voice || "",
               ]);
               this._playone.on("close", function (code) {
                 playone();
