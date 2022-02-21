@@ -73,6 +73,7 @@ function Talk() {
         );
       } else if (
         languageCode === "default" ||
+        languageCode === "normal" ||
         //|| languageCode === 'open-jTalk'
         languageCode === null
       ) {
