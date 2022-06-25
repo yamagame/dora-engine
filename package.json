@@ -22,7 +22,7 @@
     "express-session": "^1.15.6",
     "googleapis": "^73.0.0",
     "ip": "^1.1.5",
-    "jsdom": "^12.2.0",
+    "jsdom": "^16.5.0",
     "jws": "^3.1.5",
     "mecab-async": "^0.1.2",
     "memorystore": "^1.6.0",
