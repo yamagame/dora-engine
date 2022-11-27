@@ -3,9 +3,13 @@ const spawn = require("child_process").spawn;
 const path = require("path");
 const macvoice_speedrate = 210 / 100;
 const config = require("./config");
-const request = require("request");
+const axios = require("axios");
 const { localhostToken } = require("./accessCheck");
 const utils = require("./utils");
+
+const headers = {
+  "Content-Type": 'application/json',
+}
 
 function Talk() {
   var t = new EventEmitter();
@@ -58,25 +62,26 @@ function Talk() {
       }
       console.log(text);
       if ("host" in params) {
+        // 発話の中継処理
         const p = { ...params };
         delete p.host;
         this._playone = `http://${params.host}:${config.port}/text-to-speech`;
-        request(
-          {
-            uri: this._playone,
-            method: "POST",
-            json: p,
-          },
-          function (error, response, body) {
+        axios.post(this._playone, {
+          ...p,
+        }, { headers })
+          .then(function (response) {
             playone();
-          }
-        );
+          })
+          .catch(function (error) {
+            console.error(error)
+          })
       } else if (
         languageCode === "default" ||
         languageCode === "normal" ||
         //|| languageCode === 'open-jTalk'
         languageCode === null
       ) {
+        // 通常モードの発話処理
         if (this.dummy) {
           playone();
         } else if (this.macvoice) {
@@ -153,6 +158,7 @@ function Talk() {
           }
         }
       } else if (languageCode) {
+        // 言語指定の発話処理(google-router.jsへリクエスト)
         const params = {
           text,
           localhostToken: localhostToken(),
@@ -165,28 +171,27 @@ function Talk() {
         if (voiceId !== null) params.voiceId = voiceId;
         if (name) params.name = name;
         this._playone = `http://localhost:${config.port}/google`;
+        const playSpeech = () => {
+          startCallback();
+          //音声の再生
+          axios.post(`${this._playone}/text-to-speech`, {
+            ...params,
+          }, { headers }).then(function (response) {
+            playone();
+          }).catch(function (error) {
+            console.error(error)
+          })
+        }
         //音声データのダウンロードのみ
-        request(
-          {
-            uri: `${this._playone}/init-text-to-speech`,
-            method: "POST",
-            json: params,
-          },
-          (error, response, body) => {
-            startCallback();
-            //音声の再生
-            request(
-              {
-                uri: `${this._playone}/text-to-speech`,
-                method: "POST",
-                json: params,
-              },
-              (error, response, body) => {
-                playone();
-              }
-            );
-          }
-        );
+        axios.post(`${this._playone}/init-text-to-speech`, {
+          ...params,
+        }, { headers })
+          .then(function (response) {
+            playSpeech()
+          })
+          .catch(function (error) {
+            console.error(error)
+          })
       } else {
         playone();
       }
@@ -256,23 +261,20 @@ function Talk() {
     this.playing = false;
     if (this._playone) {
       if (typeof this._playone === "string") {
-        request(
-          {
-            uri: `${this._playone}/text-to-speech`,
-            method: "POST",
-            json: {
-              action: "stop",
-              localhostToken: localhostToken(),
-            },
-          },
-          function (error, response, body) {
+        axios.post(`${this._playone}/text-to-speech`, {
+          action: "stop",
+          localhostToken: localhostToken(),
+        }, { headers })
+          .then(function (response) {
             if (callback) callback();
-          }
-        );
+          })
+          .catch(function (error) {
+            console.error(error)
+          });
         this._playone = null;
         return;
       } else {
-        utils.kill(this._playone.pid, "SIGTERM", function () {});
+        utils.kill(this._playone.pid, "SIGTERM", function () { });
       }
     }
     this._playone = null;
