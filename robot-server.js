@@ -5,8 +5,7 @@ const express = require("express");
 const router = require("express").Router();
 const cookieParser = require("cookie-parser");
 const axios = require("axios");
-const speech = (() =>
-  process.env["SPEECH"] === "off" ? new EventEmitter() : require("./speech"))();
+const speech = require("./speech");
 const talk = require("./talk");
 const config = require("./config");
 const APIKEY = config.docomo.api_key;
@@ -1506,10 +1505,10 @@ async function quizPacket(payload) {
   }
   try {
     payload.quizMode = robotData.quizPayload.others.quizMode;
-  } catch (err) {}
+  } catch (err) { }
   try {
     payload.closeButton = robotData.quizPayload.others.closeButton;
-  } catch (err) {}
+  } catch (err) { }
   return payload;
 }
 
@@ -1691,7 +1690,7 @@ const postCommand = async (req, res, credential) => {
           try {
             const { area } = JSON.parse(imageMap);
             storeQuizPayload({ area });
-          } catch (err) {}
+          } catch (err) { }
         } else {
           console.log(`invalid filename ${filename}`);
         }
@@ -1755,7 +1754,7 @@ const postCommand = async (req, res, credential) => {
         servoAction("led-off");
         last_led_action = "led-off";
         if (playerSocket) {
-          playerSocket.emit("movie", { action: "cancel" }, data => {});
+          playerSocket.emit("movie", { action: "cancel" }, data => { });
         }
       });
     }
@@ -1889,8 +1888,8 @@ const postCommand = async (req, res, credential) => {
         "filename" in req.body && req.body.filename !== null
           ? req.body.filename
           : "filename" in req.params
-          ? req.params.filename
-          : null;
+            ? req.params.filename
+            : null;
       const base = path.join(HOME, "Documents");
       mkdirp(path.join(base, username, ".cache"), async function (err) {
         if (uri) {
@@ -3148,7 +3147,7 @@ function startSenario(username, filename) {
             },
           },
           {
-            send: () => {},
+            send: () => { },
           },
           { user_id: username, signature }
         );

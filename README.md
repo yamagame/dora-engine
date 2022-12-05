@@ -214,7 +214,35 @@ $ ./talk-f1.sh こんにちは
 
 再起動後、デフォルト音声合成が AquesTalk Pi になります。
 
-## Google Speech API の準備
+## 音声認識
+
+[Google Speech API](https://cloud.google.com/speech-to-text?hl=ja) と　[whisper.cpp](https://github.com/ggerganov/whisper.cpp) が選択できます。
+
+
+## 音声認識 whisper.cpp の場合
+
+whisper.cpp の使用方法は whisper.cpp に従いますので、whisper.cpp の README.md を参照してください。
+
+/work ディレクトリに https://github.com/ggerganov/whisper.cpp を clone します。
+/work/whisper.cpp ディレクトリで以下のコマンドを実行して、stream バイナリを作成します。
+
+```bash
+$ make stream
+```
+
+音声認識のモデルデータを以下のコマンドでダウンロードします。
+
+```bash
+$ bash ./models/download-ggml-model.sh base.en
+```
+
+環境変数 SPEECH に whisper を設定して音声認識を有効化します。[robot-server.sh](./robot-server.sh) の以下の行を書き換えます。
+
+```
+export SPEECH=whisper
+```
+
+## 音声認識 Google Speech API の場合
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
 

@@ -52,6 +52,7 @@
   },
   "scripts": {
     "start": "SPEECH=off MACINTOSH=on node robot-server.js",
+    "whisper": "SPEECH=whisper WHISPER_PATH=./whisper.sh MACINTOSH=on node robot-server.js",
     "robot": "node robot-server.js",
     "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node robot-server.js",

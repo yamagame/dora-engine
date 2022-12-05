@@ -26,3 +26,6 @@ chatData/*
 private
 robot-server-rpi.sh
 robot-defaults.json
+
+/work/*
+!/work/.gitkeep
