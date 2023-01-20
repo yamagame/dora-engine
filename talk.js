@@ -47,7 +47,7 @@ function Talk() {
       ["default", "", null].indexOf(languageCode) >= 0
         ? this.macvoice
           ? words.split(/\n|。|@|＠|？|\?/g)
-          : words.split(/\n|,|、|。|@|＠|？|\s|\?/g)
+          : words.split(/\n|,|。|@|＠|？|\s|\?/g)
         : [words];
     const playone = () => {
       if (conts.length <= 0 || this.playing === false) {
