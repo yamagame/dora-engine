@@ -5,3 +5,23 @@ content-type: application/json
 {
   "type": "cancel"
 }
+
+###
+
+# speech-to-textをシミュレート
+POST http://localhost:3090/debug-speech HTTP/1.1
+content-type: application/json
+
+{
+  "payload": "宇宙"
+}
+
+###
+
+# speech-to-textをシミュレート
+POST http://localhost:3090/debug-speech HTTP/1.1
+content-type: application/json
+
+{
+  "payload": "ファイナルアンサー"
+}
