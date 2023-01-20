@@ -361,12 +361,12 @@ dora.request = async function (command, options, params) {
     if (options.restype) opt.restype = options.restype;
   }
   params.localhostToken = localhostToken();
-  const body = await axios({
+  const rparams = {
     url: `http://localhost:${config.port}/${command}`,
     method: opt.method,
     data: params,
-  });
-  console.log(body);
+  }
+  const body = await axios(rparams);
   return body;
 };
 
