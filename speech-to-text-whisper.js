@@ -70,12 +70,20 @@ function Speech() {
       }
       startRecording = true
     }
+    if (childProcess) {
+      console.log("<<start>>")
+      childProcess.stdin.write("start\n")
+    }
     commingText = "";
   })
 
   // 音声解析終了
   t.on("stopRecording", function () {
     console.log("stopRecording");
+    if (childProcess) {
+      console.log("<<stop>>")
+      childProcess.stdin.write("stop\n")
+    }
   });
 
   //解析用ストリームデータを送信開始
