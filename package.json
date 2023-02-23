@@ -35,7 +35,7 @@
     "ping": "^0.2.2",
     "ps-tree": "^1.1.0",
     "pug": "^3.0.2",
-    "sequelize": "^5.16.0",
+    "sequelize": "^6.28.2",
     "socket.io": "^4.4.1",
     "socket.io-client": "^4.4.1",
     "sqlite3": "^4.0.0",
