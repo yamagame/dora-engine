@@ -1,5 +1,4 @@
 {
-  "exclude": ["build/**/*", "node_modules"],
   "compilerOptions": {
     "composite": true,
     "module": "ESNext",
