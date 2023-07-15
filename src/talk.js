@@ -11,6 +11,8 @@ const headers = {
   "Content-Type": 'application/json',
 }
 
+const basedir = path.join(__dirname, "..")
+
 function Talk() {
   var t = new EventEmitter();
   t.playQue = [];
@@ -88,7 +90,7 @@ function Talk() {
           if (languageCode === "open-jTalk") {
             startCallback();
             this._playone = spawn(
-              path.join(__dirname, "talk-open-jTalk-mac.sh"),
+              path.join(basedir, "talk-open-jTalk-mac.sh"),
               [voice === "reimu" ? "mei_normal" : voice, `${text}`]
             );
             this._playone.on("close", function (code) {
@@ -96,7 +98,7 @@ function Talk() {
             });
           } else {
             startCallback();
-            this._playone = spawn(path.join(__dirname, "talk-mac.sh"), [
+            this._playone = spawn(path.join(basedir, "talk-mac.sh"), [
               `-r`,
               speed * macvoice_speedrate,
               text,
@@ -110,7 +112,7 @@ function Talk() {
           if (languageCode === "open-jTalk") {
             startCallback();
             this._playone = spawn(
-              path.join(__dirname, "talk-open-jTalk-raspi.sh"),
+              path.join(basedir, "talk-open-jTalk-raspi.sh"),
               [voice === "reimu" ? "mei_normal" : voice, `${text}`]
             );
             this._playone.on("close", function (code) {
@@ -119,7 +121,7 @@ function Talk() {
           } else {
             if (voice == "reimu") {
               startCallback();
-              this._playone = spawn(path.join(__dirname, "talk-f1.sh"), [
+              this._playone = spawn(path.join(basedir, "talk-f1.sh"), [
                 `-s`,
                 speed,
                 `-g`,
@@ -131,7 +133,7 @@ function Talk() {
               });
             } else if (voice == "marisa") {
               startCallback();
-              this._playone = spawn(path.join(__dirname, "talk-f2.sh"), [
+              this._playone = spawn(path.join(basedir, "talk-f2.sh"), [
                 `-s`,
                 speed,
                 `-g`,
@@ -143,7 +145,7 @@ function Talk() {
               });
             } else {
               startCallback();
-              this._playone = spawn(path.join(__dirname, "talk.sh"), [
+              this._playone = spawn(path.join(basedir, "talk.sh"), [
                 `-s`,
                 speed,
                 `-g`,
@@ -289,4 +291,4 @@ function Talk() {
   return t;
 }
 
-module.exports = Talk();
+module.exports = Talk()

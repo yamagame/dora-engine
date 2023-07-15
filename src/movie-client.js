@@ -7,6 +7,8 @@ const config = require("./config");
 const mkdirp = require("mkdirp");
 const fs = require("fs");
 
+const basedir = path.join(__dirname, "..");
+
 const workFolder = "DoraEngine"; //for macOS(development)
 const PICT =
   process.platform === "darwin"
@@ -71,7 +73,7 @@ function MovieClient(host, callback) {
           if (!err && stats.isFile()) {
             player.play(p);
           } else {
-            const q = path.join(__dirname, "../Movie", data.movie);
+            const q = path.join(basedir, "../Movie", data.movie);
             fs.stat(q, (err, stats) => {
               if (!err && stats.isFile()) {
                 player.play(q);

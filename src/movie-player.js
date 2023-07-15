@@ -3,6 +3,8 @@ const spawn = require("child_process").spawn;
 const path = require("path");
 const util = require("./utils");
 
+const basedir = path.join(__dirname, "..");
+
 function Player() {
   var t = new EventEmitter();
 
@@ -10,7 +12,7 @@ function Player() {
 
   t.play = function (moviefilepath) {
     if (process.platform === "darwin") {
-      var _play = spawn(path.join(__dirname, "movie-play-mac.scpt"), [
+      var _play = spawn(path.join(basedir, "movie-play-mac.scpt"), [
         moviefilepath,
       ]);
     } else {
@@ -23,7 +25,7 @@ function Player() {
       t.emit("done");
     });
     function cancel() {
-      util.kill(_play.pid, "SIGTERM", function () {});
+      util.kill(_play.pid, "SIGTERM", function () { });
       t.removeListener("cancel", cancel);
     }
     t.on("cancel", cancel);

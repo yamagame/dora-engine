@@ -8,11 +8,12 @@ const port = config.gpioPort;
 const fs = require("fs");
 const path = require("path");
 const gamepad = config.useGamePad ? require("./gamepad") : null;
+const basedir = path.join(__dirname, "..")
 
 function loadSetting() {
   try {
-    return JSON.parse(fs.readFileSync(path.join(__dirname, "servo-head.json")));
-  } catch (err) {}
+    return JSON.parse(fs.readFileSync(path.join(basedir, "servo-head.json")));
+  } catch (err) { }
   return {
     servo0: 0.073,
     servo1: 0.073,
@@ -26,10 +27,10 @@ function saveSetting(servo0, servo1) {
   data.servo1 = servo1.initialCenter;
   try {
     fs.writeFileSync(
-      path.join(__dirname, "servo-head.json"),
+      path.join(basedir, "servo-head.json"),
       JSON.stringify(data)
     );
-  } catch (err) {}
+  } catch (err) { }
 }
 const setting = loadSetting();
 
@@ -126,7 +127,7 @@ raspi.init(() => {
     req.on("data", data => {
       buf = Buffer.concat([buf, data]);
     });
-    req.on("close", () => {});
+    req.on("close", () => { });
     req.on("end", () => {
       callback(buf.toString());
     });
@@ -153,7 +154,7 @@ raspi.init(() => {
               servo1.initialCenter = parseFloat(p.h);
               servo1.center = servo1.initialCenter;
             }
-          } catch (err) {}
+          } catch (err) { }
           if (url.pathname === "/reset") {
             servo0.initialCenter = 0.073;
             servo0.center = servo0.initialCenter;

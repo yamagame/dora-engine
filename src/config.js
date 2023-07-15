@@ -9,6 +9,8 @@ const bcrypt = (() => {
   }
 })();
 
+const basedir = path.join(__dirname, "..")
+
 const config = {
   port: port,
   gpioPort: gpioPort,
@@ -26,9 +28,9 @@ const config = {
   },
   robotUserDefaultsPath:
     process.env.ROBOT_USER_DEFAULTS_PATH ||
-    path.join(__dirname, "robot-defaults.json"),
+    path.join(basedir, "robot-defaults.json"),
   commandDirPath:
-    process.env.ROBOT_COMMAND_DIR_PATH || path.join(__dirname, "command"),
+    process.env.ROBOT_COMMAND_DIR_PATH || path.join(basedir, "command"),
   voiceHat: (process.env.ROBOT_USB_VOICE_HAT || "true") === "true",
   usbUSBMIC: (process.env.ROBOT_USB_MIC_DEVICE || "false") !== "false",
   usbUSBMICDevice: process.env.ROBOT_USB_MIC_DEVICE || "plughw:1,0",
@@ -123,7 +125,7 @@ const config = {
   //対話関連
   doraChat: {
     dataDir:
-      process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(__dirname, "chatData"),
+      process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(basedir, "chatData"),
     weather: (process.env.ROBOT_DORA_CHAT_WEATHER || "false") === "true",
     wikipedia: (process.env.ROBOT_DORA_CHAT_WIKIPEDIA || "true") === "true",
   },

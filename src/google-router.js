@@ -3,6 +3,7 @@ const router = express.Router();
 const config = require("./config");
 const { spawn } = require("child_process");
 const fs = require("fs");
+const basedir = path.join(__dirname, "..")
 const googleSpeech = (() => {
   if (
     "synthesizeSpeech" in config &&
@@ -169,7 +170,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
 
   if (action === "stop") {
     if (text_to_speech.playone) {
-      utils.kill(text_to_speech.playone.pid, "SIGTERM", function () {});
+      utils.kill(text_to_speech.playone.pid, "SIGTERM", function () { });
       text_to_speech.playone = null;
     }
     return res.send("OK\n");
@@ -269,7 +270,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
           sizesum += v.size;
           if (sizesum > maxsizebyte) {
             if (v.filename) {
-              fs.unlink(cacheFilePath(v.filename), err => {});
+              fs.unlink(cacheFilePath(v.filename), err => { });
               delete cacheDB[v.filename];
               saveCacheDB();
             }
@@ -287,7 +288,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
           process.platform === "darwin"
             ? "talk-open-jTalk-mac.sh"
             : "talk-open-jTalk-raspi.sh";
-        const p = path.join(__dirname, cmd);
+        const p = path.join(basedir, cmd);
         const opt = ["mei_normal", request.input.text, sndfilepath];
         const recording = spawn(p, opt);
         recording.on("close", function (code) {
@@ -375,9 +376,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
   const filename = `robot-snd-${crypto
     .createHash("md5")
     .update(JSON.stringify(request))
-    .digest("hex")}.${
-    audioConfig.audioEncoding === "LINEAR16" ? "wav" : "mp3"
-  }`;
+    .digest("hex")}.${audioConfig.audioEncoding === "LINEAR16" ? "wav" : "mp3"}`;
   const sndfilepath = cacheFilePath(filename);
   fs.access(sndfilepath, fs.constants.R_OK, err => {
     if (err || !(filename in cacheDB) || cacheDB[filename].text !== text) {
