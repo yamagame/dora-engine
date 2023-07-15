@@ -51,12 +51,12 @@
     "jest": "^27.5.1"
   },
   "scripts": {
-    "start": "SPEECH=off MACINTOSH=on node robot-server.js",
-    "whisper": "SPEECH=whisper WHISPER_PATH=./whisper.sh MACINTOSH=on node robot-server.js",
-    "robot": "node robot-server.js",
-    "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node robot-server.js",
-    "macintosh": "SPEECH=off MACINTOSH=on node robot-server.js",
-    "servo": "sudo node servo-head.js",
+    "start": "SPEECH=off MACINTOSH=on node src/robot-server.js",
+    "whisper": "SPEECH=whisper WHISPER_PATH=./whisper.sh MACINTOSH=on node src/robot-server.js",
+    "robot": "node src/robot-server.js",
+    "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node src/robot-server.js",
+    "macintosh": "SPEECH=off MACINTOSH=on node src/robot-server.js",
+    "servo": "sudo node src/servo-head.js",
     "test": "mocha"
   },
   "keywords": [],
