@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const router = express.Router();
 const config = require("./config");
 const { spawn } = require("child_process");
@@ -45,7 +46,6 @@ const polly = (() => {
   return null;
 })();
 const crypto = require("crypto");
-const path = require("path");
 const readline = require("readline");
 const { google } = require("googleapis");
 const utils = require("./utils");
