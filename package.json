@@ -50,7 +50,9 @@
     "raspi-soft-pwm": "^6.0.2"
   },
   "devDependencies": {
-    "jest": "^27.5.1"
+    "@types/jest": "^29.5.3",
+    "jest": "^29.6.1",
+    "ts-jest": "^29.1.1"
   },
   "scripts": {
     "start": "SPEECH=off MACINTOSH=on ts-node src/robot-server.js",
@@ -59,7 +61,29 @@
     "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node src/robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node src/robot-server.js",
     "servo": "sudo node src/servo-head.js",
-    "test": "mocha"
+    "build": "tsc --project tsconfig.build.json",
+    "test": "jest"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.json"
+        }
+      ]
+    },
+    "testMatch": [
+      "**/*.test.ts"
+    ],
+    "moduleNameMapper": {
+      "^~/(.+)": "<rootDir>/src/$1"
+    },
+    "preset": "ts-jest"
   },
   "keywords": [],
   "author": "",

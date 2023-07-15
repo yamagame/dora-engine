@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.base.json",
+  "exclude": ["**/*.test.ts", "build/**/*", "node_modules"],
+  "compilerOptions": {
+    "types": ["node"]
+  }
+}
