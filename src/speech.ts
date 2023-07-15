@@ -1,5 +1,3 @@
-const EventEmitter = require("events");
-
 const selectEngine = () => {
   if (process.env["SPEECH"] === "whisper") {
     return require("./speech-to-text-whisper")
@@ -9,4 +7,4 @@ const selectEngine = () => {
   return require("./speech-to-text-google")
 }
 
-module.exports = selectEngine();
+module.exports = selectEngine()

@@ -1,22 +1,21 @@
-const path = require("path");
-const port = 3090;
-const gpioPort = 3091;
+const path = require("path")
+const port = 3090
+const gpioPort = 3091
 const bcrypt = (() => {
   try {
-    return require("bcrypt");
+    return require("bcrypt")
   } catch (e) {
-    return require("bcryptjs");
+    return require("bcryptjs")
   }
-})();
+})()
 
 const basedir = path.join(__dirname, "..")
 
-const config = {
+export const config = {
   port: port,
   gpioPort: gpioPort,
   serverPort: 3092,
-  usePowerOffButton:
-    (process.env.ROBOT_USB_POWER_OFF_BUTTON || "true") === "true",
+  usePowerOffButton: (process.env.ROBOT_USB_POWER_OFF_BUTTON || "true") === "true",
   useGamePad: (process.env.ROBOT_USB_GAMEPAD || "false") === "true",
   udp: {
     host: "localhost",
@@ -27,15 +26,12 @@ const config = {
     app_id: process.env.DOCOMO_APP_ID || "",
   },
   robotUserDefaultsPath:
-    process.env.ROBOT_USER_DEFAULTS_PATH ||
-    path.join(basedir, "robot-defaults.json"),
-  commandDirPath:
-    process.env.ROBOT_COMMAND_DIR_PATH || path.join(basedir, "command"),
+    process.env.ROBOT_USER_DEFAULTS_PATH || path.join(basedir, "robot-defaults.json"),
+  commandDirPath: process.env.ROBOT_COMMAND_DIR_PATH || path.join(basedir, "command"),
   voiceHat: (process.env.ROBOT_USB_VOICE_HAT || "true") === "true",
   usbUSBMIC: (process.env.ROBOT_USB_MIC_DEVICE || "false") !== "false",
   usbUSBMICDevice: process.env.ROBOT_USB_MIC_DEVICE || "plughw:1,0",
-  editorAccessControl:
-    (process.env.ROBOT_EDITORL_ACCESS_CONTROL || "true") === "true",
+  editorAccessControl: (process.env.ROBOT_EDITORL_ACCESS_CONTROL || "true") === "true",
   home: process.env.HOME,
   useDB: process.env.ROBOT_DB === "true",
   sessionSecret: process.env.ROBOT_SECRET_KEY || "robot-session-cat",
@@ -43,11 +39,9 @@ const config = {
   robotPrivateKey: process.env.ROBOT_PRIVATE_KEY || null,
   robotPublicKey: process.env.ROBOT_PUBLIC_KEY || null,
   //認証処理を有効化
-  credentialAccessControl:
-    (process.env.ROBOT_CREDENTIAL_ACCESS_CONTROL || "false") === "true",
+  credentialAccessControl: (process.env.ROBOT_CREDENTIAL_ACCESS_CONTROL || "false") === "true",
   //localhostアクセスを有効化
-  allowLocalhostAccess:
-    (process.env.ROBOT_ALLOW_LOCALHOST_ACCESS || "true") === "true",
+  allowLocalhostAccess: (process.env.ROBOT_ALLOW_LOCALHOST_ACCESS || "true") === "true",
   localhostIPs: ["::1", "::ffff:127.0.0.1"],
   defaultVoice: process.env.ROBOT_DEFAULT_VOICE || "default",
   adminAuth: [
@@ -102,9 +96,7 @@ const config = {
     //キャッシュする音声データのトータルサイズ(MByte)
     maxCacheSize: process.env.ROBOT_GOOGLE_SPEECH_CACHE_SIZE || 300,
     //キャッシュファイルのDBファイル
-    cacheDBPath:
-      process.env.ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH ||
-      "/tmp/robot-cacheDB.json",
+    cacheDBPath: process.env.ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH || "/tmp/robot-cacheDB.json",
   },
   //Google sheet API関連
   googleSheet: {
@@ -124,14 +116,11 @@ const config = {
   },
   //対話関連
   doraChat: {
-    dataDir:
-      process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(basedir, "chatData"),
+    dataDir: process.env.ROBOT_DORA_CHAT_DATA_DIR || path.join(basedir, "chatData"),
     weather: (process.env.ROBOT_DORA_CHAT_WEATHER || "false") === "true",
     wikipedia: (process.env.ROBOT_DORA_CHAT_WIKIPEDIA || "true") === "true",
   },
-};
-
-module.exports = config;
+}
 
 if (require.main === module) {
   //bcrypt を使ってパスワードのハッシュを作って adminAuth の password に設定する
@@ -139,6 +128,6 @@ if (require.main === module) {
   // console.log(bcrypt.hashSync('playernopass', 8));
   // console.log(bcrypt.hashSync('guestclientnopass', 8));
   if (process.argv.length > 2 && process.argv[2]) {
-    console.log(bcrypt.hashSync(process.argv[2], 8));
+    console.log(bcrypt.hashSync(process.argv[2], 8))
   }
 }
