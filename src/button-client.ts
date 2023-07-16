@@ -1,9 +1,8 @@
 import * as EventEmitter from "events"
-const io = require("socket.io-client")
-const ping = require("ping")
-const { createSignature } = require("./accessCheck")
+import io from "socket.io-client"
+import ping from "ping"
 
-const clients = []
+import { createSignature } from "./accessCheck"
 
 function ipResolver(client, callback) {
   function _resolve() {
@@ -73,7 +72,7 @@ function sendCommand() {
 }
 
 function ButtonSocket(client, config, manager) {
-  var t = {
+  let t = {
     host: client.host,
     name: "name" in client && client.name !== null ? client.name : client.host,
     port: "port" in client && client.port !== null ? client.port : config.port,
@@ -121,15 +120,7 @@ function ButtonSocket(client, config, manager) {
 }
 
 class ButtonClientEmitter extends EventEmitter {
-  doCommand?: (payload: any) => void
-  socket?: (name: string) => void
-  constructor() {
-    super()
-  }
-}
-
-function ButtonClient(config: { port: number; robotSecretKey: string }) {
-  let clientSocket: {
+  clientSocket: {
     [index: string]: {
       name: string
       host: string
@@ -138,12 +129,40 @@ function ButtonClient(config: { port: number; robotSecretKey: string }) {
     }
   } = {}
 
-  var t = new ButtonClientEmitter()
+  constructor() {
+    super()
+  }
+
+  //コマンド実行
+  doCommand(payload) {
+    if (!payload) return
+    if (payload.type == "button") {
+      this.emit(payload.action, payload)
+      sendCommand()
+    }
+  }
+
+  socket(name: string) {
+    const key = Object.keys(this.clientSocket).find((key) => {
+      return this.clientSocket[key].name === name
+    })
+    if (key) {
+      const socket_id = this.clientSocket[key].socket_id
+      if (socket_id && buttons[socket_id]) {
+        return buttons[socket_id].socket
+      }
+    }
+    return null
+  }
+}
+
+export function ButtonClient(config: { port: number; robotSecretKey: string }) {
+  let t = new ButtonClientEmitter()
 
   t.on("open-slave", (payload) => {
     if ("host" in payload) {
-      if (!clientSocket[payload.host]) {
-        clientSocket[payload.host] = ButtonSocket(payload, config, t)
+      if (!t.clientSocket[payload.host]) {
+        t.clientSocket[payload.host] = ButtonSocket(payload, config, t)
       }
     }
   })
@@ -151,8 +170,8 @@ function ButtonClient(config: { port: number; robotSecretKey: string }) {
   t.on("close-slave", (payload) => {
     if ("host" in payload) {
       const c = []
-      Object.keys(clientSocket).forEach((key) => {
-        const client = clientSocket[key]
+      Object.keys(t.clientSocket).forEach((key) => {
+        const client = t.clientSocket[key]
         if (client.host === payload.host) {
           client.state = "close"
           if (client.socket_id && buttons[client.socket_id]) {
@@ -162,22 +181,22 @@ function ButtonClient(config: { port: number; robotSecretKey: string }) {
           c.push(client)
         }
       })
-      clientSocket = {}
+      t.clientSocket = {}
       c.forEach((c) => {
-        clientSocket[c.host] = c
+        t.clientSocket[c.host] = c
       })
     }
   })
 
   t.on("close-all", () => {
-    Object.keys(clientSocket).forEach((key) => {
-      const client = clientSocket[key]
+    Object.keys(t.clientSocket).forEach((key) => {
+      const client = t.clientSocket[key]
       client.state = "close"
       if (client.socket_id && buttons[client.socket_id]) {
         buttons[client.socket_id].socket.close()
       }
     })
-    clientSocket = {}
+    t.clientSocket = {}
   })
 
   //全ボタン待機
@@ -188,7 +207,7 @@ function ButtonClient(config: { port: number; robotSecretKey: string }) {
   //全ボタンオン
   t.on("all-on", (payload) => {
     led_mode = "on"
-    bright = typeof payload.bright ? payload.bright : bright
+    bright = payload && typeof payload.bright ? payload.bright : bright
   })
 
   //全ボタンオフ
@@ -200,18 +219,19 @@ function ButtonClient(config: { port: number; robotSecretKey: string }) {
   t.on("one", (payload) => {
     led_mode = "one"
     led_name = payload.name
-    bright = typeof payload.bright ? payload.bright : bright
+    bright = payload && typeof payload.bright ? payload.bright : bright
   })
 
   //明るさ
   t.on("bright", (payload) => {
-    bright = typeof payload.bright ? payload.bright : bright
+    bright = payload && typeof payload.bright ? payload.bright : bright
   })
 
   //音再生
   t.on("sound", (payload) => {
-    Object.keys(clientSocket).forEach((key) => {
-      const socket_id = clientSocket[key].socket_id
+    if (!payload) return
+    Object.keys(t.clientSocket).forEach((key) => {
+      const socket_id = t.clientSocket[key].socket_id
       if (socket_id && buttons[socket_id]) {
         buttons[socket_id].socket.emit("sound-command", {
           sound: payload.sound,
@@ -222,42 +242,20 @@ function ButtonClient(config: { port: number; robotSecretKey: string }) {
 
   //音声認識停止
   t.on("stop-speech-to-text", () => {
-    Object.keys(clientSocket).forEach((key) => {
-      const socket_id = clientSocket[key].socket_id
+    Object.keys(t.clientSocket).forEach((key) => {
+      const socket_id = t.clientSocket[key].socket_id
       if (socket_id && buttons[socket_id]) {
         buttons[socket_id].socket.emit("stop-speech-to-text")
       }
     })
   })
 
-  //コマンド実行
-  t.doCommand = function (payload) {
-    if (payload.type == "button") {
-      t.emit(payload.action, payload)
-      sendCommand()
-    }
-  }
-
   setInterval(() => {
     sendCommand()
   }, 200)
 
-  t.socket = function (name: string) {
-    Object.keys(clientSocket).forEach((key) => {
-      if (clientSocket[key].name === name) {
-        const socket_id = clientSocket[key].socket_id
-        if (socket_id && buttons[socket_id]) {
-          return buttons[socket_id].socket
-        }
-      }
-    })
-    return null
-  }
-
   return t
 }
-
-module.exports = ButtonClient
 
 function main() {
   const t = ButtonClient({ port: 0, robotSecretKey: "" })

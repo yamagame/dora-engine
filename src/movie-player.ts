@@ -1,9 +1,12 @@
 import * as EventEmitter from "events"
-const spawn = require("child_process").spawn
-const path = require("path")
+import * as path from "path"
+import { spawn } from "child_process"
+
+import { config } from "./config"
+
 const util = require("./utils")
 
-const basedir = path.join(__dirname, "..")
+const { basedir } = config
 
 class PlayerEmitter extends EventEmitter {
   state: string
@@ -14,10 +17,11 @@ class PlayerEmitter extends EventEmitter {
   }
 
   play(moviefilepath) {
+    let _play = null
     if (process.platform === "darwin") {
-      var _play = spawn(path.join(basedir, "movie-play-mac.scpt"), [moviefilepath])
+      _play = spawn(path.join(basedir, "movie-play-mac.scpt"), [moviefilepath])
     } else {
-      var _play = spawn("/usr/bin/omxplayer", ["--no-osd", moviefilepath])
+      _play = spawn("/usr/bin/omxplayer", ["--no-osd", moviefilepath])
     }
     this.state = "play"
     _play.on("close", function (code) {
@@ -34,13 +38,11 @@ class PlayerEmitter extends EventEmitter {
 }
 
 function Player() {
-  var t = new PlayerEmitter()
-
-  return t
+  return new PlayerEmitter()
 }
 
 const player = Player()
-module.exports = player
+export default player
 
 if (require.main === module) {
   player.play(process.argv[2])

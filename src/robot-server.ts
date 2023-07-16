@@ -1,43 +1,48 @@
-const os = require("os")
-const ip = require("ip")
-const express = require("express")
-const router = require("express").Router()
-const cookieParser = require("cookie-parser")
-const axios = require("axios")
-const speech = require("./speech")
-const talk = require("./talk")
+import * as path from "path"
+import * as fs from "fs"
+import * as os from "os"
+import * as ip from "ip"
+import { exec, spawn } from "child_process"
+
 import { config } from "./config"
-const APIKEY = config.docomo.api_key
-const APPID = config.docomo.app_id
-const { exec, spawn } = require("child_process")
-const path = require("path")
-const fs = require("fs")
-const workFolder = "DoraEngine" //for macOS(development)
-const buttonClient = require("./button-client")(config)
-const RobotDB = require("./robot-db")
-const USE_DB = config.useDB
-const saveInterval = 1000
-const URL = require("url")
-const googleRouter = require("./google-router")
-const session = require("express-session")
-const MemoryStore = require("memorystore")(session)
-const passport = require("passport")
-const DoraChat = require("./doraChat")
-const LocalStrategy = require("passport-local").Strategy
-const { v4: uuidv4 } = require("uuid")
-const mkdirp = require("mkdirp")
-const UserDefaults = require("./user-defaults")
-const { upload, readDir, deleteFile } = require("./fileServer")
-const {
+import {
   localhostIPs,
   localIPCheck,
   createSignature,
   localhostToken,
   hasPermission,
   checkPermission,
-} = require("./accessCheck")
-const csrf = require("csurf")
+} from "./accessCheck"
+
+import express from "express"
+import cookieParser from "cookie-parser"
+import axios, { Method } from "axios"
+import { selectEngine } from "./speech"
+import { Talk } from "./talk"
+import { ButtonClient } from "./button-client"
+import { RobotDB } from "./robot-db"
+import { router as googleRouter } from "./google-router"
+import { Camera } from "./robot-camera"
+import session from "express-session"
+const MemoryStore = require("memorystore")(session)
+import passport from "passport"
+const DoraChat = require("./doraChat")
+const LocalStrategy = require("passport-local").Strategy
+import { v4 as uuidv4 } from "uuid"
+import mkdirp from "mkdirp"
+import UserDefaults from "./user-defaults"
+import { upload, readDir, deleteFile } from "./fileServer"
+import csrf from "csurf"
+
+const router = express.Router()
+const speech = selectEngine(process.env["SPEECH"])
+const buttonClient = ButtonClient(config)
+const talk = Talk()
+const workFolder = "DoraEngine" //for macOS(development)
+const USE_DB = config.useDB
+const saveInterval = 1000
 const csrfProtection = csrf({ cookie: true })
+const camera = new Camera()
 const bcrypt = (() => {
   try {
     return require("bcrypt")
@@ -143,7 +148,6 @@ function readdirFileOnly(dirname, callback) {
 const Dora = require("dora")
 const dora = new Dora()
 const utils = require("./utils")
-const dateutlis = require("date-utils")
 
 dora.loadModule("button", function (DORA, config) {
   function connect(node, options) {
@@ -236,7 +240,7 @@ dora.loadModule("button", function (DORA, config) {
   DORA.registerType("led-on", ledOn)
 
   function sound(node, options) {
-    var isTemplated = (options || "").indexOf("{{") != -1
+    let isTemplated = (options || "").indexOf("{{") != -1
     node.on("input", async function (msg) {
       const socket = buttonClient.socket(msg.button.name)
       if (socket) {
@@ -252,7 +256,7 @@ dora.loadModule("button", function (DORA, config) {
   DORA.registerType("sound", sound)
 
   function soundAll(node, options) {
-    var isTemplated = (options || "").indexOf("{{") != -1
+    let isTemplated = (options || "").indexOf("{{") != -1
     node.on("input", async function (msg) {
       let message = options
       if (isTemplated) {
@@ -336,8 +340,8 @@ dora.loadModule("button", function (DORA, config) {
   DORA.registerType("speech-to-text", speechToText)
 })
 
-dora.request = async function (command, options, params) {
-  var len = 0
+dora.request = async function (command, options = null, params = null) {
+  let len = 0
   if (typeof command !== "undefined") len += 1
   if (typeof options !== "undefined") len += 1
   if (typeof params !== "undefined") len += 1
@@ -360,13 +364,12 @@ dora.request = async function (command, options, params) {
     if (options.restype) opt.restype = options.restype
   }
   params.localhostToken = localhostToken()
-  const rparams = {
+  const body = await axios({
     url: `http://localhost:${config.port}/${command}`,
-    method: opt.method,
+    method: opt.method as Method,
     data: params,
-  }
-  const body = await axios(rparams)
-  return body
+  })
+  return body.data
 }
 
 const quiz_master = process.env.QUIZ_MASTER || "_quiz_master_"
@@ -387,7 +390,7 @@ const m = function (...a) {
   return res
 }
 
-var robotData: {
+let robotData: {
   quizAnswers?: any
   quizEntry?: any
   quizPayload?: { [index: string]: any }
@@ -400,7 +403,7 @@ var robotData: {
   chatRecvTime?: Date
 } = {}
 try {
-  var robotJson = fs.readFileSync(robotDataPath)
+  const robotJson = fs.readFileSync(robotDataPath, "utf8")
   robotData = JSON.parse(robotJson)
 } catch (err) {
   console.log(err)
@@ -458,7 +461,7 @@ function writeRobotData() {
 
 speech.recording = false
 
-var last_led_action = "led-off"
+let last_led_action = "led-off"
 
 const gpioSocket = (function () {
   const io = require("socket.io-client")
@@ -761,7 +764,7 @@ function dora_chat(payload, callback) {
   doraChat[`/${payload.action}`](req, res)
 }
 
-var playing = false
+let playing = false
 
 function text_to_speech(payload, callback) {
   if (!playing) {
@@ -984,7 +987,7 @@ function speech_to_text(payload, callback) {
 }
 
 function quiz_button(payload, callback) {
-  var done = false
+  let done = false
 
   if (payload.timeout != 0) {
     setTimeout(() => {
@@ -1254,7 +1257,7 @@ async function quizPacket(payload) {
       const startTime = new Date()
       if (payload.quizId) {
         if (payload.pages) {
-          for (var i = 0; i < payload.pages.length; i++) {
+          for (let i = 0; i < payload.pages.length; i++) {
             const page = payload.pages[i]
             if (page.action == "quiz" && page.question) {
               const a = {
@@ -1392,7 +1395,7 @@ async function quizPacket(payload) {
   if (payload.area) {
     const readFile = (path) => {
       return new Promise<string>((resolve) => {
-        fs.readFile(path, (err, data) => {
+        fs.readFile(path, "utf8", (err, data) => {
           resolve(data)
         })
       })
@@ -1432,10 +1435,11 @@ function storeQuizPayload(payload) {
 }
 
 function loadQuizPayload(payload) {
+  let val = null
   if (payload.name == quiz_master) {
-    var val = robotData.quizPayload[quiz_master] || {}
+    val = robotData.quizPayload[quiz_master] || {}
   } else {
-    var val = robotData.quizPayload["others"] || {}
+    val = robotData.quizPayload["others"] || {}
   }
   val.members = students.map((v) => v.name)
   console.log(`loadQuizPayload`, val)
@@ -1696,13 +1700,13 @@ const postCommand = async (req, res, credential) => {
               return
             }
             dora
-              .parse(data.toString(), filename, function (filename, callback) {
+              .parse(data, filename, function (filename, callback) {
                 fs.readFile(path.join(base, username, filename), (err, data) => {
                   if (err) {
                     emitError(err)
                     return
                   }
-                  callback(data.toString())
+                  callback(data)
                 })
               })
               .then(() => {
@@ -1804,7 +1808,7 @@ const postCommand = async (req, res, credential) => {
       mkdirp(path.join(base, username, ".cache"), async function (err) {
         if (uri) {
           try {
-            const body = await axios({
+            const payload = await axios({
               url: uri,
               method: "POST",
               data: {
@@ -1814,14 +1818,18 @@ const postCommand = async (req, res, credential) => {
                 username,
               },
             })
-            if ("text" in body && "filename" in body) {
-              fs.writeFile(path.join(base, username, ".cache", body.filename), body.text, (err) => {
-                if (err) console.log(err)
-                res.send({
-                  status: !err ? "OK" : err.code,
-                  next_script: `.cache/${body.filename}`,
-                })
-              })
+            if ("text" in payload && "filename" in payload) {
+              fs.writeFile(
+                path.join(base, username, ".cache", payload.data.filename),
+                payload.data.text,
+                (err) => {
+                  if (err) console.log(err)
+                  res.send({
+                    status: !err ? "OK" : err.code,
+                    next_script: `.cache/${payload.filename}`,
+                  })
+                }
+              )
             } else {
               res.send({ status: "Not found" })
             }
@@ -1840,7 +1848,7 @@ const postCommand = async (req, res, credential) => {
                 res.send({ status: "Err" })
                 return
               }
-              res.send({ status: "OK", text: data.toString(), filename })
+              res.send({ status: "OK", text: data, filename })
             })
           } else {
             res.send({ status: "Invalid filename" })
@@ -1919,7 +1927,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
         fs.readFile(PART_LIST_FILE_PATH, (err, data) => {
           res.send({
             status: !err ? "OK" : err.code,
-            text: data ? data.toString() : "",
+            text: data ? data : "",
           })
         })
       } else if (filename === "出席CSV") {
@@ -1929,7 +1937,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
           path.join(HOME, "date-list.txt")
         )
         if (USE_DB) {
-          db.loadAttendance(dates).then((robotData) => {
+          db.loadAttendance().then((robotData) => {
             res.send({
               status: "OK",
               text: utils.attendance.csv(robotData, dates, students),
@@ -1945,7 +1953,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
         fs.readFile(path.join(HOME, "date-list.txt"), (err, data) => {
           res.send({
             status: !err ? "OK" : err.code,
-            text: data ? data.toString() : "",
+            text: data ? data : "",
           })
         })
       } else {
@@ -1987,7 +1995,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
             if (err) console.log(err)
             res.send({
               status: !err ? "OK" : err.code,
-              text: data ? data.toString() : "",
+              text: data ? data : "",
             })
           })
         })
@@ -2020,9 +2028,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
   }
 })
 
-const camera = new (require("./robot-camera"))()
-
-camera.on("change", hasPermission("control.write"), (payload) => {
+camera.on("change", (payload) => {
   console.log("camera changed")
   speech.emit("camera", payload)
 })
@@ -2153,7 +2159,7 @@ app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
         }
       }
     })
-    for (var i = 0; i < newBars.length; i++) {
+    for (let i = 0; i < newBars.length; i++) {
       const bar = newBars[i]
       await db.updateBar(bar, defaultBarData)
     }
@@ -2384,7 +2390,7 @@ const io = require("socket.io")(server)
 const ioa = io.of("audio")
 const iob = io.of("bar")
 const iop = io.of("player")
-var playerSocket = null
+let playerSocket = null
 
 const quiz_masters = {}
 const soundAnalyzer = {}
@@ -2492,9 +2498,6 @@ io.on("connection", function (socket) {
         mode_slave = true
       }
     })
-  })
-  socket.on("docomo-chat", function (_payload, callback) {
-    if (callback) callback("NG")
   })
   socket.on("dora-chat", function (payload, callback) {
     if (typeof payload === "undefined") {
@@ -2903,14 +2906,31 @@ const startServer = function () {
     )
   }
   server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
-  return {}
+  return {
+    findAnswers: () => {
+      return { answers: {} }
+    },
+    updateAnswer: () => {},
+    updateQuiz: () => {},
+    update: () => {},
+    createBar: () => {},
+    loadBars: () => {},
+    findBars: () => {},
+    deleteBar: async () => {},
+    updateBar: async () => {},
+    loadAttendance: async () => {},
+    quizIdList: async () => {},
+    startTimeList: async () => {},
+    answerAll: async () => {},
+    Op: null,
+  }
 }
 
 const db = startServer()
 
-var shutdownTimer = null
-var shutdownLEDTimer = null
-var doShutdown = false
+let shutdownTimer = null
+let shutdownLEDTimer = null
+let doShutdown = false
 
 function execPowerOff() {
   gpioSocket.emit("led-command", { action: "on" })
@@ -3055,7 +3075,6 @@ if (robotData.autoStart.username && robotData.autoStart.filename) {
 
   POST API
 
-    /docomo-chat
     /text-to-speech
     /speech-to-text
     /debug-speech

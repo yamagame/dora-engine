@@ -1,6 +1,8 @@
-const fs = require("fs")
-const jws = require("jws")
+import * as fs from "fs"
+
 import { config } from "./config"
+
+const jws = require("jws")
 const bcrypt = (() => {
   try {
     return require("bcrypt")
@@ -22,10 +24,10 @@ const publicKey = getCredential(config.robotPublicKey)
 const localhostIPs = config.localhostIPs
 
 function getClientIp(req) {
-  var ipAddress
-  var forwardedIpsStr = req.headers["x-forwarded-for"]
+  let ipAddress
+  let forwardedIpsStr = req.headers["x-forwarded-for"]
   if (forwardedIpsStr) {
-    var forwardedIps = forwardedIpsStr.split(",")
+    let forwardedIps = forwardedIpsStr.split(",")
     ipAddress = forwardedIps[0]
   }
   if (!ipAddress) {
@@ -112,7 +114,7 @@ function localhostToken() {
   const token = (length) => {
     const c = "ABCDEFGHIJKLMNOPQRSTUZWXYZabcdefghijklmnopqrstuvwxyz1234567890"
     const token = []
-    for (var i = 0; i < length; i++) {
+    for (let i = 0; i < length; i++) {
       token.push(c[Math.floor(Math.random() * c.length)])
     }
     return token.join("")
@@ -246,7 +248,7 @@ function checkPermission(
   callback(false)
 }
 
-module.exports = {
+export {
   localhostIPs,
   checkIPs,
   localIPCheck,

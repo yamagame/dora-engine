@@ -2,7 +2,7 @@ const timeout = (ms) => new Promise((res) => setTimeout(res, ms))
 
 const generateId = () => (1 + Math.random() * 4294967295).toString(16)
 
-var mustache = require("mustache")
+const mustache = require("mustache")
 
 const _isNumeric = /^[-+]?[123456789](\d*|\d*\.\d*|\d*\.\d+)$/
 
@@ -82,7 +82,7 @@ const removeBracket = (s) => {
   let r = ""
   let l = s.length
   let bracket = []
-  for (var i = 0; i < l; i++) {
+  for (let i = 0; i < l; i++) {
     let skip = false
     const c = s[i]
     if (c == "(" || c == "（") {

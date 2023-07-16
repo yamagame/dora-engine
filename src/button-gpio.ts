@@ -1,7 +1,11 @@
-const app = require("express")()
-const server = require("http").Server(app)
-const io = require("socket.io")(server)
-const bodyParser = require("body-parser")
+import express from "express"
+import { Server } from "http"
+import { Server as SocketIOServer } from "socket.io"
+import bodyParser from "body-parser"
+
+const app = express()
+const server = new Server(app)
+const io = new SocketIOServer(server)
 
 app.use(bodyParser.json({ type: "application/json" }))
 app.use(bodyParser.raw({ type: "application/*" }))
@@ -13,9 +17,9 @@ const raspiMode = true
 const pigpio = raspiMode ? require("pigpio") : {}
 const raspi = raspiMode ? require("raspi") : {}
 
-var led_mode = process.env.LED_MODE || "off"
-var led_bright = process.env.LED_VALUE || 1
-var buttonLevel = null
+let led_mode = process.env.LED_MODE || "off"
+let led_bright = process.env.LED_VALUE || 1
+let buttonLevel = null
 
 function changeLed(payload) {
   if (payload.action === "off") {
@@ -46,7 +50,8 @@ if (config.voiceHat && raspiMode) {
 
 if (raspiMode) {
   raspi.init(() => {
-    const servo = require("./servo")()
+    const { Servo } = require("./servo")
+    const servo = Servo()
     const led = require("./led-controller")()
     if (config.voiceHat) {
       servo.pwm2.write(led.now)
@@ -64,8 +69,8 @@ if (raspiMode) {
       led.idle(led_mode, led_bright)
     }, 20)
 
-    var Gpio = require("pigpio").Gpio
-    var button = new Gpio(23, {
+    let Gpio = require("pigpio").Gpio
+    let button = new Gpio(23, {
       mode: Gpio.INPUT,
       pullUpDown: Gpio.PUD_DOWN,
       edge: Gpio.EITHER_EDGE,

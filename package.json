@@ -61,7 +61,8 @@
     "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node src/robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node src/robot-server.js",
     "servo": "sudo node src/servo-head.js",
-    "build": "tsc --project tsconfig.build.json",
+    "build": "rm -rf ./build && tsc --project tsconfig.build.json",
+    "ts-node": "ts-node $1",
     "test": "jest"
   },
   "jest": {

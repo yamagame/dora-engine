@@ -8,7 +8,7 @@ const connectTimeout = 30000;
 var sockets = {};
 
 function getRndInteger(min, max) {
-    return Math.floor(Math.random() * (max - min) ) + min;
+  return Math.floor(Math.random() * (max - min)) + min;
 }
 
 function timeout(timeout, callback) {
@@ -18,7 +18,7 @@ function timeout(timeout, callback) {
     done = true;
     callback(new Error('timeout'), null);
   }, timeout);
-  return function(socket) {
+  return function (socket) {
     if (done) return;
     done = true;
     callback(null, socket);
@@ -51,14 +51,14 @@ function createSocket(host, id, node, callback) {
     return t.socket;
   }
   const socket = io(host);
-  socket.on('connect', function(){
+  socket.on('connect', function () {
     node.log('socket connect');
     if (callback) callback(socket);
   });
-  socket.on('event', function(data){
+  socket.on('event', function (data) {
     node.log('socket event');
   });
-  socket.on('disconnect', function(){
+  socket.on('disconnect', function () {
     node.log('socket disconnect');
   });
   const q = {}
@@ -71,7 +71,7 @@ function createSocket(host, id, node, callback) {
 }
 
 function getId(node, name) {
-  return ((Math.random() * 999999) | 0)+'-'+name;
+  return ((Math.random() * 999999) | 0) + '-' + name;
 }
 
 //Socket.IOによる接続
@@ -83,7 +83,7 @@ function _request(node, action, host, body, callback) {
       if (callback) callback(null, '');
       return;
     }
-    node.log('emit '+action);
+    node.log('emit ' + action);
     socket.emit(action, body, (data) => {
       setTimeout(() => {
         removeSocket(host, id, node);
@@ -94,7 +94,7 @@ function _request(node, action, host, body, callback) {
 }
 
 class Play {
-  constructor(){
+  constructor() {
     this.org_message = null;
     this.canceled = true;
   }
@@ -150,7 +150,7 @@ class Play {
   }
 
   doShuffle() {
-    for (var i=0;i<this.shuffle.length*10;i++) {
+    for (var i = 0; i < this.shuffle.length * 10; i++) {
       const a = getRndInteger(0, this.shuffle.length);
       const b = getRndInteger(0, this.shuffle.length);
       const c = this.shuffle[a];
@@ -166,7 +166,7 @@ class Play {
       var n = 0;
       const res = [];
       this.shuffle = [];
-      messages.split('\n').forEach( (line, i) => {
+      messages.split('\n').forEach((line, i) => {
         if (line != '') {
           res.push(line.split(':'));
           this.shuffle.push(n);
@@ -188,7 +188,7 @@ class Play {
     const { robotHost } = msg;
     const host = robotHost;
     this.host = host;
-    const messages = this.getMessage(params.message).filter( line => {
+    const messages = this.getMessage(params.message).filter(line => {
       //コメント
       if (line.length > 0) {
         return (line[0].indexOf('//') != 0)
@@ -227,169 +227,169 @@ class Play {
           doCmd(callback);
         });
       } else
-      if (d == 'prev' || d.indexOf('前') >= 0) {
-        this.prevPage(node, host, (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (d == 'top' || d.indexOf('トップ') >= 0) {
-        this.topPage(node, host, (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (d == 'quiz.question' || d.indexOf('クイズ.送信') >= 0) {
-        this.quizCommand(node, host, {
-          action: 'quiz',
-          question: msg.quiz.question,
-          choices: msg.quiz.choices,
-          time: msg.quiz.timeLimit,
-          pages: msg.quiz.pages,
-          sideImage: msg.quiz.sideImage,
-          answers: [],
-        }, (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (d == 'quiz.start' || d.indexOf('クイズ.開始') >= 0 ||
-          d == 'quiz.countdown' || d.indexOf('クイズ.カウントダウン') >= 0) {
-        this.quizCommand(node, host, {
-          action: 'start',
-          question: msg.quiz.question,
-          choices: msg.quiz.choices,
-          time: msg.counter,
-          answers: [],
-        }, (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (d == 'quiz.answer' || d.indexOf('クイズ.解答') >= 0) {
-        this.quizCommand(node, host, {
-          action: 'answer',
-          question: msg.quiz.question,
-          choices: msg.quiz.choices,
-          answers: msg.quiz.answers,
-        }, (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (d == 'quiz.end' || d.indexOf('クイズ.終了') >= 0) {
-        this.quizCommand(node, host, {
-          action: 'wait',
-        }, (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (d == 'quiz.timeup' || d.indexOf('クイズ.タイムアップ') >= 0) {
-        this.quizCommand(node, host, {
-          action: 'stop',
-          question: msg.quiz.question,
-          choices: msg.quiz.choices,
-          time: 0,
-          answers: [],
-        }, (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (d.indexOf('quiz.slide') >= 0 || d.indexOf('クイズ.スライド') >= 0) {
-        const m = d.match(/\/(.+)/);
-        if (m) {
-          this.quizCommand(node, host, {
-            action: 'slide',
-            photo: `${host}/${m[1]}`,
-            pages: [],
-          }, (err, res) => {
+        if (d == 'prev' || d.indexOf('前') >= 0) {
+          this.prevPage(node, host, (err, res) => {
             if (err) {
               callback(err, 'ERR');
               return;
             }
             doCmd(callback);
           });
-        } else {
-          doCmd(callback);
-        }
-      } else
-      if (d.indexOf('quiz.result') >= 0 || d.indexOf('クイズ.結果') >= 0) {
-      } else
-      if (d == 'marisa' || d.indexOf('魔理沙') >= 0) {
-        params.voice = 'marisa';
-        doCmd(callback);
-      } else
-      if (d == 'reimu' || d.indexOf('霊夢') >= 0) {
-        params.voice = 'reimu';
-        doCmd(callback);
-      } else
-      if (d == 'speed' || d.indexOf('スピード') >= 0) {
-        params.speed = speed[1];
-        doCmd(callback);
-      } else
-      if (d == 'volume' || d.indexOf('音量') >= 0) {
-        params.volume = volume[1];
-        doCmd(callback);
-      } else
-      if (d == 'left' || d.indexOf('左') >= 0) {
-        params.direction = 'left';
-        doCmd(callback);
-      } else
-      if (d == 'center' || d.indexOf('中') >= 0) {
-        params.direction = 'center';
-        doCmd(callback);
-      } else
-      if (d == 'right' || d.indexOf('右') >= 0) {
-        params.direction = 'right';
-        doCmd(callback);
-      } else
-      if (page !== null) {
-        this.openPage(node, host, page[1], (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else
-      if (delay !== null) {
-        this.delay(parseFloat(delay[1]), (err, res) => {
-          if (err) {
-            callback(err, 'ERR');
-            return;
-          }
-          doCmd(callback);
-        });
-      } else {
-        doCmd(callback);
-      }
+        } else
+          if (d == 'top' || d.indexOf('トップ') >= 0) {
+            this.topPage(node, host, (err, res) => {
+              if (err) {
+                callback(err, 'ERR');
+                return;
+              }
+              doCmd(callback);
+            });
+          } else
+            if (d == 'quiz.question' || d.indexOf('クイズ.送信') >= 0) {
+              this.quizCommand(node, host, {
+                action: 'quiz',
+                question: msg.quiz.question,
+                choices: msg.quiz.choices,
+                time: msg.quiz.timeLimit,
+                pages: msg.quiz.pages,
+                sideImage: msg.quiz.sideImage,
+                answers: [],
+              }, (err, res) => {
+                if (err) {
+                  callback(err, 'ERR');
+                  return;
+                }
+                doCmd(callback);
+              });
+            } else
+              if (d == 'quiz.start' || d.indexOf('クイズ.開始') >= 0 ||
+                d == 'quiz.countdown' || d.indexOf('クイズ.カウントダウン') >= 0) {
+                this.quizCommand(node, host, {
+                  action: 'start',
+                  question: msg.quiz.question,
+                  choices: msg.quiz.choices,
+                  time: msg.counter,
+                  answers: [],
+                }, (err, res) => {
+                  if (err) {
+                    callback(err, 'ERR');
+                    return;
+                  }
+                  doCmd(callback);
+                });
+              } else
+                if (d == 'quiz.answer' || d.indexOf('クイズ.解答') >= 0) {
+                  this.quizCommand(node, host, {
+                    action: 'answer',
+                    question: msg.quiz.question,
+                    choices: msg.quiz.choices,
+                    answers: msg.quiz.answers,
+                  }, (err, res) => {
+                    if (err) {
+                      callback(err, 'ERR');
+                      return;
+                    }
+                    doCmd(callback);
+                  });
+                } else
+                  if (d == 'quiz.end' || d.indexOf('クイズ.終了') >= 0) {
+                    this.quizCommand(node, host, {
+                      action: 'wait',
+                    }, (err, res) => {
+                      if (err) {
+                        callback(err, 'ERR');
+                        return;
+                      }
+                      doCmd(callback);
+                    });
+                  } else
+                    if (d == 'quiz.timeup' || d.indexOf('クイズ.タイムアップ') >= 0) {
+                      this.quizCommand(node, host, {
+                        action: 'stop',
+                        question: msg.quiz.question,
+                        choices: msg.quiz.choices,
+                        time: 0,
+                        answers: [],
+                      }, (err, res) => {
+                        if (err) {
+                          callback(err, 'ERR');
+                          return;
+                        }
+                        doCmd(callback);
+                      });
+                    } else
+                      if (d.indexOf('quiz.slide') >= 0 || d.indexOf('クイズ.スライド') >= 0) {
+                        const m = d.match(/\/(.+)/);
+                        if (m) {
+                          this.quizCommand(node, host, {
+                            action: 'slide',
+                            photo: `${host}/${m[1]}`,
+                            pages: [],
+                          }, (err, res) => {
+                            if (err) {
+                              callback(err, 'ERR');
+                              return;
+                            }
+                            doCmd(callback);
+                          });
+                        } else {
+                          doCmd(callback);
+                        }
+                      } else
+                        if (d.indexOf('quiz.result') >= 0 || d.indexOf('クイズ.結果') >= 0) {
+                        } else
+                          if (d == 'marisa' || d.indexOf('魔理沙') >= 0) {
+                            params.voice = 'marisa';
+                            doCmd(callback);
+                          } else
+                            if (d == 'reimu' || d.indexOf('霊夢') >= 0) {
+                              params.voice = 'reimu';
+                              doCmd(callback);
+                            } else
+                              if (d == 'speed' || d.indexOf('スピード') >= 0) {
+                                params.speed = speed[1];
+                                doCmd(callback);
+                              } else
+                                if (d == 'volume' || d.indexOf('音量') >= 0) {
+                                  params.volume = volume[1];
+                                  doCmd(callback);
+                                } else
+                                  if (d == 'left' || d.indexOf('左') >= 0) {
+                                    params.direction = 'left';
+                                    doCmd(callback);
+                                  } else
+                                    if (d == 'center' || d.indexOf('中') >= 0) {
+                                      params.direction = 'center';
+                                      doCmd(callback);
+                                    } else
+                                      if (d == 'right' || d.indexOf('右') >= 0) {
+                                        params.direction = 'right';
+                                        doCmd(callback);
+                                      } else
+                                        if (page !== null) {
+                                          this.openPage(node, host, page[1], (err, res) => {
+                                            if (err) {
+                                              callback(err, 'ERR');
+                                              return;
+                                            }
+                                            doCmd(callback);
+                                          });
+                                        } else
+                                          if (delay !== null) {
+                                            this.delay(parseFloat(delay[1]), (err, res) => {
+                                              if (err) {
+                                                callback(err, 'ERR');
+                                                return;
+                                              }
+                                              doCmd(callback);
+                                            });
+                                          } else {
+                                            doCmd(callback);
+                                          }
     }
 
     function checkMessage(messages) {
-      return messages.some( m => {
+      return messages.some(m => {
         return (m[0] != '');
       });
     }
@@ -426,117 +426,95 @@ class Play {
         }
       }
     } else
-    if (params.algorithm === 'random') {
-      this.doShuffle();
-      const ptr = this.shufflePtr;
-      var done = false;
-      if (!checkMessage(messages)) {
-        callback(null, '');
-      } else {
-        while (!this.canceled) {
-          if (this.shufflePtr >= this.shuffle.length) {
-            this.shufflePtr = 0;
-            break;
-          }
-          let msg = messages[this.shuffle[this.shufflePtr]][0];
-          if (msg == '') {
-          } else {
-            if (params.silence) {
-              callback(null, msg);
-            } else {
-              this.textToSpeech(node, msg, host, params, (err, res) => {
-                callback(err, msg);
-              });
+      if (params.algorithm === 'random') {
+        this.doShuffle();
+        const ptr = this.shufflePtr;
+        var done = false;
+        if (!checkMessage(messages)) {
+          callback(null, '');
+        } else {
+          while (!this.canceled) {
+            if (this.shufflePtr >= this.shuffle.length) {
+              this.shufflePtr = 0;
+              break;
             }
-            done = true;
-          }
-          this.shufflePtr++;
-          if (this.shufflePtr >= this.shuffle.length) {
-            this.doShuffle();
-          }
-          //一周するか発話したら終了
-          if (ptr == this.shufflePtr || done) break;
-        }
-      }
-    } else
-    if (params.algorithm === 'onetime') {
-      const ptr = this.shufflePtr;
-      var done = false;
-      if (!checkMessage(messages)) {
-        callback(null, '');
-      } else {
-        while (!this.canceled) {
-          if (this.shufflePtr >= messages.length) {
-            this.shufflePtr = 0;
-            break;
-          }
-          let msg = messages[this.shufflePtr][0];
-          if (msg == '') {
-          } else {
-            if (params.silence) {
-              callback(null, msg);
+            let msg = messages[this.shuffle[this.shufflePtr]][0];
+            if (msg == '') {
             } else {
-              this.textToSpeech(node, msg, host, params, (err, res) => {
-                callback(err, msg);
-              });
+              if (params.silence) {
+                callback(null, msg);
+              } else {
+                this.textToSpeech(node, msg, host, params, (err, res) => {
+                  callback(err, msg);
+                });
+              }
+              done = true;
             }
-            done = true;
-          }
-          this.shufflePtr++;
-          if (this.shufflePtr >= this.shuffle.length) {
-            this.doShuffle();
-          }
-          //一周するか発話したら終了
-          if (ptr == this.shufflePtr || done) break;
-        }
-      }
-    } else {
-      var i = 0;
-      const play = () => {
-        if (i >= messages.length || this.canceled) {
-          callback(null, 'OK');
-          return;
-        }
-        var msg = '';
-        cmd = [];
-        for (;i<messages.length;i++) {
-          if (messages[i][0] !== '') {
-            if (msg !== '') msg += "\n";
-            msg += messages[i][0];
-          }
-          if (messages[i].length > 1) {
-            messages[i].forEach( v => {
-              cmd.push(v);
-            });
-            cmd = cmd.slice(1);
-            i++;
-            break;
+            this.shufflePtr++;
+            if (this.shufflePtr >= this.shuffle.length) {
+              this.doShuffle();
+            }
+            //一周するか発話したら終了
+            if (ptr == this.shufflePtr || done) break;
           }
         }
-        node.log(cmd);
-        if (msg == '') {
-          if (cmd.length > 0) {
-            doCmd(() => {
-              play();
-            });
+      } else
+        if (params.algorithm === 'onetime') {
+          const ptr = this.shufflePtr;
+          var done = false;
+          if (!checkMessage(messages)) {
+            callback(null, '');
           } else {
-            play();
+            while (!this.canceled) {
+              if (this.shufflePtr >= messages.length) {
+                this.shufflePtr = 0;
+                break;
+              }
+              let msg = messages[this.shufflePtr][0];
+              if (msg == '') {
+              } else {
+                if (params.silence) {
+                  callback(null, msg);
+                } else {
+                  this.textToSpeech(node, msg, host, params, (err, res) => {
+                    callback(err, msg);
+                  });
+                }
+                done = true;
+              }
+              this.shufflePtr++;
+              if (this.shufflePtr >= this.shuffle.length) {
+                this.doShuffle();
+              }
+              //一周するか発話したら終了
+              if (ptr == this.shufflePtr || done) break;
+            }
           }
         } else {
-          if (params.silence) {
-            if (cmd.length > 0) {
-              doCmd(() => {
-                play();
-              });
-            } else {
-              play();
+          var i = 0;
+          const play = () => {
+            if (i >= messages.length || this.canceled) {
+              callback(null, 'OK');
+              return;
             }
-          } else {
-            this.textToSpeech(node, msg, host, params, (err, res) => {
-              if (err) {
-                callback(err, 'ERR');
-                return;
+            var msg = '';
+            cmd = [];
+            for (; i < messages.length; i++) {
+              if (messages[i][0] !== '') {
+                if (msg !== '') msg += "\n";
+                msg += messages[i][0];
               }
+              if (messages[i].length > 1) {
+                messages[i].forEach(v => {
+                  cmd.push(v);
+                });
+                cmd = cmd.slice(1);
+                i++;
+                break;
+              }
+            }
+            node.log(cmd);
+            if (msg == '') {
               if (cmd.length > 0) {
                 doCmd(() => {
                   play();
@@ -544,16 +522,38 @@ class Play {
               } else {
                 play();
               }
-            });
+            } else {
+              if (params.silence) {
+                if (cmd.length > 0) {
+                  doCmd(() => {
+                    play();
+                  });
+                } else {
+                  play();
+                }
+              } else {
+                this.textToSpeech(node, msg, host, params, (err, res) => {
+                  if (err) {
+                    callback(err, 'ERR');
+                    return;
+                  }
+                  if (cmd.length > 0) {
+                    doCmd(() => {
+                      play();
+                    });
+                  } else {
+                    play();
+                  }
+                });
+              }
+            }
           }
+          play();
         }
-      }
-      play();
-    }
   }
 }
 
-module.exports = function(RED) {
+module.exports = function (RED) {
   "use strict";
   var net = require('net');
   var mustache = require("mustache");
@@ -590,17 +590,17 @@ module.exports = function(RED) {
   }
 
   function RobotListenerNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
     var nodeUrl = config.host;
-    var isTemplatedUrl = (nodeUrl||"").indexOf("{{") != -1;
+    var isTemplatedUrl = (nodeUrl || "").indexOf("{{") != -1;
     node.host = nodeUrl;
     //node.log(`${node.host}`);
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       const id = getId(node, 'RobotListenerNode');
       var url = nodeUrl || msg.url;
       if (isTemplatedUrl) {
-          url = mustache.render(nodeUrl, msg);
+        url = mustache.render(nodeUrl, msg);
       }
       msg.robotHost = url;
       node.socket_info = {
@@ -621,7 +621,7 @@ module.exports = function(RED) {
         node.send(msg);
       }));
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       removeSocket(node.socket_info.url, node.socket_info.id, node);
       if (node.socket_info.timeout) {
         clearTimeout(node.socket_info.timeout);
@@ -630,23 +630,23 @@ module.exports = function(RED) {
       done();
     });
   }
-  RED.nodes.registerType("robot-listener",RobotListenerNode);
+  RED.nodes.registerType("robot-listener", RobotListenerNode);
 
   function VoiceNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
     var params = {};
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       params = getParams(params, msg.robotParams);
       params = getParams(params, config);
       msg.robotParams = params;
       node.send(msg);
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       done();
     });
   }
-  RED.nodes.registerType("robot-voice",VoiceNode);
+  RED.nodes.registerType("robot-voice", VoiceNode);
 
   //HTTPによる接続
   function _request_http(node, action, host, body, callback) {
@@ -657,23 +657,23 @@ module.exports = function(RED) {
         'content-type': 'application/json',
       },
       body: JSON.stringify(body),
-    }, function(err, res, body) {
+    }, function (err, res, body) {
       callback(err, body);
     });
   }
 
   function TextToSpeechNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
     node.algorithmPlay = new Play();
     var params = {};
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       node.playing = true;
-      node.status({fill:"blue",shape:"dot"});
+      node.status({ fill: "blue", shape: "dot" });
       params.message = msg.payload;
       params = getParams(params, msg.robotParams);
       params = getParams(params, config);
-      node.algorithmPlay.request(node, msg, params, function(err, res) {
+      node.algorithmPlay.request(node, msg, params, function (err, res) {
         if (!node.playing) return;
         node.log(res);
         msg.result = res;
@@ -681,17 +681,17 @@ module.exports = function(RED) {
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       node.playing = false;
       node.algorithmPlay.stop(node);
       node.status({});
       done();
     });
   }
-  RED.nodes.registerType("text-to-speech",TextToSpeechNode);
+  RED.nodes.registerType("text-to-speech", TextToSpeechNode);
 
   function SpeechToTextNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
     var param = {};
     if (typeof config.timeout !== 'undefined') {
@@ -700,11 +700,11 @@ module.exports = function(RED) {
     if (typeof config.sensitivity !== 'undefined') {
       param.sensitivity = config.sensitivity;
     }
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       node.recording = true;
-      node.status({fill:"blue",shape:"dot"});
+      node.status({ fill: "blue", shape: "dot" });
       node.robotHost = msg.robotHost;
-      _request(node, 'speech-to-text', msg.robotHost, param, function(err, res) {
+      _request(node, 'speech-to-text', msg.robotHost, param, function (err, res) {
         if (!node.recording) return;
         node.recording = false;
         node.log(res);
@@ -712,72 +712,72 @@ module.exports = function(RED) {
           msg.payload = 'timeout';
           node.send([null, msg]);
         } else
-        if (res == '[canceled]') {
-          msg.payload = 'canceled';
-          node.send([null, msg]);
-        } else
-        if (res == '[camera]') {
-          msg.payload = 'camera';
-          node.send([null, msg]);
-        } else {
-          if (res.button) {
-            msg.payload = 'button';
-            msg.button = res;
-            delete res.button;
+          if (res == '[canceled]') {
+            msg.payload = 'canceled';
             node.send([null, msg]);
           } else
-          if (res.gamepad) {
-            msg.payload = 'gamepad';
-            msg.gamepad = res;
-            delete res.gamepad;
-            node.send([null, msg]);
-          } else
-          if (res.speechRequest) {
-            msg.speechRequest = true;
-            msg.payload = res.payload;
-            node.send([msg, null]);
-          } else
-          if (typeof res === 'object') {
-            msg.languageCode = res.languageCode,
-            msg.confidence = res.confidence;
-            msg.payload = res.transcript;
-            node.send([msg, null]);
-          } else {
-            msg.payload = res;
-            delete msg.speechRequest;
-            node.send([msg, null]);
-          }
-        }
+            if (res == '[camera]') {
+              msg.payload = 'camera';
+              node.send([null, msg]);
+            } else {
+              if (res.button) {
+                msg.payload = 'button';
+                msg.button = res;
+                delete res.button;
+                node.send([null, msg]);
+              } else
+                if (res.gamepad) {
+                  msg.payload = 'gamepad';
+                  msg.gamepad = res;
+                  delete res.gamepad;
+                  node.send([null, msg]);
+                } else
+                  if (res.speechRequest) {
+                    msg.speechRequest = true;
+                    msg.payload = res.payload;
+                    node.send([msg, null]);
+                  } else
+                    if (typeof res === 'object') {
+                      msg.languageCode = res.languageCode,
+                        msg.confidence = res.confidence;
+                      msg.payload = res.transcript;
+                      node.send([msg, null]);
+                    } else {
+                      msg.payload = res;
+                      delete msg.speechRequest;
+                      node.send([msg, null]);
+                    }
+            }
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       node.recording = false;
       _request(node, 'stop-speech-to-text', node.robotHost, {});
       node.status({});
       done();
     });
   }
-  RED.nodes.registerType("speech-to-text",SpeechToTextNode);
+  RED.nodes.registerType("speech-to-text", SpeechToTextNode);
 
   function UtteranceNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
     node.algorithmPlay = new Play();
     var params = {};
     var utterance = config.utterance;
-    var isTemplatedUrl = (utterance||"").indexOf("{{") != -1;
+    var isTemplatedUrl = (utterance || "").indexOf("{{") != -1;
     node.utterance = utterance;
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       node.playing = true;
-      node.status({fill:"blue",shape:"dot"});
+      node.status({ fill: "blue", shape: "dot" });
       params.message = node.utterance;
       if (isTemplatedUrl) {
-          params.message = mustache.render(node.utterance, msg);
+        params.message = mustache.render(node.utterance, msg);
       }
       params = getParams(params, msg.robotParams);
       params = getParams(params, config);
-      node.algorithmPlay.request(node, msg, params, function(err, res) {
+      node.algorithmPlay.request(node, msg, params, function (err, res) {
         if (!node.playing) return;
         node.log(res);
         msg.result = res;
@@ -786,127 +786,103 @@ module.exports = function(RED) {
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       node.playing = false;
       node.algorithmPlay.stop(node);
       node.status({});
       done();
     });
   }
-  RED.nodes.registerType("utterance",UtteranceNode);
-
-  function DocomoChatNode(config) {
-    RED.nodes.createNode(this,config);
-    var node = this;
-    var params = {};
-    node.on("input", function(msg) {
-      node.status({fill:"blue",shape:"dot"});
-      params.message = msg.payload;
-      params = getParams(params, msg.robotParams);
-      params = getParams(params, config);
-      _request(node, 'docomo-chat', msg.robotHost, params, function(err, res) {
-        msg.result = msg.payload;
-        msg.payload = res;
-        node.log(res);
-        node.send(msg);
-        node.status({});
-      });
-    });
-    node.on('close', function(removed, done) {
-      done();
-      node.status({});
-    });
-  }
-  RED.nodes.registerType("chat",DocomoChatNode);
+  RED.nodes.registerType("utterance", UtteranceNode);
 
   function CommandNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
-      node.status({fill:"blue",shape:"dot"});
+    node.on("input", function (msg) {
+      node.status({ fill: "blue", shape: "dot" });
       _request(node, 'command', msg.robotHost, {
         command: config.command,
         args: config.args,
-      }, function(err, res) {
+      }, function (err, res) {
         node.log(res);
         node.send(msg);
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       done();
       node.status({});
     });
   }
-  RED.nodes.registerType("command",CommandNode);
+  RED.nodes.registerType("command", CommandNode);
 
   function OpenSlideNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
-      node.status({fill:"blue",shape:"dot"});
+    node.on("input", function (msg) {
+      node.status({ fill: "blue", shape: "dot" });
       _request(node, 'command', msg.robotHost, {
         command: 'open-slide.cmd',
         args: config.args,
-      }, function(err, res) {
+      }, function (err, res) {
         node.log(res);
         node.send(msg);
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       done();
       node.status({});
     });
   }
-  RED.nodes.registerType("open-slide",OpenSlideNode);
+  RED.nodes.registerType("open-slide", OpenSlideNode);
 
   function NextPageNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
-      node.status({fill:"blue",shape:"dot"});
+    node.on("input", function (msg) {
+      node.status({ fill: "blue", shape: "dot" });
       _request(node, 'command', msg.robotHost, {
         command: 'right-key.cmd',
         args: '',
-      }, function(err, res) {
+      }, function (err, res) {
         node.log(res);
         node.send(msg);
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       done();
       node.status({});
     });
   }
-  RED.nodes.registerType("next-page",NextPageNode);
+  RED.nodes.registerType("next-page", NextPageNode);
 
   function CloseSlideNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
-      node.status({fill:"blue",shape:"dot"});
+    node.on("input", function (msg) {
+      node.status({ fill: "blue", shape: "dot" });
       _request(node, 'command', msg.robotHost, {
         command: 'done-key.cmd',
         args: '',
-      }, function(err, res) {
+      }, function (err, res) {
         node.log(res);
         node.send(msg);
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       done();
       node.status({});
     });
   }
-  RED.nodes.registerType("close-slide",CloseSlideNode);
+  RED.nodes.registerType("close-slide", CloseSlideNode);
 
   function MecabNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    var isTemplatedUrl = (config.pattern||"").indexOf("{{") != -1;
+    var isTemplatedUrl = (config.pattern || "").indexOf("{{") != -1;
     if (typeof config.intent === 'undefined') {
       node.intent = '';
     } else {
@@ -918,18 +894,18 @@ module.exports = function(RED) {
       node.priority = config.priority;
     }
     const wireNum = config.wires[1].length;
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       if (config.pattern) {
         var pattern = config.pattern;
         if (isTemplatedUrl) {
-            pattern = mustache.render(config.pattern, msg);
+          pattern = mustache.render(config.pattern, msg);
         }
-        node.pattern = pattern.split('\n').filter( v => v != '' );
+        node.pattern = pattern.split('\n').filter(v => v != '');
       } else {
         node.pattern = [];
       }
-      node.status({fill:"blue",shape:"dot"});
-      mecab_proc(msg.payload, [ [node.intent, node.pattern], ] , function(err, res) {
+      node.status({ fill: "blue", shape: "dot" });
+      mecab_proc(msg.payload, [[node.intent, node.pattern],], function (err, res) {
         //node.log(res);
         msg.subject = res.subject;
         msg.subjects = res.subjects;
@@ -956,52 +932,52 @@ module.exports = function(RED) {
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       done();
       node.status({});
     });
   }
-  RED.nodes.registerType("mecab",MecabNode);
+  RED.nodes.registerType("mecab", MecabNode);
 
   function TopicForkNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
     const wireNum = config.wires[0].length;
-    node.on("input", function(msg) {
-      msg.topicId = (function(){
-          var S4 = function() {
-              return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
-          };
-          return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4() +S4());
+    node.on("input", function (msg) {
+      msg.topicId = (function () {
+        var S4 = function () {
+          return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+        };
+        return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
       })();
       msg.topic = node.context().global.get('topic');
       if (typeof node.context().global.get('topicForks') === 'undefined') {
-        node.context().global.set('topicForks',{});
+        node.context().global.set('topicForks', {});
       }
       const topicForks = node.context().global.get('topicForks');
       topicForks[msg.topicId] = { count: node.wires[0].length, priority: 0, name: "", msg: {} };
       node.context().global.set('topicForks', topicForks);
-      node.status({fill:"blue",shape:"dot"});
+      node.status({ fill: "blue", shape: "dot" });
       node.send(msg);
       node.status({});
     });
-    node.on("close", function() {
+    node.on("close", function () {
       node.status({});
     });
   }
-  RED.nodes.registerType("topic-fork",TopicForkNode);
+  RED.nodes.registerType("topic-fork", TopicForkNode);
 
   function TopicJoinNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       // console.log(JSON.stringify(msg, null, '  '));
       // console.log(msg.topicId);
-      node.status({fill:"blue",shape:"dot"});
+      node.status({ fill: "blue", shape: "dot" });
       while (true) {
         if (typeof node.context().global.get('topicForks') !== 'undefined' && typeof msg.topicId !== 'undefined') {
           const topicForks = node.context().global.get('topicForks');
-          topicForks[msg.topicId].count --;
+          topicForks[msg.topicId].count--;
           // console.log(`msg.topicName ${msg.topicName}`);
           if (typeof msg.topicPriority !== 'undefined' && topicForks[msg.topicId].priority < msg.topicPriority) {
             topicForks[msg.topicId].priority = msg.topicPriority;
@@ -1031,16 +1007,16 @@ module.exports = function(RED) {
       }
       node.status({});
     });
-    node.on("close", function() {
+    node.on("close", function () {
       node.status({});
     });
   }
-  RED.nodes.registerType("topic-join",TopicJoinNode);
+  RED.nodes.registerType("topic-join", TopicJoinNode);
 
   function TopicPriorityNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       if (typeof msg.topicPriority === 'undefined') {
         msg.topicPriority = 0;
       }
@@ -1048,33 +1024,33 @@ module.exports = function(RED) {
       node.send(msg);
       node.status({});
     });
-    node.on("close", function() {
+    node.on("close", function () {
       node.status({});
     });
   }
-  RED.nodes.registerType("topic-priority",TopicPriorityNode);
+  RED.nodes.registerType("topic-priority", TopicPriorityNode);
 
   function TopicNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
-      node.status({fill:"blue",shape:"dot"});
+    node.on("input", function (msg) {
+      node.status({ fill: "blue", shape: "dot" });
       msg.topicName = config.topic;
       msg.topicPriority = (typeof msg.topicPriority !== 'undefined') ? msg.topicPriority : 0;
       node.send(msg);
       node.status({});
     });
-    node.on("close", function() {
+    node.on("close", function () {
       node.status({});
     });
   }
-  RED.nodes.registerType("topic",TopicNode);
+  RED.nodes.registerType("topic", TopicNode);
 
   function RepeatNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
-    node.on("input", function(msg) {
-      node.status({fill:"blue",shape:"dot"});
+    node.on("input", function (msg) {
+      node.status({ fill: "blue", shape: "dot" });
       if (!msg.hasOwnProperty('_loopController') || msg._loopController.id !== this.id) {
         msg._loopController = {
           loops: 0,
@@ -1097,24 +1073,24 @@ module.exports = function(RED) {
         node.status({});
       }
     });
-    node.on("close", function() {
+    node.on("close", function () {
       node.status({});
     });
   }
-  RED.nodes.registerType("repeat",RepeatNode);
+  RED.nodes.registerType("repeat", RepeatNode);
 
   function QuizButtonNode(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
     var node = this;
     var param = {};
     if (typeof config.timeout !== 'undefined') {
       param.timeout = config.timeout;
     }
-    node.on("input", function(msg) {
+    node.on("input", function (msg) {
       node.recording = true;
-      node.status({fill:"blue",shape:"dot"});
+      node.status({ fill: "blue", shape: "dot" });
       node.robotHost = msg.robotHost;
-      _request(node, 'quiz-button', msg.robotHost, param, function(err, res) {
+      _request(node, 'quiz-button', msg.robotHost, param, function (err, res) {
         if (!node.recording) return;
         node.recording = false;
         node.log(res);
@@ -1122,23 +1098,23 @@ module.exports = function(RED) {
           msg.payload = 'timeout';
           node.send([null, msg]);
         } else
-        if (res == '[canceled]') {
-          msg.payload = 'canceled';
-          node.send([null, msg]);
-        } else {
-          msg.button = res;
-          node.send([msg, null]);
-        }
+          if (res == '[canceled]') {
+            msg.payload = 'canceled';
+            node.send([null, msg]);
+          } else {
+            msg.button = res;
+            node.send([msg, null]);
+          }
         node.status({});
       });
     });
-    node.on('close', function(removed, done) {
+    node.on('close', function (removed, done) {
       node.recording = false;
       _request(node, 'stop-quiz-button', node.robotHost, {});
       node.status({});
       done();
     });
   }
-  RED.nodes.registerType("quiz-button",QuizButtonNode);
+  RED.nodes.registerType("quiz-button", QuizButtonNode);
 
 }

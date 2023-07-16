@@ -1,10 +1,12 @@
-const express = require("express")
-const path = require("path")
-const router = express.Router()
+import * as path from "path"
+import * as fs from "fs"
+import { spawn } from "child_process"
+
 import { config } from "./config"
-const { spawn } = require("child_process")
-const fs = require("fs")
-const basedir = path.join(__dirname, "..")
+
+const express = require("express")
+export const router = express.Router()
+const { basedir } = config
 const googleSpeech = (() => {
   if (
     "synthesizeSpeech" in config &&
@@ -94,7 +96,7 @@ const cacheDBPath =
 const cacheDB = (() => {
   if (cacheDBPath) {
     try {
-      const data = fs.readFileSync(cacheDBPath)
+      const data = fs.readFileSync(cacheDBPath, "utf8")
       const json = JSON.parse(data)
       Object.keys(json).forEach((key) => {
         if ("atime" in json[key]) json[key].atime = new Date(json[key].atime)
@@ -315,7 +317,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
             })
             .promise()
             .then((data) => {
-              var outputFileStream = new FileWriter(sndfilepath, {
+              let outputFileStream = new FileWriter(sndfilepath, {
                 sampleRate: 16000,
                 channels: 1,
               })
@@ -491,7 +493,7 @@ const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 const loadCredential = (callback) => {
   if (google_sheet.credentials === null) {
-    fs.readFile(config.googleSheet.credentialPath, (err, content) => {
+    fs.readFile(config.googleSheet.credentialPath, "utf8", (err, content) => {
       if (err) return callback(err)
       google_sheet.credentials = JSON.parse(content)
       callback(null, google_sheet.credentials)
@@ -531,7 +533,7 @@ const getNewToken = (oAuth2Client, callback) => {
 
 const getToken = (oAuth2Client, callback) => {
   if (google_sheet.token === null) {
-    fs.readFile(config.googleSheet.tokenPath, (err, content) => {
+    fs.readFile(config.googleSheet.tokenPath, "utf8", (err, content) => {
       if (err) {
         return callback(err)
       }
@@ -715,8 +717,6 @@ router.post("/append-to-sheet", (req, res) => {
   }
   res.send("OK\n")
 })
-
-module.exports = router
 
 if (require.main === module) {
   // const PORT = process.env.PORT || 5000

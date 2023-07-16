@@ -1,4 +1,7 @@
-const RobotDB = function (databasePath, options, callback) {
+import * as fs from "fs"
+import * as path from "path"
+
+export const RobotDB = function (databasePath, options, callback) {
   const Sequelize = require("sequelize")
   const sequelize = new Sequelize(`sqlite:${databasePath}`, options)
   const Op = Sequelize.Op
@@ -223,7 +226,7 @@ const RobotDB = function (databasePath, options, callback) {
     })
     const items = {}
     let r = []
-    for (var i = 0; i < quizItems.length; i++) {
+    for (let i = 0; i < quizItems.length; i++) {
       const v = await Answer.findAll({
         where: {
           quizItemId: quizItems[i].id,
@@ -401,7 +404,7 @@ const RobotDB = function (databasePath, options, callback) {
       attributes: ["startTime"],
     })
     const startTimes = []
-    for (var i = 0; i < quiz.length; i++) {
+    for (let i = 0; i < quiz.length; i++) {
       const retval = await this.findAnswers({
         quizId,
         startTime: quiz[i].startTime,
@@ -471,7 +474,7 @@ const RobotDB = function (databasePath, options, callback) {
     }
   }
 
-  async function deleteBar(bar, defaultBarData) {
+  async function deleteBar(bar) {
     if (bar.uuid) {
       await Bar.destroy({
         where: {
@@ -485,6 +488,10 @@ const RobotDB = function (databasePath, options, callback) {
     return await Bar.findAll({
       where,
     })
+  }
+
+  async function answerAll() {
+    return {}
   }
 
   const t = {
@@ -506,6 +513,7 @@ const RobotDB = function (databasePath, options, callback) {
     updateBar,
     deleteBar,
     findBars,
+    answerAll,
     Op,
   }
 
@@ -529,12 +537,7 @@ const RobotDB = function (databasePath, options, callback) {
   return t
 }
 
-module.exports = RobotDB
-
 if (require.main === module) {
-  const fs = require("fs")
-  const path = require("path")
-  const config = require("./config")
   const workFolder = "DoraEngine" //for macOS(development)
   const HOME =
     process.platform === "darwin"
@@ -542,7 +545,7 @@ if (require.main === module) {
       : process.env.HOME
   const robotDataPath = path.join(HOME, "robot-data.json")
 
-  const robotJson = fs.readFileSync(robotDataPath)
+  const robotJson = fs.readFileSync(robotDataPath, "utf8")
   const robotData = JSON.parse(robotJson)
 
   const sqeuelize = RobotDB(
@@ -596,7 +599,7 @@ if (require.main === module) {
         })
       })
 
-      for (var i = 0; i < a.length; i++) {
+      for (let i = 0; i < a.length; i++) {
         await db.updateQuiz(a[i])
         await db.updateAnswer(a[i])
       }

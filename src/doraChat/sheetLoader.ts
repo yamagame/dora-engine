@@ -64,7 +64,7 @@ export default function (config) {
             const r = []
             let t = { answer: [] }
             const askKey = head.indexOf("ask") >= 0
-            for (var i in data) {
+            for (let i in data) {
               const v = data[i]
               if (askKey) {
                 if (!v.ask) {

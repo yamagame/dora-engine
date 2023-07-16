@@ -1,17 +1,19 @@
 import * as EventEmitter from "events"
 import { spawn, ChildProcess } from "child_process"
-const path = require("path")
+import * as path from "path"
+
+import { config } from "./config"
+import { localhostToken } from "./accessCheck"
+
 const macvoice_speedrate = 210 / 100
-const config = require("./config")
 const axios = require("axios")
-const { localhostToken } = require("./accessCheck")
 const utils = require("./utils")
 
 const headers = {
   "Content-Type": "application/json",
 }
 
-const basedir = path.join(__dirname, "..")
+const { basedir } = config
 
 class TalkEmitter extends EventEmitter {
   playQue: any[] = []
@@ -33,7 +35,7 @@ class TalkEmitter extends EventEmitter {
     super()
   }
 
-  say(words, params, callback, startCallback) {
+  say(words: string, params, callback, startCallback) {
     if (typeof words === "undefined") {
       callback()
       return
@@ -228,7 +230,7 @@ class TalkEmitter extends EventEmitter {
     playone()
   }
 
-  playAsync(speech, params, callback) {
+  playAsync(speech: string, params, callback) {
     return new Promise<void>((resolve) => {
       let doneStart = false
       this.say(
@@ -260,7 +262,7 @@ class TalkEmitter extends EventEmitter {
       pitch?: string
       name?: string
     } = {},
-    callback
+    callback = null
   ) {
     //デフォルトパラメータの設定
     {
@@ -296,7 +298,7 @@ class TalkEmitter extends EventEmitter {
     }
   }
 
-  stop(callback) {
+  stop(callback = null) {
     this.playing = false
     if (this._playone) {
       if (typeof this._playone === "string") {
@@ -331,9 +333,18 @@ class TalkEmitter extends EventEmitter {
   }
 }
 
-function Talk() {
-  var t = new TalkEmitter()
-  return t
+export function Talk() {
+  return new TalkEmitter()
 }
 
-module.exports = Talk()
+function main() {
+  const talk = Talk()
+  talk.macvoice = true
+  talk.dummy = false
+  talk.languageCode = "normal"
+  talk.play("こんにちは")
+}
+
+if (require.main === module) {
+  main()
+}

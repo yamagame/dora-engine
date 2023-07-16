@@ -47,10 +47,10 @@ const generate = (sentense) => {
     const removeP = (n) => {
       delete n.p
       if (n.c) {
-        for (var i = 0; i < n.c.length; i++) {
+        for (let i = 0; i < n.c.length; i++) {
           const q = removeP(n.c[i])
         }
-        for (var i = 0; i < n.v.length; i++) {
+        for (let i = 0; i < n.v.length; i++) {
           const q = removeP(n.v[i])
         }
       }

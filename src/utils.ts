@@ -4,7 +4,7 @@ const psTree = require("ps-tree")
 function kill(pid, signal, callback) {
   signal = signal || "SIGKILL"
   callback = callback || function () {}
-  var killTree = true
+  let killTree = true
   if (killTree) {
     psTree(pid, function (err, children) {
       ;[pid]
@@ -100,10 +100,10 @@ function AttendanceCSV(robot_data, dates_list, student_list) {
 function AttendanceLoad(robotdata_path, studentlist_path, datelist_path) {
   const quiz = robotdata_path ? require(robotdata_path) : []
 
-  var students = studentlist_path
+  let students = studentlist_path
     ? (function () {
         try {
-          var d = fs.readFileSync(studentlist_path)
+          let d = fs.readFileSync(studentlist_path)
           return d
             .toString()
             .split("\n")
@@ -117,7 +117,7 @@ function AttendanceLoad(robotdata_path, studentlist_path, datelist_path) {
                   kana: "",
                 }
               }
-              var t = v.match(/(.+)\((.+)\)\/(.*)/)
+              let t = v.match(/(.+)\((.+)\)\/(.*)/)
               if (!t) {
                 t = v.match(/(.+)\((.+)\)/)
                 if (!t) {
@@ -138,10 +138,10 @@ function AttendanceLoad(robotdata_path, studentlist_path, datelist_path) {
       })()
     : []
 
-  var dates = datelist_path
+  let dates = datelist_path
     ? (function () {
         try {
-          var d = fs.readFileSync(datelist_path)
+          let d = fs.readFileSync(datelist_path)
           return d
             .toString()
             .split("\n")

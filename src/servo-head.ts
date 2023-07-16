@@ -1,18 +1,18 @@
+import * as fs from "fs"
+import * as path from "path"
+
 //首振り
 const pigpio = require("pigpio")
 const raspi = require("raspi")
-const { Servo } = require("./action")
-const Action = require("./action").Action
-import { config } from "~/config"
+import { Servo, Action } from "./action"
+const config = require("~/config")
 const port = config.gpioPort
-const fs = require("fs")
-const path = require("path")
 const gamepad = config.useGamePad ? require("./gamepad") : null
-const basedir = path.join(__dirname, "..")
+const { basedir } = config
 
 function loadSetting() {
   try {
-    return JSON.parse(fs.readFileSync(path.join(basedir, "servo-head.json")))
+    return JSON.parse(fs.readFileSync(path.join(basedir, "servo-head.json"), "utf8"))
   } catch (err) {}
   return {
     servo0: 0.073,
@@ -35,10 +35,10 @@ if (config.voiceHat) {
   pigpio.configureClock(5, 0)
 }
 
-var mode = process.env.MODE || "idle"
-var led_mode = process.env.LED_MODE || "off"
-var led_bright = process.env.LED_VALUE || 1
-var buttonLevel = null
+let mode = process.env.MODE || "idle"
+let led_mode = process.env.LED_MODE || "off"
+let led_bright = process.env.LED_VALUE || 1
+let buttonLevel = null
 
 const servo0 = Servo(setting.servo0) //UP DOWN
 const servo1 = Servo(setting.servo1) //LEFT RIGHT
@@ -54,7 +54,8 @@ function abs(a) {
 }
 
 function startServo() {
-  const servo = require("./servo")()
+  const { Servo } = require("./servo")
+  const servo = Servo()
   const led = require("./led-controller")()
   servo.pwm0.write(servo0.now) //UP DOWN
   servo.pwm1.write(servo1.now) //LEFT RIGHT
@@ -290,8 +291,8 @@ raspi.init(() => {
     })
   })
 
-  var Gpio = require("pigpio").Gpio
-  var button = new Gpio(23, {
+  let Gpio = require("pigpio").Gpio
+  let button = new Gpio(23, {
     mode: Gpio.INPUT,
     pullUpDown: Gpio.PUD_DOWN,
     edge: Gpio.EITHER_EDGE,

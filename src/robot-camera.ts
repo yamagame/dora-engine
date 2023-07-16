@@ -1,6 +1,6 @@
 import * as EventEmitter from "events"
 
-class Camera extends EventEmitter {
+export class Camera extends EventEmitter {
   _eventTime = 60
   counter = 0
   nowInfo = []
@@ -111,8 +111,6 @@ class Camera extends EventEmitter {
 
   hello() {}
 }
-
-module.exports = Camera
 
 if (require.main === module) {
   const camera = new Camera()

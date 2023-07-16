@@ -1,13 +1,15 @@
-const io = require("socket.io-client")
 import * as EventEmitter from "events"
-const player = require("./movie-player")
-const path = require("path")
-const ping = require("ping")
-import { config } from "./config"
-const mkdirp = require("mkdirp")
-const fs = require("fs")
+import * as path from "path"
+import * as fs from "fs"
 
-const basedir = path.join(__dirname, "..")
+import { config } from "./config"
+
+const io = require("socket.io-client")
+const player = require("./movie-player")
+const ping = require("ping")
+const mkdirp = require("mkdirp")
+
+const { basedir } = config
 
 const workFolder = "DoraEngine" //for macOS(development)
 const PICT =
@@ -31,7 +33,7 @@ const request = require("request-promise")
 const host = process.argv[2] || "localhost"
 
 function MovieClient(host, callback) {
-  var t = new EventEmitter()
+  let t = new EventEmitter()
 
   const login = async (callback) => {
     try {

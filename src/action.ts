@@ -15,8 +15,8 @@ function abs(a) {
   return a
 }
 
-var t0 = 0
-var t1 = 0
+let t0 = 0
+let t1 = 0
 
 class ServoEmitter extends EventEmitter {
   center = 0
@@ -39,7 +39,7 @@ class ServoEmitter extends EventEmitter {
     const adjust = (a, b) => {
       const d = this.target - this.now
       if (abs(d) > a) {
-        var q = d * this.speed
+        let q = d * this.speed
         if (abs(q) > b) q = b * sgn(q)
         this.now += q
         return true
@@ -57,8 +57,7 @@ class ServoEmitter extends EventEmitter {
 }
 
 function Servo(center: number) {
-  var t = new ServoEmitter(center)
-  return t
+  return new ServoEmitter(center)
 }
 
 class ActionEmitter extends EventEmitter {
@@ -183,7 +182,7 @@ class ActionEmitter extends EventEmitter {
 }
 
 function Action(servo0, servo1) {
-  var t = new ActionEmitter()
+  let t = new ActionEmitter()
   t.servo0 = servo0
   t.servo1 = servo1
   t.wait = 120
@@ -193,7 +192,4 @@ function Action(servo0, servo1) {
   return t
 }
 
-module.exports = {
-  Action,
-  Servo,
-}
+export { Action, Servo }

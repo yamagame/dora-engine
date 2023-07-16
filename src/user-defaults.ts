@@ -65,8 +65,7 @@ class UserDefaults {
 }
 
 const userDefaults = new UserDefaults()
-
-module.exports = userDefaults
+export default userDefaults
 
 async function main() {
   const save = (data) => {

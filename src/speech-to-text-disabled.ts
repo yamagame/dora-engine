@@ -1,9 +1,7 @@
 import * as EventEmitter from "events"
 
 function Speech() {
-  var t = new EventEmitter()
-  return t
+  return new EventEmitter()
 }
 
-const sp = Speech()
-module.exports = sp
+export default Speech()

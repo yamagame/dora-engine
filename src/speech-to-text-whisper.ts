@@ -1,5 +1,5 @@
 import * as EventEmitter from "events"
-const { spawn } = require("child_process")
+import { spawn } from "child_process"
 
 const WHISPER = process.env["WHISPER_PATH"] || "./whisper.sh"
 console.log(`WHISPER_PATH ${WHISPER}`)
@@ -13,9 +13,9 @@ class SpeechEmitter extends EventEmitter {
 }
 
 function Speech() {
-  var t = new SpeechEmitter()
-  var streamDataReuest = false
-  var startRecording = false
+  const t = new SpeechEmitter()
+  let streamDataReuest = false
+  let startRecording = false
 
   let resultSpeech = []
   let commingText = ""
@@ -103,11 +103,10 @@ function Speech() {
 }
 
 const sp = Speech()
-module.exports = sp
+export default sp
 
-if (require.main === module) {
+function main() {
   const express = require("express")
-  const socketIO = require("socket.io")
   const PORT = 4300
 
   const app = express()
@@ -116,4 +115,8 @@ if (require.main === module) {
   server.listen(PORT, () => console.log(`server listening on port ${PORT}!`))
 
   sp.emit("startRecording", {})
+}
+
+if (require.main === module) {
+  main()
 }

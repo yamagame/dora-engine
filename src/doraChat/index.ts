@@ -341,7 +341,7 @@ export default function (router, settings) {
       let answer = `ごめんなさい、${dateUtter}の天気はわかりません`
       if (response.ok) {
         const data = await response.json()
-        var telop = null
+        let telop = null
         if (data.forecasts) {
           data.forecasts.some((v) => {
             if (v.dateLabel == dateLabel) {

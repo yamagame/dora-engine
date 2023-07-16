@@ -1,4 +1,5 @@
-const path = require("path")
+import * as path from "path"
+
 const port = 3090
 const gpioPort = 3091
 const bcrypt = (() => {
@@ -9,9 +10,10 @@ const bcrypt = (() => {
   }
 })()
 
-const basedir = path.join(__dirname, "..")
+const basedir = process.env.ROBOT_BASE_DIR || path.join(__dirname, "..")
 
 export const config = {
+  basedir: basedir,
   port: port,
   gpioPort: gpioPort,
   serverPort: 3092,
@@ -20,10 +22,6 @@ export const config = {
   udp: {
     host: "localhost",
     port: port,
-  },
-  docomo: {
-    api_key: process.env.DOCOMO_API_KEY || "",
-    app_id: process.env.DOCOMO_APP_ID || "",
   },
   robotUserDefaultsPath:
     process.env.ROBOT_USER_DEFAULTS_PATH || path.join(basedir, "robot-defaults.json"),

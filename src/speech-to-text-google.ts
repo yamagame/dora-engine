@@ -1,7 +1,9 @@
 import * as EventEmitter from "events"
+
+import { config } from "./config"
+
 const speech = require("@google-cloud/speech").v1p1beta1
 const mic = require("mic")
-const config = require("./config")
 
 const PRELOAD_COUNT = 3
 
@@ -31,11 +33,11 @@ function Speech() {
     const a = []
     let _waveSkip = waveSkip
     if (_waveSkip > buffer.length / 2) _waveSkip = buffer.length / 2
-    for (var i = 0; i < buffer.length; i += _waveSkip * 2) {
+    for (let i = 0; i < buffer.length; i += _waveSkip * 2) {
       let maxSample = null
       let sum = 0
       let buff = []
-      for (var j = i; j < i + _waveSkip * 2; j += 2) {
+      for (let j = i; j < i + _waveSkip * 2; j += 2) {
         let sample = 0
         if (buffer[j + 1] > 128) {
           sample = (buffer[j + 1] - 256) * 256
@@ -59,7 +61,7 @@ function Speech() {
     return a
   }
 
-  var t = new RecordingEmitter()
+  const t = new RecordingEmitter()
 
   const defaultRequestOpts = {
     config: {
@@ -79,24 +81,24 @@ function Speech() {
   } else {
     device = config.usbUSBMICDevice //e.g. 'plughw:1,0';
   }
-  var micInstance = mic({
+  const micInstance = mic({
     device: device,
     rate: "16000",
     channels: "1",
     debug: false,
     exitOnSilence: 6,
   })
-  var micInputStream = micInstance.getAudioStream()
+  const micInputStream = micInstance.getAudioStream()
   t.stream = micInputStream
 
-  var recognizeStream = null
-  var recognizeStreams = null
-  var requestOpts = [{ ...defaultRequestOpts }]
-  var startTime = 0
-  var writingStep = 0
-  var speechClients = []
-  var streamQue = []
-  var streamDataReuest = false
+  let recognizeStream = null
+  let recognizeStreams = null
+  let requestOpts = [{ ...defaultRequestOpts }]
+  let startTime = 0
+  let writingStep = 0
+  let speechClients = []
+  let streamQue = []
+  let streamDataReuest = false
 
   speechClients[0] = new speech.SpeechClient()
 
@@ -389,9 +391,9 @@ function Speech() {
 }
 
 const sp = Speech()
-module.exports = sp
+export default sp
 
-if (require.main === module) {
+function main() {
   const express = require("express")
   const socketIO = require("socket.io")
   const PORT = 4300
@@ -454,4 +456,8 @@ if (require.main === module) {
   sp.on("wave-data", function (data) {
     ioa.emit("wave-data", data)
   })
+}
+
+if (require.main === module) {
+  main()
 }
