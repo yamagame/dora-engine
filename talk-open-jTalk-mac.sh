@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# OpenJTalk(mac用) を使って発話する
+#
+
 TMP="$3"
 USER_NAME=`whoami`
 VOICE_NAME="$1"

@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# RaspberryPi でロボットシステムを起動する
+# 音声認識はオフ、音声合成はOpenJTalkを使用
+#
+
 cd `dirname $0`
 #./talk-f1.sh 起動中です
 # sudo systemctl enable ntp

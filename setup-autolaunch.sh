@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# RaspberryPi でロボットシステムを自動起動させるsystemdの設定を行う
+#
+
 cd ~
 
 cd dora-engine

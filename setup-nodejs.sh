@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# RaspberryPi で Node.js を使用するための準備を行う
+#
+
 cd ~
 
 sudo apt-get install npm -y

@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# RaspberryPi で OpenJTalk を使用するための準備を行う
+#
+
 cd ~
 
 sudo apt-get update

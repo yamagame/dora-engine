@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# OpenJTalk(RaspberryPi用) を使って発話する
+#
+
 TMP="$3"
 VOICE_NAME="$1"
 ALL_VOICE_PATH=`find ~/ -name *"$VOICE_NAME"*.htsvoice`
