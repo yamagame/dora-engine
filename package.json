@@ -7,6 +7,7 @@
     "@google-cloud/speech": "^4.5.0",
     "@google-cloud/text-to-speech": "^3.2.0",
     "@google-cloud/translate": "^6.2.0",
+    "@types/dotenv": "^8.2.0",
     "aws-iot-device-sdk": "^2.1.0",
     "aws-sdk": "^2.418.0",
     "axios": "^0.21.1",
@@ -17,7 +18,9 @@
     "core-io-types": "^2.1.0",
     "csurf": "^1.9.0",
     "date-utils": "^1.2.21",
+    "dayjs": "^1.11.9",
     "dora": "github:yamagame/dora",
+    "dotenv": "^16.3.1",
     "express": "^4.16.2",
     "express-session": "^1.15.6",
     "googleapis": "^73.0.0",
@@ -44,10 +47,10 @@
     "wav": "^1.0.2"
   },
   "optionalDependencies": {
-    "mic": "git+https://github.com/yamagame/mic.git",
     "raspi": "^6.0.1",
     "raspi-gpio": "^6.2.2",
-    "raspi-soft-pwm": "^6.0.2"
+    "raspi-soft-pwm": "^6.0.2",
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.3",
@@ -57,12 +60,13 @@
   "scripts": {
     "start": "SPEECH=off MACINTOSH=on ts-node src/robot-server.js",
     "whisper": "SPEECH=whisper WHISPER_PATH=./whisper.sh MACINTOSH=on node src/robot-server.js",
+    "reazon": "SPEECH=reazon MACINTOSH=on ts-node -r tsconfig-paths/register src/robot-server.ts",
     "robot": "node src/robot-server.js",
     "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node src/robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node src/robot-server.js",
     "servo": "sudo node src/servo-head.js",
     "build": "rm -rf ./build && tsc --project tsconfig.build.json",
-    "ts-node": "ts-node $1",
+    "ts-node": "ts-node -r tsconfig-paths/register $1",
     "test": "jest"
   },
   "jest": {

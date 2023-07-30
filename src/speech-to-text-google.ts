@@ -1,9 +1,8 @@
 import * as EventEmitter from "events"
-
 import { config } from "./config"
+import Mic from "~/voice/mic"
 
 const speech = require("@google-cloud/speech").v1p1beta1
-const mic = require("mic")
 
 const PRELOAD_COUNT = 3
 
@@ -81,7 +80,7 @@ function Speech() {
   } else {
     device = config.usbUSBMICDevice //e.g. 'plughw:1,0';
   }
-  const micInstance = mic({
+  const micInstance = new Mic({
     device: device,
     rate: "16000",
     channels: "1",
@@ -391,7 +390,7 @@ function Speech() {
 }
 
 const sp = Speech()
-export default sp
+module.exports = sp
 
 function main() {
   const express = require("express")

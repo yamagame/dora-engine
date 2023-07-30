@@ -10,7 +10,7 @@ const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 const loadCredential = (config, callback) => {
   if (google_sheet.credentials === null) {
-    fs.readFile(config.credentialPath, (err, content) => {
+    fs.readFile(config.credentialPath, "utf8", (err, content) => {
       if (err) return callback(err)
       google_sheet.credentials = JSON.parse(content.toString())
       callback(null, google_sheet.credentials)
@@ -50,7 +50,7 @@ const getNewToken = (config, oAuth2Client, callback) => {
 
 const getToken = (config, oAuth2Client, callback) => {
   if (google_sheet.token === null) {
-    fs.readFile(config.tokenPath, (err, content) => {
+    fs.readFile(config.tokenPath, "utf8", (err, content) => {
       if (err) {
         return callback(err)
       }

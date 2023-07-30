@@ -2,6 +2,7 @@ import * as path from "path"
 import * as fs from "fs"
 import * as os from "os"
 import * as ip from "ip"
+import "dotenv/config"
 import { exec, spawn } from "child_process"
 
 import { config } from "./config"
@@ -14,8 +15,8 @@ import {
   checkPermission,
 } from "./accessCheck"
 
-import express from "express"
-import cookieParser from "cookie-parser"
+import * as express from "express"
+import * as cookieParser from "cookie-parser"
 import axios, { Method } from "axios"
 import { selectEngine } from "./speech"
 import { Talk } from "./talk"
@@ -23,18 +24,18 @@ import { ButtonClient } from "./button-client"
 import { RobotDB } from "./robot-db"
 import { router as googleRouter } from "./google-router"
 import { Camera } from "./robot-camera"
-import session from "express-session"
+import * as session from "express-session"
 const MemoryStore = require("memorystore")(session)
-import passport from "passport"
-const DoraChat = require("./doraChat")
+import * as passport from "passport"
+// const DoraChat = require("./doraChat")
 const LocalStrategy = require("passport-local").Strategy
 import { v4 as uuidv4 } from "uuid"
-import mkdirp from "mkdirp"
+import * as mkdirp from "mkdirp"
 import UserDefaults from "./user-defaults"
 import { upload, readDir, deleteFile } from "./fileServer"
-import csrf from "csurf"
+import * as csrf from "csurf"
 
-const router = express.Router()
+// const router = express.Router()
 const speech = selectEngine(process.env["SPEECH"])
 const buttonClient = ButtonClient(config)
 const talk = Talk()
@@ -60,9 +61,9 @@ const PICT =
     : path.join(process.env.HOME, "Pictures")
 const PART_LIST_FILE_PATH = path.join(HOME, "quiz-student.txt")
 
-mkdirp(config.doraChat.dataDir, async function (err) {
-  if (err) console.log(err)
-})
+// mkdirp(config.doraChat.dataDir, async function (err) {
+//   if (err) console.log(err)
+// })
 
 const defaultBarData = {
   uuid: "",
@@ -518,8 +519,8 @@ speech.on("wave-data", function (data) {
 const app = express()
 
 app.use((req, res, next) => {
-  console.log(`# ${new Date().toLocaleString()} ${req.ip} ${req.url}`)
-  console.log(`${JSON.stringify(req.headers)}`)
+  // console.log(`# ${new Date().toLocaleString()} ${req.ip} ${req.url}`)
+  // console.log(`${JSON.stringify(req.headers)}`)
   next()
 })
 
@@ -550,8 +551,8 @@ app.use(
 )
 
 app.use((req, res, next) => {
-  console.log("SessionID: " + req.sessionID)
-  console.log("session: " + JSON.stringify(req.session))
+  // console.log("SessionID: " + req.sessionID)
+  // console.log("session: " + JSON.stringify(req.session))
   next()
 })
 
@@ -731,38 +732,38 @@ app.get("/logout/:view", function (req, res) {
   res.redirect(`/login/${req.params.view}`)
 })
 
-const doraChat = DoraChat(
-  (function () {
-    const r = {
-      post: function (key, fn) {
-        r[key] = fn
-      },
-    }
-    return r
-  })(),
-  {
-    credentialPath: config.googleSheet.credentialPath,
-    tokenPath: config.googleSheet.tokenPath,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    cacheDir: config.doraChat.dataDir,
-    wikipedia: config.doraChat.wikipedia,
-    weather: config.doraChat.weather,
-  }
-)
+// const doraChat = DoraChat(
+//   (function () {
+//     const r = {
+//       post: function (key, fn) {
+//         r[key] = fn
+//       },
+//     }
+//     return r
+//   })(),
+//   {
+//     credentialPath: config.googleSheet.credentialPath,
+//     tokenPath: config.googleSheet.tokenPath,
+//     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+//     cacheDir: config.doraChat.dataDir,
+//     wikipedia: config.doraChat.wikipedia,
+//     weather: config.doraChat.weather,
+//   }
+// )
 
-function dora_chat(payload, callback) {
-  const req = {
-    body: {
-      ...payload,
-    },
-  }
-  const res = {
-    send: function (res) {
-      callback(null, res)
-    },
-  }
-  doraChat[`/${payload.action}`](req, res)
-}
+// function dora_chat(payload, callback) {
+//   const req = {
+//     body: {
+//       ...payload,
+//     },
+//   }
+//   const res = {
+//     send: function (res) {
+//       callback(null, res)
+//     },
+//   }
+//   doraChat[`/${payload.action}`](req, res)
+// }
 
 let playing = false
 
@@ -1103,18 +1104,18 @@ app.post("/text-to-speech/stop", hasPermission("control.write"), (req, res) => {
   })
 })
 
-app.use(
-  "/dora-chat",
-  hasPermission("control.write"),
-  DoraChat(router, {
-    credentialPath: config.googleSheet.credentialPath,
-    tokenPath: config.googleSheet.tokenPath,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    cacheDir: config.doraChat.dataDir,
-    wikipedia: config.doraChat.wikipedia,
-    weather: config.doraChat.weather,
-  })
-)
+// app.use(
+//   "/dora-chat",
+//   hasPermission("control.write"),
+//   DoraChat(router, {
+//     credentialPath: config.googleSheet.credentialPath,
+//     tokenPath: config.googleSheet.tokenPath,
+//     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+//     cacheDir: config.doraChat.dataDir,
+//     wikipedia: config.doraChat.wikipedia,
+//     weather: config.doraChat.weather,
+//   })
+// )
 
 /*
   マイクによる音声認識の閾値を変更する
@@ -1694,14 +1695,14 @@ const postCommand = async (req, res, credential) => {
         try {
           const base = path.join(HOME, "Documents")
           const username = name ? path.basename(name) : null
-          fs.readFile(path.join(base, username, filename), (err, data) => {
+          fs.readFile(path.join(base, username, filename), "utf8", (err, data) => {
             if (err) {
               emitError(err)
               return
             }
             dora
               .parse(data, filename, function (filename, callback) {
-                fs.readFile(path.join(base, username, filename), (err, data) => {
+                fs.readFile(path.join(base, username, filename), "utf8", (err, data) => {
                   if (err) {
                     emitError(err)
                     return
@@ -1842,12 +1843,13 @@ const postCommand = async (req, res, credential) => {
           if (filename) {
             const p = path.join(base, username, filename)
             console.log(`load ${p}`)
-            fs.readFile(p, (err, data) => {
+            fs.readFile(p, "utf8", (err, data) => {
               if (err) {
                 console.log(err)
                 res.send({ status: "Err" })
                 return
               }
+              console.log(data)
               res.send({ status: "OK", text: data, filename })
             })
           } else {
@@ -1924,7 +1926,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
       }
     } else if (req.body.action == "load") {
       if (filename === "生徒リスト") {
-        fs.readFile(PART_LIST_FILE_PATH, (err, data) => {
+        fs.readFile(PART_LIST_FILE_PATH, "utf8", (err, data) => {
           res.send({
             status: !err ? "OK" : err.code,
             text: data ? data : "",
@@ -1950,7 +1952,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
           })
         }
       } else if (filename === "日付リスト") {
-        fs.readFile(path.join(HOME, "date-list.txt"), (err, data) => {
+        fs.readFile(path.join(HOME, "date-list.txt"), "utf8", (err, data) => {
           res.send({
             status: !err ? "OK" : err.code,
             text: data ? data : "",
@@ -1990,8 +1992,8 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
     } else if (req.body.action == "load") {
       if (isValidFilename(filename)) {
         mkdirp(path.join(base, username), function (err) {
-          console.log(`load ${path.join(base, username, filename)}`)
-          fs.readFile(path.join(base, username, filename), (err, data) => {
+          console.log(`>> load ${path.join(base, username, filename)}`)
+          fs.readFile(path.join(base, username, filename), "utf8", (err, data) => {
             if (err) console.log(err)
             res.send({
               status: !err ? "OK" : err.code,
@@ -2014,7 +2016,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
       }
     } else if (req.body.action == "list") {
       mkdirp(path.join(base, username), function (err) {
-        console.log(`list ${path.join(base, username)}`)
+        console.log(`>> list ${path.join(base, username)}`)
         readdirFileOnly(path.join(base, username), (err, items) => {
           if (err) console.log(err)
           res.send({ status: !err ? "OK" : err.code, items })
@@ -2499,36 +2501,36 @@ io.on("connection", function (socket) {
       }
     })
   })
-  socket.on("dora-chat", function (payload, callback) {
-    if (typeof payload === "undefined") {
-      if (callback) callback("NG")
-      return
-    }
-    localhostCheck(payload)
-    checkPermission(payload, "control.write", (verified) => {
-      if (verified) {
-        try {
-          dora_chat(
-            {
-              message: payload.message,
-              action: payload.action || "",
-              sheetId: payload.sheetId || null,
-              sheetName: payload.sheetName || null,
-              download: payload.download || null,
-              useMecab: payload.useMecab || null,
-            },
-            (err, data) => {
-              if (callback) callback(data)
-            }
-          )
-          return
-        } catch (err) {
-          console.error(err)
-        }
-      }
-      if (callback) callback({})
-    })
-  })
+  // socket.on("dora-chat", function (payload, callback) {
+  //   if (typeof payload === "undefined") {
+  //     if (callback) callback("NG")
+  //     return
+  //   }
+  //   localhostCheck(payload)
+  //   checkPermission(payload, "control.write", (verified) => {
+  //     if (verified) {
+  //       try {
+  //         dora_chat(
+  //           {
+  //             message: payload.message,
+  //             action: payload.action || "",
+  //             sheetId: payload.sheetId || null,
+  //             sheetName: payload.sheetName || null,
+  //             download: payload.download || null,
+  //             useMecab: payload.useMecab || null,
+  //           },
+  //           (err, data) => {
+  //             if (callback) callback(data)
+  //           }
+  //         )
+  //         return
+  //       } catch (err) {
+  //         console.error(err)
+  //       }
+  //     }
+  //     if (callback) callback({})
+  //   })
+  // })
   socket.on("text-to-speech", function (payload, callback) {
     if (typeof payload === "undefined") {
       if (callback) callback("NG")

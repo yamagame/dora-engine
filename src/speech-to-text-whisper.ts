@@ -29,13 +29,12 @@ function Speech() {
   }
 
   // マイクの音声認識の閾値を変更
-  t.on("mic_threshold", function (threshold) {
+  t.on("mic_threshold", function (_threshold) {
     // ignore
   })
 
   // 音声解析開始
-  t.on("startRecording", function (params) {
-    const { threshold, languageCode, alternativeLanguageCodes, level } = params
+  t.on("startRecording", function (_params) {
     if (!startRecording) {
       if (childProcess == null) {
         childProcess = spawn(WHISPER)
@@ -103,7 +102,7 @@ function Speech() {
 }
 
 const sp = Speech()
-export default sp
+module.exports = sp
 
 function main() {
   const express = require("express")

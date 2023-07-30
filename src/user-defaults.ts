@@ -44,7 +44,7 @@ class UserDefaults {
         callback(null, this.defaults)
         return
       }
-      fs.readFile(filepath, (err, data) => {
+      fs.readFile(filepath, "utf8", (err, data) => {
         if (err) {
           callback(null, "")
           return

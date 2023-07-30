@@ -40,7 +40,7 @@ export default function (config) {
         }
         if (!(config.credentialPath && config.tokenPath) || !sheetId) {
           if (config.cacheDir) {
-            fs.readFile(cachePath(), (err, data) => {
+            fs.readFile(cachePath(), "utf8", (err, data) => {
               if (!err) {
                 try {
                   this.sheets[sheetName] = JSON.parse(data.toString())
@@ -130,7 +130,7 @@ export default function (config) {
         )
       }
       if (config.cacheDir) {
-        fs.readFile(cachePath(), (err, data) => {
+        fs.readFile(cachePath(), "utf8", (err, data) => {
           if (!err) {
             try {
               this.sheets[sheetName] = JSON.parse(data.toString())
