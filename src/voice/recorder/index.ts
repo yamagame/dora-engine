@@ -93,6 +93,7 @@ export class Recorder extends EventEmitter {
           if (this.state === "delay") {
             this.state = "idle"
           }
+          this.buffers = this.buffers.slice(-3)
         }
       } else if (this.state === "idle") {
         this.buffers = this.buffers.slice(-3)
@@ -165,7 +166,6 @@ export class Recorder extends EventEmitter {
 
   transcribe() {
     if (this.buffers.length <= 0) return
-    if (this.state != "delay") return
     const sampleCount = this.buffers.reduce((memo: number, buffer: Int16Array) => {
       return memo + buffer.length
     }, 0)
