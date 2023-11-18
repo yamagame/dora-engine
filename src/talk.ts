@@ -91,12 +91,13 @@ class TalkEmitter extends EventEmitter {
         languageCode === "default" ||
         languageCode === "normal" ||
         //|| languageCode === 'open-jTalk'
-        languageCode === null
+        !languageCode
       ) {
         // 通常モードの発話処理
         if (this.dummy) {
           playone()
         } else if (this.macvoice) {
+          console.log("macvoice", languageCode)
           if (languageCode === "open-jTalk") {
             startCallback()
             this._playone = spawn(path.join(basedir, "talk-open-jTalk-mac.sh"), [

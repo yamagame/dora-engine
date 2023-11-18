@@ -343,9 +343,9 @@ dora.loadModule("button", function (DORA, config) {
 
 dora.request = async function (command, options = null, params = null) {
   let len = 0
-  if (typeof command !== "undefined") len += 1
-  if (typeof options !== "undefined") len += 1
-  if (typeof params !== "undefined") len += 1
+  if (typeof command !== "undefined" && command != null) len += 1
+  if (typeof options !== "undefined" && options != null) len += 1
+  if (typeof params !== "undefined" && params != null) len += 1
   if (len <= 0) {
     throw new Error("Illegal arguments.")
   }
@@ -1019,6 +1019,7 @@ app.get("/recordingTime", (req, res) => {
   res.send(`${speech.recordingTime}`)
 })
 
+// curl -X POST -d '{"message":"こんにちは"}' -H 'content-type:application/json' http://localhost:3090/text-to-speech
 app.post("/text-to-speech", hasPermission("control.write"), (req, res) => {
   console.log("/text-to-speech")
   console.log(req.body)
@@ -1065,7 +1066,7 @@ app.post("/speech-to-text", hasPermission("control.write"), (req, res) => {
   Google Speech API に問い合わせないで curl コマンドでメッセージを送信できる
 
   curlコマンド使用例
-  $ curl -X POST --data 'こんにちは' -H 'content-type:text/plain' http://192.168.X.X:3090/debug-speech
+  $ curl -X POST --data 'こんにちは' -H 'content-type:text/plain' http://localhost:3090/debug-speech
 */
 app.post("/debug-speech", hasPermission("control.write"), (req, res) => {
   if (typeof req.body === "string") {
@@ -1122,7 +1123,7 @@ app.post("/text-to-speech/stop", hasPermission("control.write"), (req, res) => {
   閾値が0に近い程マイクの感度は高くなる
 
   curlコマンド使用例
-  $ curl -X POST --data '200' http://192.168.X.X:3090/mic-threshold
+  $ curl -X POST --data '200' http://localhost:3090/mic-threshold
 */
 app.post("/mic-threshold", hasPermission("control.write"), (req, res) => {
   speech.emit("mic_threshold", req.body.toString("utf-8"))
@@ -1873,6 +1874,8 @@ app.post("/command/:filename", hasPermission("command.write"), async (req, res) 
   }
 })
 
+// ボタン押下をエミュレート
+// - curl -X POST -d '{"type":"cancel"}' -H 'content-type:application/json' http://localhost:3090/command
 app.post("/command", hasPermission("command.write"), async (req, res) => {
   if (req.isAuthenticated()) {
     createSignature(req.user.id, (signature) => {

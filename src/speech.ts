@@ -1,4 +1,4 @@
-export const selectEngine = (mode: string) => {
+const _selectEngine = (mode: string) => {
   if (mode === "whisper") {
     return require("./speech-to-text-whisper")
   } else if (mode === "reazon") {
@@ -9,12 +9,16 @@ export const selectEngine = (mode: string) => {
   return require("./speech-to-text-google")
 }
 
+export const selectEngine = (mode: string) => {
+  return _selectEngine(mode).default
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // main
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function main() {
-  const speech = selectEngine("reazon")
+  const speech = selectEngine("reazon").default
   console.log(speech)
 }
 
