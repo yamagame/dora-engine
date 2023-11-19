@@ -121,7 +121,7 @@ export const config = {
   // レアゾンスピーチ連携
   reazon: {
     host: process.env.REAZON_SPEECH_HOST || "localhost",
-    port: process.env.REAZON_SPEECH_PORT || "3093",
+    port: process.env.REAZON_SPEECH_PORT || "3090",
   },
 }
 

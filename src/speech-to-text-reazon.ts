@@ -10,6 +10,10 @@ class RecordingEmitter extends EventEmitter {
 
 function Speech() {
   const t = new RecordingEmitter()
+  const conf = {
+    HOST: config.reazon.host,
+    PORT: config.reazon.port,
+  }
 
   // マイクの音声認識の閾値を変更
   t.on("mic_threshold", function (threshold) {
@@ -19,9 +23,10 @@ function Speech() {
   // 音声解析開始
   t.on("startRecording", async function (params) {
     try {
-      console.log("reazon", "startRecording")
+      const url = `http://${conf.HOST}:${conf.PORT}/listen/start`
+      console.log("reazon", "startRecording", url)
       const body = await axios({
-        url: `http://${config.reazon.host}:${config.reazon.port}/listen/start`,
+        url,
         method: "POST",
         data: {},
       })
@@ -34,9 +39,10 @@ function Speech() {
   // 音声解析終了
   t.on("stopRecording", async function () {
     try {
-      console.log("reazon", "stopRecording")
+      const url = `http://${conf.HOST}:${conf.PORT}/listen/stop`
+      console.log("reazon", "stopRecording", url)
       const body = await axios({
-        url: `http://${config.reazon.host}:${config.reazon.port}/listen/stop`,
+        url,
         method: "POST",
         data: {},
       })
@@ -44,6 +50,16 @@ function Speech() {
     } catch (err) {
       console.error(err)
     }
+  })
+
+  t.on("host", function (host) {
+    console.log("reazon: host", host)
+    conf.HOST = host
+  })
+
+  t.on("port", function (port) {
+    console.log("reazon: port", port)
+    conf.PORT = port
   })
 
   return t

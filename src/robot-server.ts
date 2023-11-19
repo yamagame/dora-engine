@@ -732,6 +732,27 @@ app.get("/logout/:view", function (req, res) {
   res.redirect(`/login/${req.params.view}`)
 })
 
+// curl -X POST --data '{"host":"localhost", "port":"3090"}' --header "content-type:application/json" http://localhost:3090/reazon/config
+app.post("/reazon/config", function (req, res) {
+  const { host, port } = req.body
+  if (host) speech.emit("host", host)
+  if (port) speech.emit("port", port)
+  res.send("OK")
+})
+
+// レアゾンスピーチ用ダミーレスポンス
+app.post("/listen/start", function (req, res) {
+  res.send("OK")
+  setTimeout(() => {
+    speech.emit("speech", "なるほど、なるほど")
+  }, 3000)
+})
+
+// レアゾンスピーチ用ダミーレスポンス
+app.post("/listen/stop", function (req, res) {
+  res.send("OK")
+})
+
 // const doraChat = DoraChat(
 //   (function () {
 //     const r = {
