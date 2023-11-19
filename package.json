@@ -62,8 +62,10 @@
   },
   "scripts": {
     "start": "SPEECH=off MACINTOSH=on ts-node src/robot-server.js",
-    "whisper": "SPEECH=whisper WHISPER_PATH=./whisper.sh MACINTOSH=on node src/robot-server.js",
+    "whisper": "SPEECH=whisper WHISPER_PATH=./whisper.sh node src/robot-server.js",
+    "whisper:mac": "SPEECH=whisper WHISPER_PATH=./whisper.sh MACINTOSH=on node src/robot-server.js",
     "reazon": "REAZON_SPEECH_HOST=host.docker.internal REAZON_SPEECH_PORT=3093 SPEECH=reazon ts-node -r tsconfig-paths/register src/robot-server.ts",
+    "reazon:mac": "REAZON_SPEECH_HOST=localhost REAZON_SPEECH_PORT=3093 SPEECH=reazon MACINTOSH=on ts-node -r tsconfig-paths/register src/robot-server.ts",
     "robot": "node src/robot-server.js",
     "robot-dev": "SPEECH=off MACINTOSH=on ROBOT_DB=true node src/robot-server.js",
     "macintosh": "SPEECH=off MACINTOSH=on node src/robot-server.js",

@@ -225,8 +225,8 @@ $ ./talk-f1.sh こんにちは
 
 whisper.cpp の使用方法は whisper.cpp に従いますので、whisper.cpp の README.md を参照してください。
 
-/work ディレクトリに https://github.com/ggerganov/whisper.cpp を clone します。
-/work/whisper.cpp ディレクトリで以下のコマンドを実行して、stream バイナリを作成します。
+/modules ディレクトリに https://github.com/ggerganov/whisper.cpp を clone します。
+/modules/whisper.cpp ディレクトリで以下のコマンドを実行して、stream バイナリを作成します。
 
 ```bash
 $ make stream
