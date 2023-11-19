@@ -378,8 +378,8 @@ const quiz_master = process.env.QUIZ_MASTER || "_quiz_master_"
 let led_mode = "auto"
 let mode_slave = false
 
-// talk.dummy = (process.env['SPEECH'] === 'off' && process.env['MACINTOSH'] !== 'on');
-talk.macvoice = process.env["MACINTOSH"] === "on"
+// talk.robot_voice = "dummy"
+talk.robot_voice = process.env["ROBOT_VOICE"]
 
 let robotDataPath = process.argv[2] || path.join(HOME, "robot-data.json")
 

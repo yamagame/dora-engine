@@ -21,8 +21,7 @@ class TalkEmitter extends EventEmitter {
   voice: string = "reimu"
   speed: number = 95
   volume: number = 80
-  dummy: boolean = false
-  macvoice: boolean = false
+  robot_voice: string = null
   languageCode?: string
   audioEncoding?: string
   ssmlGender?: string
@@ -52,7 +51,7 @@ class TalkEmitter extends EventEmitter {
     const name = params.name
     const conts =
       ["default", "", null].indexOf(languageCode) >= 0
-        ? this.macvoice
+        ? this.robot_voice === "mac"
           ? words.split(/\n|。|@|＠|？|\?/g)
           : words.split(/\n|,|。|@|＠|？|\s|\?/g)
         : [words]
@@ -94,9 +93,9 @@ class TalkEmitter extends EventEmitter {
         !languageCode
       ) {
         // 通常モードの発話処理
-        if (this.dummy) {
+        if (this.robot_voice === "dummy") {
           playone()
-        } else if (this.macvoice) {
+        } else if (this.robot_voice === "mac") {
           console.log("macvoice", languageCode)
           if (languageCode === "open-jTalk") {
             startCallback()
@@ -340,8 +339,7 @@ export function Talk() {
 
 function main() {
   const talk = Talk()
-  talk.macvoice = true
-  talk.dummy = false
+  talk.robot_voice = "mac"
   talk.languageCode = "normal"
   talk.play("こんにちは")
 }
