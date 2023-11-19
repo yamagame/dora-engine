@@ -4,4 +4,4 @@
 #
 
 echo $@
-../Downloads/aquestalkpi/AquesTalkPi -v f2 $@ | aplay
+./modules/aquestalkpi/AquesTalkPi -v f2 $@ | aplay

@@ -802,6 +802,8 @@ function text_to_speech(payload, callback) {
 }
 
 function speech_to_text(payload, callback) {
+  console.log("speech_to_text", payload.timeout)
+
   let done = false
   speech.eventWating = true
 
@@ -813,6 +815,7 @@ function speech_to_text(payload, callback) {
   const alternativeLanguageCodes = payload.alternativeLanguageCodes
 
   const stopRecording = () => {
+    console.log("stopRecording", "robot-server")
     speech.recording = false
     speech.eventWating = false
     speech.emit("stopRecording")
@@ -821,6 +824,7 @@ function speech_to_text(payload, callback) {
   }
 
   const startRecording = () => {
+    console.log("startRecording", "robot-server")
     speech.recording = true
     speech.emit("startRecording", {
       threshold,
@@ -854,6 +858,7 @@ function speech_to_text(payload, callback) {
       done = true
     }, payload.timeout)
 
+    console.log("speech_to_text", payload.recording)
     if (payload.recording) {
       startRecording()
     }
@@ -1082,6 +1087,13 @@ app.post("/speech", hasPermission("control.write"), (req, res) => {
     speech.emit("speech", req.body.toString("utf-8"))
   } else if (typeof req.body.payload === "string") {
     speech.emit("speech", req.body.payload.toString("utf-8"))
+  }
+  res.send("OK")
+})
+
+app.post("/transcribe", hasPermission("control.write"), (req, res) => {
+  if (typeof req.body.text === "string") {
+    speech.emit("speech", req.body.text)
   }
   res.send("OK")
 })

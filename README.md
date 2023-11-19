@@ -190,11 +190,13 @@ $ aplay -Dplug:softvol test.wav
 
 Download のセクションから、使用許諾を読んで「同意して Download」ボタンをクリックします。
 
-Downloads フォルダにファイルがダウンロードされますので、以下のコマンドを入力して解凍します。
+Downloads フォルダに aquestalkpi-20220207.tar がダウンロードされますので、以下のコマンドでダウンロードしたファイルを DoraEngine のプロジェクトルートの modules ディレクトリに移動して解凍します。
 
 ```
-$ cd ~/Downloads
-$ tar xvf aquestalkpi-20130827.tgz
+$ mv ~/Downloads/aquestalkpi-20220207.tar ./modules
+$ pushd modules
+$ tar xvf aquestalkpi-20220207.tar
+$ popd
 ```
 
 以下のコマンドを入力して、音声合成のテストを行います。

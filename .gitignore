@@ -30,3 +30,5 @@ robot-defaults.json
 /work/*
 !/work/.gitkeep
 .env
+/modules/*
+!/modules/.gitkeep

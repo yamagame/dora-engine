@@ -118,6 +118,11 @@ export const config = {
     weather: (process.env.ROBOT_DORA_CHAT_WEATHER || "false") === "true",
     wikipedia: (process.env.ROBOT_DORA_CHAT_WIKIPEDIA || "true") === "true",
   },
+  // レアゾンスピーチ連携
+  reazon: {
+    host: process.env.REAZON_SPEECH_HOST || "localhost",
+    port: process.env.REAZON_SPEECH_PORT || "3093",
+  },
 }
 
 if (require.main === module) {
