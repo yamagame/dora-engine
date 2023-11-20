@@ -4,7 +4,7 @@ After=servo-head.service
 
 [Service]
 #EnvironmentFile=/etc/default/robot-server
-ExecStart=/bin/bash -c './robot-server.sh'
+ExecStart=/bin/bash -c './start-robot-server.sh'
 WorkingDirectory=/home/pi/dora-engine
 Restart=always
 User=pi

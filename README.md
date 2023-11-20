@@ -9,7 +9,7 @@
 ## 特徴
 
 - 音声認識、音声合成機能を持つ Raspberry Pi を使った手作りできるコミュニケーションロボットです。
-- 部品代は AquesTalk Pi を含めて 2 万円ほどです。
+- 部品代は AquesTalk Pi を含めて 3 万円ほどです。
 - 専用スクリプト言語を使ってロボットのコントロールを簡単に行えます。
 - 外部のパソコンなしにロボット単体で画像と連携したプレゼンテーションができます。
 - 外装はダンボールですのでお好みに合わせて自由に変更できます。
@@ -208,7 +208,7 @@ $ ./talk-f1.sh こんにちは
 
 音声合成を Open JTalk から変更する場合は、環境変数 ROBOT_DEFAULT_VOICE の設定を外します。
 
-[robot-server.sh](./robot-server.sh) の以下の行のコメントアウトします。
+[start-robot-server.sh](./start-robot-server.sh) の以下の行のコメントアウトします。
 
 ```
 #export ROBOT_DEFAULT_VOICE=open-jTalk
@@ -275,6 +275,10 @@ export SPEECH=whisper
 
 環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectID を設定します。
 
+## レアゾンスピーチの場合
+
+ToDo
+
 ## プレゼンテーション画面
 
 <p align="center">
@@ -309,36 +313,6 @@ http://[dora-engineのIPアドレス]:3090/scenario-editor/
 
 会話文について詳しくは、[こちら](https://github.com/yamagame/dora)を参照。
 
-## スケジューラ画面
-
-<p align="center">
-  <img style="border:solid 1px lightgray;" src="./images/scheduler.png"/>
-</p>
-
-ブラウザで以下の URL を開きます。
-
-```
-http://[dora-engineのIPアドレス]:3090/scheduler/
-```
-
-マウスでドラッグすると画面が動きます。スクロールホイールで拡大縮小できます。
-
-クリックするとカーソルが表示されます。
-
-キーボードフォーカスが当たっている状態でスペースキーを押すとカーソル位置にバーを作成することができます。
-
-シフトキーを押しながらドラッグすると、選択エリアが表示され、バーをまとめて選択することができます。
-
-バーは、ドラッグすると位置を変更できます。バーの左右の端をドラッグするとサイズを変更できます。
-
-バーをダブルクリックすると、バーのタイトルや本文を変更することができます。
-
-スケジューラにキーボードフォーカスが当たっている状態で、以下のキー操作ができます。
-
-- T キー 今日の日付に移動します
-- G キー バーを順に選択して選択したバーが画面の中央に表示されます。
-- DEL キー 選択したバーを削除します。
-
 ## 関連プロジェクト
 
 ### Dora Script
@@ -348,22 +322,6 @@ http://[dora-engineのIPアドレス]:3090/scheduler/
 ### Dora Editor
 
 [https://github.com/yamagame/dora-editor](https://github.com/yamagame/dora-editor)
-
-### Dora Admin
-
-[https://github.com/yamagame/dora-admin](https://github.com/yamagame/dora-admin)
-
-### Dora Quiz
-
-[https://github.com/yamagame/dora-quiz](https://github.com/yamagame/dora-quiz)
-
-### Dora Wave
-
-[https://github.com/yamagame/dora-wave](https://github.com/yamagame/dora-wave)
-
-### Dora Scheduler
-
-[https://github.com/yamagame/dora-scheduler](https://github.com/yamagame/dora-scheduler)
 
 ### Dora Script Sample
 

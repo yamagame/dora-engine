@@ -129,19 +129,7 @@ class TalkEmitter extends EventEmitter {
               playone()
             })
           } else {
-            if (voice == "reimu") {
-              startCallback()
-              this._playone = spawn(path.join(basedir, "talk-f1.sh"), [
-                `-s`,
-                speed,
-                `-g`,
-                volume,
-                `　${text}`,
-              ])
-              this._playone.on("close", function (code) {
-                playone()
-              })
-            } else if (voice == "marisa") {
+            if (voice == "marisa") {
               startCallback()
               this._playone = spawn(path.join(basedir, "talk-f2.sh"), [
                 `-s`,
@@ -155,13 +143,12 @@ class TalkEmitter extends EventEmitter {
               })
             } else {
               startCallback()
-              this._playone = spawn(path.join(basedir, "talk.sh"), [
+              this._playone = spawn(path.join(basedir, "talk-f1.sh"), [
                 `-s`,
                 speed,
                 `-g`,
                 volume,
-                `${text}`,
-                voice === "reimu" ? "" : voice || "",
+                `　${text}`,
               ])
               this._playone.on("close", function (code) {
                 playone()

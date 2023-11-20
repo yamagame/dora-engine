@@ -524,7 +524,7 @@ app.use((req, res, next) => {
   next()
 })
 
-app.set("views", path.join(__dirname, "..", "views"))
+app.set("views", path.join(config.basedir, "views"))
 app.set("view engine", "pug")
 
 app.use(express.urlencoded({ extended: false }))
@@ -636,11 +636,11 @@ passport.use(
 )
 
 app.get("/admin-page", isLogined("admin"), function (req, res, next) {
-  fs.createReadStream(path.join(__dirname, "..", "public/admin-page/index.html")).pipe(res)
+  fs.createReadStream(path.join(config.basedir, "public/admin-page/index.html")).pipe(res)
 })
 
 app.get("/scenario-editor", isLogined("editor"), function (req, res, next) {
-  fs.createReadStream(path.join(__dirname, "..", "public/scenario-editor/index.html")).pipe(res)
+  fs.createReadStream(path.join(config.basedir, "public/scenario-editor/index.html")).pipe(res)
 })
 
 app.use((req, res, next) => {

@@ -5,7 +5,8 @@ import * as path from "path"
 const pigpio = require("pigpio")
 const raspi = require("raspi")
 import { Servo, Action } from "./action"
-const config = require("./config")
+import * as ServoController from "./servo"
+import { config } from "./config"
 const port = config.gpioPort
 const gamepad = config.useGamePad ? require("./gamepad") : null
 const { basedir } = config
@@ -54,8 +55,7 @@ function abs(a) {
 }
 
 function startServo() {
-  const { Servo } = require("./servo")
-  const servo = Servo()
+  const servo = ServoController.Servo()
   const led = require("./led-controller")()
   servo.pwm0.write(servo0.now) //UP DOWN
   servo.pwm1.write(servo1.now) //LEFT RIGHT

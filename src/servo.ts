@@ -1,7 +1,7 @@
 const { SoftPWM } = require("raspi-soft-pwm")
 import { config } from "./config"
 
-export default function Servo() {
+export function Servo() {
   if (config.voiceHat) {
     return {
       pwm0: new SoftPWM("GPIO26"), //UP DOWN
