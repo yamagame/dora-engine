@@ -635,10 +635,6 @@ passport.use(
   )
 )
 
-app.get("/admin-page", isLogined("admin"), function (req, res, next) {
-  fs.createReadStream(path.join(config.basedir, "public/admin-page/index.html")).pipe(res)
-})
-
 app.get("/scenario-editor", isLogined("editor"), function (req, res, next) {
   fs.createReadStream(path.join(config.basedir, "public/scenario-editor/index.html")).pipe(res)
 })
