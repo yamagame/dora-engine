@@ -1,6 +1,6 @@
 import * as EventEmitter from "events"
 import { config } from "./config"
-import Mic from "~/voice/mic"
+import Mic from "./voice/mic"
 
 const speech = require("@google-cloud/speech").v1p1beta1
 

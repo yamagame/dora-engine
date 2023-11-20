@@ -1,5 +1,5 @@
 const { SoftPWM } = require("raspi-soft-pwm")
-import { config } from "~/config"
+import { config } from "./config"
 
 export default function Servo() {
   if (config.voiceHat) {

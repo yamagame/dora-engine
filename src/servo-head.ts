@@ -5,7 +5,7 @@ import * as path from "path"
 const pigpio = require("pigpio")
 const raspi = require("raspi")
 import { Servo, Action } from "./action"
-const config = require("~/config")
+const config = require("./config")
 const port = config.gpioPort
 const gamepad = config.useGamePad ? require("./gamepad") : null
 const { basedir } = config
