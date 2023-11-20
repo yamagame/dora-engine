@@ -60,21 +60,6 @@ const PICT =
     : path.join(process.env.HOME, "Pictures")
 const PART_LIST_FILE_PATH = path.join(HOME, "quiz-student.txt")
 
-const defaultBarData = {
-  uuid: "",
-  x: 0,
-  y: 0,
-  width: 24,
-  height: 24,
-  rgba: "#00FF00FF",
-  type: "roundrect",
-  title: null,
-  text: null,
-  info: {
-    readOnly: false,
-  },
-}
-
 const isLogined = function (view = null) {
   return function (req, res, next) {
     if (!config.credentialAccessControl) {
