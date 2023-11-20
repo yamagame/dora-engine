@@ -21,4 +21,4 @@ cd `dirname $0`
 export ROBOT_DEFAULT_VOICE=open-jTalk
 export SPEECH=reazon
 export ROBOT_BASE_DIR=`pwd`
-node build/src/robot-server.js > robot-server.log
+node build/src/robot-server.js | tee robot-server.log

@@ -4,4 +4,4 @@
 #
 
 cd `dirname $0`
-node build/src/servo-head.js > servo-head.log
+node build/src/servo-head.js | tee servo-head.log
