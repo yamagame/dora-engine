@@ -23,7 +23,6 @@ import { Talk } from "./talk"
 import { ButtonClient } from "./button-client"
 import { RobotDB } from "./robot-db"
 import { router as googleRouter } from "./google-router"
-import { Camera } from "./robot-camera"
 import * as session from "express-session"
 const MemoryStore = require("memorystore")(session)
 import * as passport from "passport"
@@ -43,7 +42,6 @@ const workFolder = "DoraEngine" //for macOS(development)
 const USE_DB = config.useDB
 const saveInterval = 1000
 const csrfProtection = csrf({ cookie: true })
-const camera = new Camera()
 const bcrypt = (() => {
   try {
     return require("bcrypt")
@@ -60,10 +58,6 @@ const PICT =
     ? path.join(process.env.HOME, "Documents", workFolder, "Pictures")
     : path.join(process.env.HOME, "Pictures")
 const PART_LIST_FILE_PATH = path.join(HOME, "quiz-student.txt")
-
-// mkdirp(config.doraChat.dataDir, async function (err) {
-//   if (err) console.log(err)
-// })
 
 const defaultBarData = {
   uuid: "",
@@ -172,24 +166,6 @@ dora.loadModule("button", function (DORA, config) {
   }
   DORA.registerType("connect", connect)
 
-  function detect(node, options) {
-    const params = options.split("/")
-    if (params.length < 2 || params === "") {
-      throw new Error("ベンダーID/プロダクトIDがありません。")
-    }
-    node.on("input", async function (msg) {
-      let vendorId = params[0]
-      let productId = params[1]
-      gpioSocket.emit("gamepad", {
-        action: "add",
-        vendorId,
-        productId,
-      })
-      node.send(msg)
-    })
-  }
-  DORA.registerType("gamepad", detect)
-
   function close(node, options) {
     const params = options.split("/")
     if (params.length < 1 || params === "") {
@@ -294,20 +270,12 @@ dora.loadModule("button", function (DORA, config) {
           } else if (res == "[canceled]") {
             msg.payload = "canceled"
             node.send([msg, null])
-          } else if (res == "[camera]") {
-            msg.payload = "camera"
-            node.send([msg, null])
           } else {
             if (res.button) {
               msg.payload = "button"
               msg.button = res
               delete res.button
               node.send([msg, null])
-            } else if (res.gamepad) {
-              msg.payload = "gamepad"
-              msg.gamepad = res
-              delete res.gamepad
-              node.send([null, msg])
             } else if (res.speechRequest) {
               msg.speechRequest = true
               msg.payload = res.payload
@@ -857,8 +825,6 @@ function speech_to_text(payload, callback) {
     speech.removeListener("data", dataListener)
     speech.removeListener("speech", speechListener)
     speech.removeListener("button", buttonListener)
-    speech.removeListener("camera", cameraListener)
-    speech.removeListener("gamepad", gamepadListener)
   }
 
   if (payload.timeout != 0) {
@@ -960,36 +926,6 @@ function speech_to_text(payload, callback) {
     done = true
   }
 
-  const cameraListener = (payload) => {
-    if (!done) {
-      stopRecording()
-      removeListener()
-      if (callback) callback(null, "[camera]")
-      if (led_mode == "auto") {
-        servoAction("led-off")
-        last_led_action = "led-off"
-      }
-    }
-    done = true
-  }
-
-  const gamepadListener = (payload) => {
-    if (!done) {
-      const data = {
-        gamepad: true,
-        ...payload,
-      }
-      stopRecording()
-      removeListener()
-      if (callback) callback(null, data)
-      if (led_mode == "auto") {
-        servoAction("led-off")
-        last_led_action = "led-off"
-      }
-    }
-    done = true
-  }
-
   if (led_mode == "auto") {
     if (payload.timeout > 0 && payload.recording) {
       servoAction("led-on")
@@ -1005,8 +941,6 @@ function speech_to_text(payload, callback) {
   speech.on("data", dataListener)
   speech.on("speech", speechListener)
   speech.on("button", buttonListener)
-  speech.on("camera", cameraListener)
-  speech.on("gamepad", gamepadListener)
 }
 
 function quiz_button(payload, callback) {
@@ -2062,321 +1996,6 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
   }
 })
 
-camera.on("change", (payload) => {
-  console.log("camera changed")
-  speech.emit("camera", payload)
-})
-
-/*
-  カメラ連携
-
-  curlコマンド使用例
-  $ curl -X POST --data '[{"id":100, "area":200}]' --header "content-type:application/json" http://localhost:3090/camera
-*/
-app.post("/camera", hasPermission("control.write"), (req, res) => {
-  camera.up(req.body)
-  res.send({ status: "OK" })
-})
-
-function nomalizeBar(bar) {
-  const b: { text: string; title: string } = { text: "", title: "" }
-  const barAttrMembers = [
-    "x",
-    "y",
-    "title",
-    "uuid",
-    "text",
-    "width",
-    "height",
-    "info",
-    "rgba",
-    "type",
-  ]
-  barAttrMembers.forEach((key) => {
-    if (typeof bar[key] !== "undefined") {
-      b[key] = bar[key]
-    }
-  })
-  if (b.text == null) b.text = ""
-  if (b.title == null) b.title = ""
-  return b
-}
-
-app.post("/bar/all", hasPermission("control.write"), async (req, res) => {
-  const { bars } = req.body
-  if (bars) {
-    if (USE_DB) {
-      const barData = await db.loadBars()
-      const b = []
-      bars.forEach((d) => {
-        barData.forEach((bar) => {
-          if (bar.uuid === d.uuid) {
-            b.push(bar)
-          }
-        })
-      })
-      res.json(b)
-    } else {
-      const b = []
-      bars.forEach((d) => {
-        robotData.barData.forEach((bar) => {
-          if (bar.uuid === d.uuid) {
-            b.push(bar)
-          }
-        })
-      })
-      res.json(b)
-    }
-  } else {
-    if (USE_DB) {
-      res.json(await db.loadBars())
-    } else {
-      res.json(robotData.barData)
-    }
-  }
-})
-
-app.post("/bar/update", hasPermission("control.write"), async (req, res) => {
-  const bars = [...req.body.barData]
-  const { saveOnly, create } = req.body
-  const newBars = []
-  if (USE_DB) {
-    const b = {}
-    const barData = await db.loadBars()
-    barData.forEach((bar) => {
-      b[bar.uuid] = bar
-    })
-    bars.forEach((bar) => {
-      if (bar) {
-        if (create) {
-          bar = nomalizeBar(bar)
-          if (!bar.uuid) {
-            bar.uuid = uuidv4()
-          }
-        } else {
-          if (!bar.uuid) {
-            return
-          }
-        }
-        Object.keys(defaultBarData).forEach((key) => {
-          if (typeof bar[key] === "undefined") {
-            bar[key] = defaultBarData[key]
-          }
-        })
-        const t = b[bar.uuid]
-        if (t) {
-          //更新
-          if (bar.y === "auto") {
-            delete bar.y
-          }
-          barData.push(bar)
-          newBars.push(bar)
-        } else if (create) {
-          //追加
-          if (bar.y === "auto") {
-            bar.y = 0
-            const q = barData
-              .filter((b) => b.x == bar.x)
-              .sort((a, b) => {
-                if (a.y < b.y) return -1
-                if (a.y > b.y) return 1
-                return 0
-              })
-            q.forEach((b) => {
-              if (b.x === bar.x && b.y === bar.y) {
-                bar.y += 24
-              }
-            })
-          }
-          barData.push(bar)
-          newBars.push(bar)
-        }
-      }
-    })
-    for (let i = 0; i < newBars.length; i++) {
-      const bar = newBars[i]
-      await db.updateBar(bar, defaultBarData)
-    }
-    if (!saveOnly) {
-      iob.emit("update-schedule")
-    }
-  } else {
-    const b = {}
-    robotData.barData.forEach((bar) => {
-      b[bar.uuid] = bar
-    })
-    bars.forEach((bar) => {
-      if (bar) {
-        if (create) {
-          bar = nomalizeBar(bar)
-          if (!bar.uuid) {
-            bar.uuid = uuidv4()
-          }
-          Object.keys(defaultBarData).forEach((key) => {
-            if (typeof bar[key] === "undefined") {
-              bar[key] = defaultBarData[key]
-            }
-          })
-        } else {
-          if (!bar.uuid) {
-            return
-          }
-        }
-        const t = b[bar.uuid]
-        if (t) {
-          //更新
-          if (bar.y === "auto") {
-            delete bar.y
-          }
-          Object.keys(bar).forEach((key) => {
-            t[key] = bar[key]
-          })
-          newBars.push(t)
-        } else if (create) {
-          //追加
-          if (bar.y === "auto") {
-            bar.y = 0
-            const q = robotData.barData
-              .filter((b) => b.x == bar.x)
-              .sort((a, b) => {
-                if (a.y < b.y) return -1
-                if (a.y > b.y) return 1
-                return 0
-              })
-            q.forEach((b) => {
-              if (b.x === bar.x && b.y === bar.y) {
-                bar.y += 24
-              }
-            })
-          }
-          robotData.barData.push(bar)
-          newBars.push(bar)
-        }
-      }
-    })
-    writeRobotData()
-    if (!saveOnly) {
-      iob.emit("update-schedule", { bars: newBars })
-    }
-  }
-  res.send({ status: "OK", bars: newBars })
-})
-
-app.post("/bar/delete", hasPermission("control.write"), (req, res) => {
-  const bars = [...req.body.barData]
-  const { saveOnly } = req.body
-  if (USE_DB) {
-    bars.forEach(async (bar) => {
-      await db.deleteBar(bar)
-    })
-    if (!saveOnly) {
-      iob.emit("update-schedule")
-    }
-  } else {
-    const b = []
-    robotData.barData.forEach((bar) => {
-      if (
-        !bars.some((b) => {
-          return b.uuid === bar.uuid
-        })
-      ) {
-        b.push(bar)
-      }
-    })
-    robotData.barData = b
-    writeRobotData()
-    if (!saveOnly) {
-      iob.emit("update-schedule")
-    }
-  }
-  res.send({ status: "OK" })
-})
-
-app.post("/bar/findOne", hasPermission("control.write"), async (req, res) => {
-  const { x, y, title } = req.body
-  let cbar = []
-  if (USE_DB) {
-    if (typeof title !== "undefined" && title !== null) {
-      cbar = await db.findBars({
-        [db.Op.or]: [{ title }, { uuid: title }],
-      })
-    } else if (typeof x !== "undefined" && x !== null) {
-      cbar = await db.findBars({
-        x: {
-          [db.Op.lte]: x,
-        },
-      })
-    } else if (typeof y !== "undefined" && y !== null) {
-      cbar = await db.findBars({
-        y: {
-          [db.Op.lte]: y,
-        },
-      })
-    } else {
-      cbar = await db.loadBars()
-    }
-  } else {
-    cbar = [...robotData.barData]
-  }
-  if (typeof x !== "undefined" && x !== null) {
-    cbar = cbar.filter((b) => {
-      return b.x <= x && x < b.x + b.width
-    })
-  }
-  if (typeof y !== "undefined" && y !== null) {
-    cbar = cbar.filter((b) => {
-      return b.y <= y && y < b.y + b.height
-    })
-  }
-  if (typeof title !== "undefined" && title !== null) {
-    cbar = cbar.filter((b) => {
-      return b.title.indexOf(title) >= 0 || b.uuid.indexOf(title) >= 0
-    })
-  }
-  cbar = cbar.sort((a, b) => {
-    if (a.y < b.y) return -1
-    if (a.y > b.y) return 1
-    if (a.x < b.x) return -1
-    if (a.x > b.x) return 1
-    return 0
-  })
-  if (cbar.length > 0) {
-    res.send({ ...nomalizeBar(cbar[0]), status: "found" })
-  } else {
-    res.send({ status: "not found" })
-  }
-})
-
-app.post("/bar/move-screen", hasPermission("control.write"), async (req, res) => {
-  const { time, uuid } = req.body
-  if (uuid) {
-    iob.emit("move-to-center", { uuid })
-  } else if (time) {
-    iob.emit("move-to-day", { time })
-  } else {
-    const dayToString = (d: Date) => {
-      return `${d.getFullYear()}-${("00" + (d.getMonth() + 1)).slice(-2)}-${(
-        "00" + d.getDate()
-      ).slice(-2)}`
-    }
-    iob.emit("move-to-day", { time: dayToString(new Date()) })
-  }
-  res.send({ status: "OK" })
-})
-
-app.post("/calendar", hasPermission("control.write"), async (req, res) => {
-  const calendarData = "calendarData" in req.body ? { ...req.body.calendarData } : null
-  if (calendarData) {
-    robotData.calendarData = calendarData
-    writeRobotData()
-  }
-  res.send({ status: "OK" })
-})
-
-app.get("/calendar", async (req, res) => {
-  res.send(robotData.calendarData)
-})
-
 app.post("/autostart", hasPermission("control.write"), async (req, res) => {
   const autostart = "autostart" in req.body ? { ...req.body.autostart } : null
   if (autostart) {
@@ -2422,7 +2041,6 @@ app.post(
 const server = require("http").Server(app)
 const io = require("socket.io")(server)
 const ioa = io.of("audio")
-const iob = io.of("bar")
 const iop = io.of("player")
 let playerSocket = null
 
@@ -3040,10 +2658,6 @@ gpioSocket.on("button", (payload) => {
   }
 })
 
-gpioSocket.on("gamepad", (payload) => {
-  speech.emit("gamepad", payload)
-})
-
 const ioClient = require("socket.io-client")
 const localSocket = ioClient(`http://localhost:${config.port}`)
 
@@ -3138,7 +2752,5 @@ if (robotData.autoStart.username && robotData.autoStart.filename) {
         create
         remove
         list
-
-    /camera
 
 */
