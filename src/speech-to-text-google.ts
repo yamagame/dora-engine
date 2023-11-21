@@ -1,4 +1,4 @@
-import * as EventEmitter from "events"
+import { RecordingEmitter } from "./recording-emitter"
 import { config } from "./config"
 import Mic from "./voice/mic"
 
@@ -6,7 +6,7 @@ const speech = require("@google-cloud/speech").v1p1beta1
 
 const PRELOAD_COUNT = 3
 
-class RecordingEmitter extends EventEmitter {
+class GoogleSpeechRecordingEmitter extends RecordingEmitter {
   recording = false
   _recording = false
   _preloadRecording = false
@@ -60,7 +60,7 @@ function Speech() {
     return a
   }
 
-  const t = new RecordingEmitter()
+  const t = new GoogleSpeechRecordingEmitter()
 
   const defaultRequestOpts = {
     config: {

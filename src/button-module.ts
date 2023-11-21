@@ -125,6 +125,9 @@ export function BottonModule(buttonClient) {
             } else if (res == "[canceled]") {
               msg.payload = "canceled"
               node.send([msg, null])
+            } else if (res == "[error]") {
+              msg.payload = "error"
+              node.send([msg, null])
             } else {
               if (res.button) {
                 msg.payload = "button"

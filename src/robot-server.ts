@@ -4,6 +4,7 @@ import * as os from "os"
 import * as ip from "ip"
 import "dotenv/config"
 import { exec, spawn } from "child_process"
+import { Socket } from "socket.io"
 
 import { config } from "./config"
 import {
@@ -29,7 +30,6 @@ const MemoryStore = require("memorystore")(session)
 import * as passport from "passport"
 // const DoraChat = require("./doraChat")
 const LocalStrategy = require("passport-local").Strategy
-import { v4 as uuidv4 } from "uuid"
 import * as mkdirp from "mkdirp"
 import UserDefaults from "./user-defaults"
 import { upload, readDir, deleteFile } from "./fileServer"
@@ -522,8 +522,8 @@ app.get("/logout/:view", function (req, res) {
 // curl -X POST --data '{"host":"localhost", "port":"3090"}' --header "content-type:application/json" http://localhost:3090/reazon/config
 app.post("/reazon/config", function (req, res) {
   const { host, port } = req.body
-  if (host) speech.emit("host", host)
-  if (port) speech.emit("port", port)
+  if (host) speech.host = host
+  if (port) speech.port = port
   res.send("OK")
 })
 
@@ -1867,9 +1867,11 @@ const ioa = io.of("audio")
 const iop = io.of("player")
 let playerSocket = null
 
-const quiz_masters = {}
+const quiz_masters: { [index: string]: Socket } = {}
 const soundAnalyzer = {}
 const imageServers = {}
+
+speech.masters = quiz_masters
 
 iop.on("connection", function (socket) {
   console.log("connected io player", socket.conn.remoteAddress)
@@ -1948,7 +1950,7 @@ ioa.on("connection", function (socket) {
   })
 })
 
-io.on("connection", function (socket) {
+io.on("connection", function (socket: Socket) {
   console.log("connected io", socket.conn.remoteAddress)
   const localhostCheck = (payload) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {

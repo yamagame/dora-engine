@@ -1,10 +1,10 @@
-import * as EventEmitter from "events"
+import { RecordingEmitter } from "./recording-emitter"
 import { spawn } from "child_process"
 
 const WHISPER = process.env["WHISPER_PATH"] || "./whisper.sh"
 console.log(`WHISPER_PATH ${WHISPER}`)
 
-class SpeechEmitter extends EventEmitter {
+class SpeechEmitter extends RecordingEmitter {
   writing = false
   recording = false
   constructor() {

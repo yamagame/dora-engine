@@ -1,7 +1,7 @@
-import * as EventEmitter from "events"
+import { RecordingEmitter } from "./recording-emitter"
 
 function Speech() {
-  return new EventEmitter()
+  return new RecordingEmitter()
 }
 
 export default Speech()

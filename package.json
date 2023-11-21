@@ -63,6 +63,7 @@
   "scripts": {
     "start": "SPEECH=off ts-node -r tsconfig-paths/register src/robot-server.ts",
     "start:mac": "SPEECH=off ROBOT_VOICE=mac ts-node -r tsconfig-paths/register src/robot-server.ts",
+    "start:browser": "SPEECH=browser ts-node -r tsconfig-paths/register src/robot-server.ts",
     "whisper": "SPEECH=whisper WHISPER_PATH=./whisper.sh ts-node -r tsconfig-paths/register src/robot-server.ts",
     "whisper:mac": "SPEECH=whisper WHISPER_PATH=./whisper.sh ROBOT_VOICE=mac ts-node -r tsconfig-paths/register src/robot-server.ts",
     "reazon": "REAZON_SPEECH_HOST=host.docker.internal REAZON_SPEECH_PORT=3093 SPEECH=reazon ts-node -r tsconfig-paths/register src/robot-server.ts",

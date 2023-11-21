@@ -1,6 +1,8 @@
 const _selectEngine = (mode: string) => {
   if (mode === "whisper") {
     return require("./speech-to-text-whisper")
+  } else if (mode === "browser") {
+    return require("./speech-to-text-browser")
   } else if (mode === "reazon") {
     return require("./speech-to-text-reazon")
   } else if (mode === "off") {
