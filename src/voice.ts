@@ -34,7 +34,7 @@ class TalkEmitter extends EventEmitter {
     super()
   }
 
-  say(words: string, params, callback, startCallback) {
+  _say(words: string, params, callback, startCallback) {
     if (typeof words === "undefined") {
       callback()
       return
@@ -217,10 +217,10 @@ class TalkEmitter extends EventEmitter {
     playone()
   }
 
-  playAsync(speech: string, params, callback) {
+  _playAsync(speech: string, params, callback) {
     return new Promise<void>((resolve) => {
       let doneStart = false
-      this.say(
+      this._say(
         speech,
         params,
         () => {
@@ -267,7 +267,7 @@ class TalkEmitter extends EventEmitter {
     if (!this.playing) {
       this.playing = true
       const _play = (sentence) => {
-        this.playAsync(sentence, params, callback).then(() => {
+        this._playAsync(sentence, params, callback).then(() => {
           if (this.playQue.length > 0 && this.playing !== false) {
             const sentence = this.playQue.shift()
             _play(sentence)
