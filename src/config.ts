@@ -10,7 +10,7 @@ const bcrypt = (() => {
   }
 })()
 
-const basedir = process.env.ROBOT_BASE_DIR || "."
+const basedir = process.env.ROBOT_BASE_DIR || process.cwd()
 
 export const config = {
   basedir: basedir,
