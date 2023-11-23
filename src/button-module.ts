@@ -1,4 +1,4 @@
-export function BottonModule(buttonClient) {
+export function ButtonModule(buttonClient) {
   return function (DORA, config) {
     function connect(node, options) {
       const params = options.split("/")

@@ -22,7 +22,7 @@ import axios, { Method } from "axios"
 import { selectEngine } from "./speech"
 import { Talk } from "./voice"
 import { ButtonClient } from "./button-client"
-import { BottonModule } from "./button-module"
+import { ButtonModule } from "./button-module"
 import { RobotDB } from "./robot-db"
 import { router as googleRouter } from "./google-router"
 import * as session from "express-session"
@@ -130,7 +130,7 @@ const Dora = require("dora")
 const dora = new Dora()
 const utils = require("./utils")
 
-dora.loadModule("button", BottonModule(buttonClient))
+dora.loadModule("button", ButtonModule(buttonClient))
 
 dora.request = async function (command, options = null, params = null) {
   let len = 0
