@@ -292,20 +292,6 @@ talk.on("talk", function () {
   speech.recording = false
 })
 
-speech.on("data", function (data) {
-  Object.keys(soundAnalyzer).forEach((key) => {
-    const socket = soundAnalyzer[key]
-    socket.emit("speech-data", data)
-  })
-})
-
-speech.on("wave-data", function (data) {
-  Object.keys(soundAnalyzer).forEach((key) => {
-    const socket = soundAnalyzer[key]
-    socket.emit("wave-data", data)
-  })
-})
-
 const app = express()
 
 app.use((req, res, next) => {
@@ -424,6 +410,10 @@ passport.use(
     }
   )
 )
+
+app.get("/quiz-master", isLogined("editor"), function (req, res, next) {
+  fs.createReadStream(path.join(config.basedir, "public/quiz-master/index.html")).pipe(res)
+})
 
 app.get("/scenario-editor", isLogined("editor"), function (req, res, next) {
   fs.createReadStream(path.join(config.basedir, "public/scenario-editor/index.html")).pipe(res)
@@ -1862,12 +1852,10 @@ app.post(
 
 const server = require("http").Server(app)
 const io = require("socket.io")(server)
-const ioa = io.of("audio")
 const iop = io.of("player")
 let playerSocket = null
 
 const quiz_masters: { [index: string]: Socket } = {}
-const soundAnalyzer = {}
 const imageServers = {}
 
 speech.masters = quiz_masters
@@ -1895,54 +1883,6 @@ iop.on("connection", function (socket) {
           payload.host = ip[1]
           imageServers[socket.id] = payload
           io.emit("imageServers", imageServers)
-        }
-      }
-    })
-  })
-})
-
-ioa.on("connection", function (socket) {
-  console.log("connected io audio", socket.conn.remoteAddress)
-  const localhostCheck = (payload) => {
-    if (localhostIPs.indexOf(socket.handshake.address) === -1) {
-      payload.localhostToken = localhostToken()
-    }
-  }
-  socket.on("disconnect", function () {
-    console.log("disconnect io audio")
-    delete soundAnalyzer[socket.id]
-    if (Object.keys(soundAnalyzer).length == 0) {
-      //停止
-      speech.emit("stopStreamData")
-    }
-  })
-  socket.on("speech-config", (payload) => {
-    localhostCheck(payload)
-    checkPermission(payload, "", (verified) => {
-      if (verified) {
-        const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/)
-        if (ip != null && payload.role === "waveAnalyzer") {
-          ;["level", "threshold"].forEach((key) => {
-            if (typeof payload[key] !== "undefined") {
-              robotData.voice[key] = payload[key]
-            }
-          })
-          writeRobotData()
-          if (speech.stream) speech.stream.changeParameters(payload)
-        }
-      }
-    })
-  })
-  socket.on("start-stream-data", (payload) => {
-    localhostCheck(payload)
-    checkPermission(payload, "", (verified) => {
-      if (verified) {
-        const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/)
-        if (ip != null && payload.role === "waveAnalyzer") {
-          if (Object.keys(soundAnalyzer).length == 0) {
-            speech.emit("startStreamData")
-          }
-          soundAnalyzer[socket.id] = socket
         }
       }
     })
