@@ -1,5 +1,5 @@
 import * as EventEmitter from "events"
-import io from "socket.io-client"
+const io = require("socket.io-client")
 import * as ping from "ping"
 
 import { createSignature } from "./accessCheck"
