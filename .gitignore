@@ -32,3 +32,4 @@ robot-defaults.json
 .env
 /modules/*
 !/modules/.gitkeep
+*.log
