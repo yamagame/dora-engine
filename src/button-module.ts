@@ -1,6 +1,6 @@
 export function ButtonModule(buttonClient) {
   return function (DORA, config) {
-    function connect(node, options) {
+    function open(node, options) {
       const params = options.split("/")
       if (params.length < 1 || params === "") {
         throw new Error("ホスト名がありません。")
@@ -19,7 +19,7 @@ export function ButtonModule(buttonClient) {
         node.send(msg)
       })
     }
-    DORA.registerType("connect", connect)
+    DORA.registerType("open", open)
 
     function close(node, options) {
       const params = options.split("/")
