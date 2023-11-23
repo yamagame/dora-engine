@@ -13,8 +13,9 @@ function Speech() {
   // 音声解析開始
   t.on("startRecording", async function (params) {
     try {
-      Object.keys(this.masters).forEach((client_id) => {
+      Object.keys(this.masters).some((client_id) => {
         this.masters[client_id].emit("startRecording")
+        return true
       })
     } catch (err) {
       console.error(err)
@@ -24,8 +25,9 @@ function Speech() {
   // 音声解析終了
   t.on("stopRecording", async function () {
     try {
-      Object.keys(this.masters).forEach((client_id) => {
+      Object.keys(this.masters).some((client_id) => {
         this.masters[client_id].emit("stopRecording")
+        return true
       })
     } catch (err) {
       console.error(err)
