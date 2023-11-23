@@ -1,6 +1,7 @@
 import * as path from "path"
 import * as fs from "fs"
 import { spawn } from "child_process"
+import * as platform from "./platform"
 
 import { config } from "./config"
 
@@ -206,7 +207,9 @@ function ReqTextToSpeech(req, res, mode = "play") {
 
   if ("audioEncoding" in req.body) {
     audioConfig.audioEncoding = req.body.audioEncoding
-  } else {
+  }
+
+  if (!audioConfig.audioEncoding) {
     audioConfig.audioEncoding = "LINEAR16"
   }
 
@@ -235,8 +238,6 @@ function ReqTextToSpeech(req, res, mode = "play") {
     audioConfig,
   }
 
-  console.log(request)
-
   const cacheFilePath = (filename) => {
     return path.join(config.synthesizeSpeech.tempdir, filename)
   }
@@ -244,7 +245,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
   const playone = (sndfilepath, callback) => {
     if (mode === "silence") return callback(null, 0)
     const cmd = process.platform === "darwin" ? "afplay" : "aplay"
-    const opt = process.platform === "darwin" ? [sndfilepath] : ["-Dplug:softvol", sndfilepath]
+    const opt = platform.isRaspi() ? ["-Dplug:softvol", sndfilepath] : [sndfilepath]
     console.log(`/usr/bin/${cmd} ${sndfilepath}`)
     text_to_speech.playone = spawn(`/usr/bin/${cmd}`, opt)
     text_to_speech.playone.on("close", function (code) {
@@ -293,8 +294,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
   const requestSynthesizeSpeech = (request, sndfilepath, callback) => {
     limitCacheFile(cacheDB, config.synthesizeSpeech.maxCacheSize, () => {
       if (request.voice.languageCode === "open-jTalk") {
-        const cmd =
-          process.platform === "darwin" ? "talk-open-jTalk-mac.sh" : "talk-open-jTalk-raspi.sh"
+        const cmd = "talk-open-jTalk.sh"
         const p = path.join(basedir, cmd)
         const opt = ["mei_normal", request.input.text, sndfilepath]
         const recording = spawn(p, opt)
@@ -379,6 +379,8 @@ function ReqTextToSpeech(req, res, mode = "play") {
       }
     })
   }
+
+  console.log(`audioEncoding`, audioConfig.audioEncoding)
 
   const filename = `robot-snd-${crypto
     .createHash("md5")
