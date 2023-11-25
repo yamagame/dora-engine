@@ -1,8 +1,11 @@
+import { Flow } from "./flow";
 const Emitter = require("component-emitter");
 const utils = require("./utils");
 
-class Node extends Emitter {
-  constructor(flow) {
+export class Node extends Emitter {
+  flow: Flow;
+
+  constructor(flow: Flow) {
     super();
     this.flow = flow;
     this.wires = [];
@@ -19,7 +22,7 @@ class Node extends Emitter {
     return this.flow.credential();
   }
 
-  status(status) {}
+  status(status) { }
 
   send(msg) {
     if (!this.isAlive()) return;
@@ -97,8 +100,8 @@ class Node extends Emitter {
     return this.flow.nextLabel(this, label, index);
   }
 
-  join() {
-    return this.flow.join(this);
+  join(type) {
+    return this.flow.join(this, type);
   }
 
   goto(msg, labels) {
@@ -112,6 +115,23 @@ class Node extends Emitter {
       name: this.name,
     };
   }
-}
 
-module.exports = Node;
+  getField(msg, field) {
+    console.log(field);
+    let index = field.length;
+    let object = msg;
+    do {
+      const key = field[field.length - index];
+      console.log(key);
+      if (index <= 1) {
+        if (object[key] !== null) {
+          return { key, object };
+        }
+        return null;
+      }
+      object = object[key];
+      index--;
+    } while (object);
+    return null;
+  }
+}
