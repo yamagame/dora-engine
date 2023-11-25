@@ -18,7 +18,7 @@ cd `dirname $0`
 #export ROBOT_GOOGLE_SPEECH_CACHE_DB_PATH=~/Sound/robot-cacheDB.json
 #export ROBOT_CREDENTIAL_ACCESS_CONTROL=true
 #export ROBOT_ALLOW_LOCALHOST_ACCESS=false
-export ROBOT_DEFAULT_VOICE=open-jTalk
-export SPEECH=reazon
+#export ROBOT_DEFAULT_VOICE=open-jTalk
+export SPEECH=browser
 export ROBOT_BASE_DIR=`pwd`
 node build/src/robot-server.js | tee robot-server.log
