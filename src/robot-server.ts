@@ -126,7 +126,7 @@ function readdirFileOnly(dirname, callback) {
 {HOME}/Pictures/{slide image file}
 */
 
-const Dora = require("dora")
+const Dora = require("./dora")
 const dora = new Dora()
 const utils = require("./utils")
 
