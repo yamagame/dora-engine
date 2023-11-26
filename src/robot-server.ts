@@ -411,8 +411,8 @@ passport.use(
   )
 )
 
-app.get("/quiz-master", isLogined("editor"), function (req, res, next) {
-  fs.createReadStream(path.join(config.basedir, "public/quiz-master/index.html")).pipe(res)
+app.get("/browser-speech", isLogined("editor"), function (req, res, next) {
+  fs.createReadStream(path.join(config.basedir, "public/browser-speech/index.html")).pipe(res)
 })
 
 app.get("/scenario-editor", isLogined("editor"), function (req, res, next) {
@@ -1492,6 +1492,8 @@ const postCommand = async (req, res, credential) => {
                 dora.play(
                   {
                     username,
+                    filename,
+                    scenario: path.parse(filename).name,
                     hostname: os.hostname(),
                     ip_address: ip.address(),
                     voice: {

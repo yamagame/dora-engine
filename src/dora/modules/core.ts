@@ -833,6 +833,30 @@ export const Core = function (DORA, config = {}) {
   }
   DORA.registerType("text-to-speech", TextToSpeech)
 
+  /*
+   * ランダムに発話
+   * /text-to-speech.random/こんにちは/ヤッホー/こんちわー
+   */
+  function SpeechRandom(node: Node, options) {
+    const isTemplated = (options || "").indexOf("{{") != -1
+    node._counter = 0
+    node.on("input", async function (msg) {
+      let message = options || ""
+      if (isTemplated) {
+        message = utils.mustache.render(message, msg)
+      }
+      const params = message.split("/")
+      resetRandomTable(node, params.length)
+      message = params[node._randtable[node._counter]]
+      node._counter++
+      if (node._counter >= params.length) {
+        node._counter = 0
+      }
+      textToSpeech(node, msg, this.credential(), message)
+    })
+  }
+  DORA.registerType("text-to-speech.random", SpeechRandom)
+
   /**
    * 発話をキャンセルして、発話文をpayloadにテキストとして追加する
    * silenceしたら、silence.endすること。
@@ -1178,19 +1202,13 @@ export const Core = function (DORA, config = {}) {
    *
    */
   function ClearSubtitle(node: Node, options) {
-    node.on("input", function (msg) {
+    node.on("input", async function (msg) {
       const { socket } = node.flow.options
-      socket.emit(
-        "clear-subtitle",
-        {
-          msg,
-          node,
-        },
-        (res) => {
-          if (!node.isAlive()) return
-          node.next(msg)
-        }
-      )
+      await node.flow.request({
+        type: "quiz",
+        speech: "",
+      })
+      node.next(msg)
     })
   }
   DORA.registerType("clear.subtitle", ClearSubtitle)
@@ -1638,7 +1656,7 @@ export const Core = function (DORA, config = {}) {
       if (isTemplated) {
         message = utils.mustache.render(message, msg)
       }
-      msg.timeout = val(message)
+      msg.timeout = val(message) * 1000
       node.next(msg)
     })
   }
@@ -1652,28 +1670,20 @@ export const Core = function (DORA, config = {}) {
   function Image(node: Node, options) {
     const isTemplated = (options || "").indexOf("{{") != -1
     node.on("input", async function (msg) {
-      const { socket, host } = node.flow.options
       let message = options
       if (isTemplated) {
         message = utils.mustache.render(message, msg)
       }
       if (![/^http.+/, /^:.+/, /^\/\/.+/].some((re) => message.match(re))) {
-        message = `image/${message}`
+        message = `images/${msg.scenario}/${message}`
       }
-      socket.emit(
-        "display/image",
-        {
-          msg,
-          params: {
-            image: {
-              src: message,
-            },
-            ...this.credential(),
-          },
-          node,
-        },
-        (res) => {}
-      )
+      await node.flow.request({
+        type: "quiz",
+        action: "slide",
+        photo: `${message}`,
+        pages: [],
+        area: null,
+      })
       node.next(msg)
     })
   }
