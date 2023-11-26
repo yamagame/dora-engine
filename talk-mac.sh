@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# sayコマンド(mac用) を使って発話する
+#
+
 R_OPTION=$1
 R_RATE=$2
 SPEECH_TEXT=$3

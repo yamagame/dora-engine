@@ -1,0 +1,5 @@
+//オウム返し
+:LOOP
+/speech-to-text
+/text-to-speech/{{speechText}}
+/goto/:LOOP

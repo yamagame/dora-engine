@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "composite": true,
+    "module": "CommonJS",
+    "outDir": "./build/",
+    "baseUrl": "./src/",
+    "paths": {
+      "~/*": ["*"]
+    }
+  }
+}

@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# RaspberryPi でロボットシステムを稼働させるための準備を行う
+#
+
 cd ~
 
 #sudo apt-get remove --purge wolfram-engine oracle-java8-jdk openjdk-8-jre gcj-6-jre -y

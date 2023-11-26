@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# RaspberryPi にNotoSansCJKフォントをインストールするスクリプト
+#
+
 cd ~
 
 wget -O NotoSansCJKjp-hinted.zip https://noto-website-2.storage.googleapis.com/pkgs/NotoSansCJKjp-hinted.zip

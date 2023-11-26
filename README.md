@@ -9,7 +9,7 @@
 ## 特徴
 
 - 音声認識、音声合成機能を持つ Raspberry Pi を使った手作りできるコミュニケーションロボットです。
-- 部品代は AquesTalk Pi を含めて 2 万円ほどです。
+- 部品代は AquesTalk Pi を含めて 3 万円ほどです。
 - 専用スクリプト言語を使ってロボットのコントロールを簡単に行えます。
 - 外部のパソコンなしにロボット単体で画像と連携したプレゼンテーションができます。
 - 外装はダンボールですのでお好みに合わせて自由に変更できます。
@@ -190,11 +190,13 @@ $ aplay -Dplug:softvol test.wav
 
 Download のセクションから、使用許諾を読んで「同意して Download」ボタンをクリックします。
 
-Downloads フォルダにファイルがダウンロードされますので、以下のコマンドを入力して解凍します。
+Downloads フォルダに aquestalkpi-20220207.tar がダウンロードされますので、以下のコマンドでダウンロードしたファイルを DoraEngine のプロジェクトルートの modules ディレクトリに移動して解凍します。
 
 ```
-$ cd ~/Downloads
-$ tar xvf aquestalkpi-20130827.tgz
+$ mv ~/Downloads/aquestalkpi-20220207.tar ./modules
+$ pushd modules
+$ tar xvf aquestalkpi-20220207.tar
+$ popd
 ```
 
 以下のコマンドを入力して、音声合成のテストを行います。
@@ -206,7 +208,7 @@ $ ./talk-f1.sh こんにちは
 
 音声合成を Open JTalk から変更する場合は、環境変数 ROBOT_DEFAULT_VOICE の設定を外します。
 
-[robot-server.sh](./robot-server.sh) の以下の行のコメントアウトします。
+[start-robot-server.sh](./start-robot-server.sh) の以下の行のコメントアウトします。
 
 ```
 #export ROBOT_DEFAULT_VOICE=open-jTalk
@@ -214,7 +216,36 @@ $ ./talk-f1.sh こんにちは
 
 再起動後、デフォルト音声合成が AquesTalk Pi になります。
 
-## Google Speech API の準備
+## 音声認識
+
+[Google Speech API](https://cloud.google.com/speech-to-text?hl=ja) と　[whisper.cpp](https://github.com/ggerganov/whisper.cpp) が選択できます。
+
+## Chrome ブラウザの音声認識APIを使用する場合
+
+```sh
+# ロボットエンジンの起動
+$ yarn start
+```
+
+```sh
+# または環境変数を指定して起動
+export SPEECH=browser
+```
+
+chrome ブラウザで http://localhost:3090/browser-speech を開きます。別のウインドウで http://localhost:3090/scenario-editor を開き、下記のスクリプトを実行します。
+
+```sh
+//オウム返し
+:LOOP
+/speech-to-text
+/text-to-speech/{{speechText}}
+/goto/:LOOP
+```
+
+初回はマイクの利用許可を求められますので許可します。ブラウザの音声認識を利用するにはインターネットが必要です。  
+ブラウザの音声認識は chrome のみで機能します。音声認識できる時間は 15 秒間で 15 秒経つとタイムアウトします。
+
+## Google Text-To-Speech API による音声認識の場合
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
 
@@ -222,12 +253,12 @@ $ ./talk-f1.sh こんにちは
 
 [https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries)
 
-プロジェクトの Speech API を有効にします。
+GCP プロジェクトの Speech API を有効にします。
 
-環境変数 SPEECH の設定を削除して音声認識を有効化します。[robot-server.sh](./robot-server.sh) の以下の行のコメントアウトします。
+環境変数 SPEECH に google を設定します。
 
 ```
-#export SPEECH=off
+export SPEECH=google
 ```
 
 音声認識のテストを行います。以下のコマンドをシナリオエディタに入力してエコーロボットになれば OK です。音声認識している最中はお腹のボタンが点灯します。
@@ -244,6 +275,71 @@ $ ./talk-f1.sh こんにちは
 環境変数 GOOGLE_APPLICATION_CREDENTIALS で指定したプロジェクトの Translation API を有効にします。
 
 環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectID を設定します。
+
+## ReazonSpeech による音声認識の場合
+
+[https://github.com/yamagame/node-voice-recorder.git](https://github.com/yamagame/node-voice-recorder.git) を起動します。
+
+node-voice-recorder では音声録音サーバと音声認識サーバを起動します。
+
+```sh
+# 音声認識サーバの起動
+./scripts/start-server.sh
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Unzipping taggers/averaged_perceptron_tagger.zip.
+[nltk_data] Downloading package cmudict to /root/nltk_data...
+[nltk_data]   Unzipping corpora/cmudict.zip.
+INFO:     Started server process [157]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:9002 (Press CTRL+C to quit)
+```
+
+```sh
+# 音声録音サーバの起動
+$ ./scripts/connect-dora-engine.sh
+dora-engineのIPアドレスを入力 > localhost
+connecting localhost from 10.5.32.200
+yarn run v1.23.0-20220130.1630
+$ REAZONSPEECH_RAW=./work/out.raw ts-node -r tsconfig-paths/register src/index.ts
+Vad | sampleRate: 48000 | hertzPerBin: 93.75 | iterationFrequency: 93.75 | iterationPeriod: 0.010666666666666666
+Got SIGNAL startComplete
+node-voice-recorder listening on port 3093!
+```
+
+dora-engine は音声録音サーバを中継して音声認識を行います。
+環境変数 REAZON_SPEECH_HOST、REAZON_SPEECH_PORT に音声録音サーバのホストとポート番号を指定し、SPEECH を reazon にしてロボットエンジンを起動します。
+
+```sh
+# 設定例
+export REAZON_SPEECH_HOST=localhost
+export REAZON_SPEECH_PORT=3393
+export SPEECH=reazon
+```
+
+## whisper.cpp による音声認識の場合
+
+whisper.cpp の使用方法は whisper.cpp に従いますので、whisper.cpp の README.md を参照してください。
+
+/modules ディレクトリに https://github.com/ggerganov/whisper.cpp を clone します。
+/modules/whisper.cpp ディレクトリで以下のコマンドを実行して、stream バイナリを作成します。
+
+```bash
+$ make stream
+```
+
+音声認識のモデルデータを以下のコマンドでダウンロードします。
+
+```bash
+$ bash ./models/download-ggml-model.sh ggml-large-v3
+```
+
+環境変数 SPEECH に whisper を設定して音声認識を有効化します。[robot-server.sh](./robot-server.sh) の以下の行を書き換えます。
+
+```sh
+export SPEECH=whisper
+```
 
 ## プレゼンテーション画面
 
@@ -279,36 +375,6 @@ http://[dora-engineのIPアドレス]:3090/scenario-editor/
 
 会話文について詳しくは、[こちら](https://github.com/yamagame/dora)を参照。
 
-## スケジューラ画面
-
-<p align="center">
-  <img style="border:solid 1px lightgray;" src="./images/scheduler.png"/>
-</p>
-
-ブラウザで以下の URL を開きます。
-
-```
-http://[dora-engineのIPアドレス]:3090/scheduler/
-```
-
-マウスでドラッグすると画面が動きます。スクロールホイールで拡大縮小できます。
-
-クリックするとカーソルが表示されます。
-
-キーボードフォーカスが当たっている状態でスペースキーを押すとカーソル位置にバーを作成することができます。
-
-シフトキーを押しながらドラッグすると、選択エリアが表示され、バーをまとめて選択することができます。
-
-バーは、ドラッグすると位置を変更できます。バーの左右の端をドラッグするとサイズを変更できます。
-
-バーをダブルクリックすると、バーのタイトルや本文を変更することができます。
-
-スケジューラにキーボードフォーカスが当たっている状態で、以下のキー操作ができます。
-
-- T キー 今日の日付に移動します
-- G キー バーを順に選択して選択したバーが画面の中央に表示されます。
-- DEL キー 選択したバーを削除します。
-
 ## 関連プロジェクト
 
 ### Dora Script
@@ -318,22 +384,6 @@ http://[dora-engineのIPアドレス]:3090/scheduler/
 ### Dora Editor
 
 [https://github.com/yamagame/dora-editor](https://github.com/yamagame/dora-editor)
-
-### Dora Admin
-
-[https://github.com/yamagame/dora-admin](https://github.com/yamagame/dora-admin)
-
-### Dora Quiz
-
-[https://github.com/yamagame/dora-quiz](https://github.com/yamagame/dora-quiz)
-
-### Dora Wave
-
-[https://github.com/yamagame/dora-wave](https://github.com/yamagame/dora-wave)
-
-### Dora Scheduler
-
-[https://github.com/yamagame/dora-scheduler](https://github.com/yamagame/dora-scheduler)
 
 ### Dora Script Sample
 
