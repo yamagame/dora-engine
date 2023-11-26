@@ -220,31 +220,32 @@ $ ./talk-f1.sh こんにちは
 
 [Google Speech API](https://cloud.google.com/speech-to-text?hl=ja) と　[whisper.cpp](https://github.com/ggerganov/whisper.cpp) が選択できます。
 
+## Chrome ブラウザの音声認識APIを使用する場合
 
-## 音声認識 whisper.cpp の場合
-
-whisper.cpp の使用方法は whisper.cpp に従いますので、whisper.cpp の README.md を参照してください。
-
-/modules ディレクトリに https://github.com/ggerganov/whisper.cpp を clone します。
-/modules/whisper.cpp ディレクトリで以下のコマンドを実行して、stream バイナリを作成します。
-
-```bash
-$ make stream
+```sh
+# ロボットエンジンの起動
+$ yarn start
 ```
 
-音声認識のモデルデータを以下のコマンドでダウンロードします。
-
-```bash
-$ bash ./models/download-ggml-model.sh base.en
+```sh
+# または環境変数を指定して起動
+export SPEECH=browser
 ```
 
-環境変数 SPEECH に whisper を設定して音声認識を有効化します。[robot-server.sh](./robot-server.sh) の以下の行を書き換えます。
+chrome ブラウザで http://localhost:3090/browser-speech を開きます。別のウインドウで http://localhost:3090/scenario-editor を開き、下記のスクリプトを実行します。
 
-```
-export SPEECH=whisper
+```sh
+//オウム返し
+:LOOP
+/speech-to-text
+/text-to-speech/{{speechText}}
+/goto/:LOOP
 ```
 
-## 音声認識 Google Speech API の場合
+初回はマイクの利用許可を求められますので許可します。ブラウザの音声認識を利用するにはインターネットが必要です。  
+ブラウザの音声認識は chrome のみで機能します。音声認識できる時間は 15 秒間で 15 秒経つとタイムアウトします。
+
+## Google Text-To-Speech API による音声認識の場合
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
 
@@ -252,12 +253,12 @@ export SPEECH=whisper
 
 [https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries)
 
-プロジェクトの Speech API を有効にします。
+GCP プロジェクトの Speech API を有効にします。
 
-環境変数 SPEECH の設定を削除して音声認識を有効化します。[robot-server.sh](./robot-server.sh) の以下の行のコメントアウトします。
+環境変数 SPEECH に google を設定します。
 
 ```
-#export SPEECH=off
+export SPEECH=google
 ```
 
 音声認識のテストを行います。以下のコマンドをシナリオエディタに入力してエコーロボットになれば OK です。音声認識している最中はお腹のボタンが点灯します。
@@ -275,9 +276,70 @@ export SPEECH=whisper
 
 環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectID を設定します。
 
-## レアゾンスピーチの場合
+## ReazonSpeech による音声認識の場合
 
-ToDo
+[https://github.com/yamagame/node-voice-recorder.git](https://github.com/yamagame/node-voice-recorder.git) を起動します。
+
+node-voice-recorder では音声録音サーバと音声認識サーバを起動します。
+
+```sh
+# 音声認識サーバの起動
+./scripts/start-server.sh
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Unzipping taggers/averaged_perceptron_tagger.zip.
+[nltk_data] Downloading package cmudict to /root/nltk_data...
+[nltk_data]   Unzipping corpora/cmudict.zip.
+INFO:     Started server process [157]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:9002 (Press CTRL+C to quit)
+```
+
+```sh
+# 音声録音サーバの起動
+$ ./scripts/connect-dora-engine.sh
+dora-engineのIPアドレスを入力 > localhost
+connecting localhost from 10.5.32.200
+yarn run v1.23.0-20220130.1630
+$ REAZONSPEECH_RAW=./work/out.raw ts-node -r tsconfig-paths/register src/index.ts
+Vad | sampleRate: 48000 | hertzPerBin: 93.75 | iterationFrequency: 93.75 | iterationPeriod: 0.010666666666666666
+Got SIGNAL startComplete
+node-voice-recorder listening on port 3093!
+```
+
+dora-engine は音声録音サーバを中継して音声認識を行います。
+環境変数 REAZON_SPEECH_HOST、REAZON_SPEECH_PORT に音声録音サーバのホストとポート番号を指定し、SPEECH を reazon にしてロボットエンジンを起動します。
+
+```sh
+# 設定例
+export REAZON_SPEECH_HOST=localhost
+export REAZON_SPEECH_PORT=3393
+export SPEECH=reazon
+```
+
+## whisper.cpp による音声認識の場合
+
+whisper.cpp の使用方法は whisper.cpp に従いますので、whisper.cpp の README.md を参照してください。
+
+/modules ディレクトリに https://github.com/ggerganov/whisper.cpp を clone します。
+/modules/whisper.cpp ディレクトリで以下のコマンドを実行して、stream バイナリを作成します。
+
+```bash
+$ make stream
+```
+
+音声認識のモデルデータを以下のコマンドでダウンロードします。
+
+```bash
+$ bash ./models/download-ggml-model.sh ggml-large-v3
+```
+
+環境変数 SPEECH に whisper を設定して音声認識を有効化します。[robot-server.sh](./robot-server.sh) の以下の行を書き換えます。
+
+```sh
+export SPEECH=whisper
+```
 
 ## プレゼンテーション画面
 
