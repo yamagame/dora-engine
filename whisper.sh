@@ -8,4 +8,5 @@
 #
 
 cd ./modules/whisper.cpp
-stream -f out.txt -kc -m ./models/ggml-base.bin -l ja --step 1000 --length 3000
+# ./stream -f out.txt -kc -m ./models/ggml-large-v3.bin -l ja --step 1000 --length 3000
+./stream -f out.txt -kc -m ./models/ggml-large-v3.bin -l ja -vth 0.9 -fth 80

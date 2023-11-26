@@ -2,7 +2,6 @@ import { RecordingEmitter } from "./recording-emitter"
 import { spawn } from "child_process"
 
 const WHISPER = process.env["WHISPER_PATH"] || "./whisper.sh"
-console.log(`WHISPER_PATH ${WHISPER}`)
 
 class SpeechEmitter extends RecordingEmitter {
   writing = false
@@ -13,6 +12,8 @@ class SpeechEmitter extends RecordingEmitter {
 }
 
 function Speech() {
+  console.log(`WHISPER_PATH ${WHISPER}`)
+
   const t = new SpeechEmitter()
   let streamDataReuest = false
   let startRecording = false
@@ -24,6 +25,8 @@ function Speech() {
   let childProcess = null
 
   const isSpeech = (text) => {
+    if (text.indexOf("ご視聴ありがとうございました") >= 0) return false
+    if (text === "あっ" || text === "ん") return false
     if (text.length > 0 && text[0] !== "(" && text[0] !== "[") return true
     return false
   }
@@ -74,7 +77,7 @@ function Speech() {
     }
     if (childProcess) {
       console.log("<<start>>")
-      childProcess.stdin.write("start\n")
+      // childProcess.stdin.write("start\n")
     }
     commingText = ""
   })
