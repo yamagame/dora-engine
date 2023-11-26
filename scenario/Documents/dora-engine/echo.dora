@@ -2,5 +2,4 @@
 :LOOP
 /speech-to-text
 /text-to-speech/{{speechText}}
-//3s
 /goto/:LOOP
