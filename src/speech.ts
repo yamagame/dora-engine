@@ -5,10 +5,10 @@ const _selectEngine = (mode: string) => {
     return require("./speech-to-text-browser")
   } else if (mode === "reazon") {
     return require("./speech-to-text-reazon")
-  } else if (mode === "off") {
-    return require("./speech-to-text-disabled")
+  } else if (mode === "google") {
+    return require("./speech-to-text-google")
   }
-  return require("./speech-to-text-google")
+  return require("./speech-to-text-disabled")
 }
 
 export const selectEngine = (mode: string) => {
