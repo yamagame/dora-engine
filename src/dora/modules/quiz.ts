@@ -1030,7 +1030,6 @@ export function Quiz(DORA, config = {}) {
    *
    */
   function QuizResultScore(node, options) {
-    let pageNumber = null
     node.on("input", async function (msg) {
       if (typeof msg.quiz === "undefined") msg.quiz = utils.quizObject()
       const { pages } = msg.quiz
@@ -1056,7 +1055,6 @@ export function Quiz(DORA, config = {}) {
    *
    */
   function QuizResultCheck(node, options) {
-    let pageNumber = null
     node.on("input", async function (msg) {
       if (typeof msg.quiz === "undefined") msg.quiz = utils.quizObject()
       const { pages } = msg.quiz

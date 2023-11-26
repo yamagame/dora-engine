@@ -7,6 +7,7 @@ import { Quiz } from "./modules/quiz"
 import { HTTP } from "./modules/http"
 import { LED } from "./modules/led"
 import { Nlp } from "./modules/nlp"
+import { Chat } from "./modules/chat"
 
 import * as utils from "./libs/utils"
 const util = require("util")
@@ -69,6 +70,8 @@ export class Dora {
     LED(this)
     this._modname = "nlp"
     Nlp(this)
+    this._modname = "chat"
+    Chat(this)
     this.utils = utils
     this._errorInfo = {}
   }

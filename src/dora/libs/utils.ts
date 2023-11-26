@@ -104,7 +104,8 @@ function getParam(param, key, def) {
 }
 
 function logMessage(node, socket, message) {
-  socket.emit("log", {
+  socket.emit("dora-event", {
+    action: "log",
     message,
     lineNumber: node.index + 1,
     filename: node.flow.filename,

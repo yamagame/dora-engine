@@ -1854,13 +1854,44 @@ app.post(
 
 const server = require("http").Server(app)
 const io = require("socket.io")(server)
+const iochat = io.of("chat")
 const iop = io.of("player")
 let playerSocket = null
 
+const chatServers: { [index: string]: { socket: Socket } } = {}
 const quiz_masters: { [index: string]: Socket } = {}
 const imageServers = {}
 
 speech.masters = quiz_masters
+
+iochat.on("connection", function (socket) {
+  console.log("connected io chat", socket.conn.remoteAddress)
+  const localhostCheck = (payload: { localhostToken?: string } = {}) => {
+    if (localhostIPs.indexOf(socket.handshake.address) === -1) {
+      payload.localhostToken = localhostToken()
+    }
+  }
+  socket.on("disconnect", function () {
+    console.log("disconnect io chat")
+    delete chatServers[socket.id]
+  })
+  socket.on("notify", function (payload) {
+    localhostCheck(payload)
+    checkPermission(payload, "", (verified) => {
+      if (verified) {
+        const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/)
+        if (ip != null && payload.role === "chatServer") {
+          // payload.host = ip[1]
+          const messages = []
+          const chatServer = {
+            socket,
+          }
+          chatServers[socket.id] = chatServer
+        }
+      }
+    })
+  })
+})
 
 iop.on("connection", function (socket) {
   console.log("connected io player", socket.conn.remoteAddress)
@@ -2107,6 +2138,59 @@ io.on("connection", function (socket: Socket) {
         console.log("message", payload)
       }
       if (callback) callback()
+    })
+  })
+  socket.on("chat.ask", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG")
+      return
+    }
+    localhostCheck(payload)
+    checkPermission(payload, "control.write", (verified) => {
+      if (verified) {
+        if (
+          !Object.keys(chatServers).some((key) => {
+            try {
+              const chatServer = chatServers[key]
+              chatServer.socket.emit("ask", { text: payload.text }, (payload) => {
+                if (callback) callback()
+              })
+            } catch (err) {
+              console.error(err)
+            }
+            return true
+          })
+        ) {
+          if (callback) callback()
+        }
+      }
+    })
+  })
+  socket.on("chat.get", function (payload, callback) {
+    if (typeof payload === "undefined") {
+      if (callback) callback("NG")
+      return
+    }
+    localhostCheck(payload)
+    checkPermission(payload, "control.write", (verified) => {
+      if (verified) {
+        if (
+          !Object.keys(chatServers).some((key) => {
+            try {
+              const chatServer = chatServers[key]
+              chatServer.socket.emit("get", {}, (payload) => {
+                console.log(payload)
+                if (callback) callback({ text: payload.text })
+              })
+            } catch (err) {
+              console.error(err)
+            }
+            return true
+          })
+        ) {
+          if (callback) callback({ text: "error" })
+        }
+      }
     })
   })
   socket.on("quiz-command", function (payload, callback) {
