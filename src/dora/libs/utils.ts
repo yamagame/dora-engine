@@ -82,6 +82,7 @@ const nGramCheck = function (str1, str2) {
 
 const _clone = (obj) => {
   if (typeof obj === "undefined" || obj === null) return null
+  if (typeof obj === "string") return obj
   const callstack = obj.callstack
   delete obj.callstack
   if (obj.quiz && obj.quiz.startTime) {

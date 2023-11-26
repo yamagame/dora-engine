@@ -6,4 +6,4 @@
 
 sudo dpkg --add-architecture armhf
 sudo apt update
-sudo apt install libc6:armhf libstdc++6:armhf
+sudo apt install libc6:armhf libstdc++6:armhf -y

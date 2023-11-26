@@ -576,7 +576,7 @@ export const Core = function (DORA, config = {}) {
    *
    *
    */
-  function Sound(type: "sound.async" | "sound.sync") {
+  function Sound(type: "sound" | "sound.sync") {
     return function (node: Node, options) {
       const isTemplated = (options || "").indexOf("{{") != -1
       node.on("input", async function (msg) {
@@ -593,7 +593,7 @@ export const Core = function (DORA, config = {}) {
       })
     }
   }
-  DORA.registerType("sound", Sound("sound.sync"))
+  DORA.registerType("sound", Sound("sound"))
   DORA.registerType("sound.sync", Sound("sound.sync"))
 
   /*
@@ -1122,10 +1122,10 @@ export const Core = function (DORA, config = {}) {
    *
    */
   function JoinFlow(node, options) {
-    var isTemplated = (options || "").indexOf("{{") != -1
+    const isTemplated = (options || "").indexOf("{{") != -1
     node.on("input", function (msg) {
       const { socket } = node.flow.options
-      var option = options
+      let option = options
       if (isTemplated) {
         option = utils.mustache.render(option, msg)
       }
@@ -1137,8 +1137,9 @@ export const Core = function (DORA, config = {}) {
         },
         (res) => {
           if (!node.isAlive()) return
-          node.join()
-          node.next(msg)
+          if (node.join("force")) {
+            node.next(msg)
+          }
         }
       )
     })

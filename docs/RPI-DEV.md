@@ -6,7 +6,7 @@
 - [RaspiOS を Mac 上の Docker で動作させる手順](https://github.com/yamagame/dora-agent/blob/main/docs/DOCKER-RPI.md)
 
 ```sh
-# pulseaudio を設定
+# mac 側で pulseaudio を起動
 $ pulseaudio -k && pulseaudio --load=module-native-protocol-tcp --exit-idle-time=-1 --daemon
 
 # ラズパイイメージを起動
