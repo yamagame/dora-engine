@@ -27,7 +27,7 @@
 
 音声合成には以下のものを選択できます。
 
-- [Open JTalk](http://open-jtalk.sp.nitech.ac.jp/)
+- [OpenJTalk](http://open-jtalk.sp.nitech.ac.jp/)
 - [AquesTalk Pi](https://www.a-quest.com/products/aquestalkpi.html)
 - [Google Text-to-Speech](https://cloud.google.com/text-to-speech/)
 - [AWS Polly](https://aws.amazon.com/jp/polly/)

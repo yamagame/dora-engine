@@ -7,7 +7,6 @@ import { config } from "./config"
 const io = require("socket.io-client")
 const player = require("./movie-player")
 const ping = require("ping")
-const mkdirp = require("mkdirp")
 
 const { basedir } = config
 

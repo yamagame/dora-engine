@@ -1,4 +1,4 @@
-const fetch = require("node-fetch")
+import fetch from "node-fetch"
 import { Node } from "../../"
 const utils = require("../../libs/utils")
 const { vegetables, building, structure, hospital, house } = require("./words")

@@ -1,5 +1,5 @@
-const utils = require("../libs/utils")
-const fetch = require("node-fetch")
+import * as utils from "../libs/utils"
+import fetch from "node-fetch"
 
 export const HTTP = function (DORA, config = {}) {
   /*

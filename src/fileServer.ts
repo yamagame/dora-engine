@@ -2,14 +2,14 @@ import * as path from "path"
 import * as fs from "fs"
 
 const multer = require("multer")
-const mkdirp = require("mkdirp")
+import { mkdirp } from "mkdirp"
 
 const upload = function (req, res, basePath, dirPath, filenameCallback = null) {
   const destPath = path.join(basePath, dirPath)
   if (path.normalize(destPath).indexOf(path.normalize(basePath)) != 0) {
     return res.status(403).send("invalid dirname.")
   }
-  mkdirp(destPath, (err) => {
+  mkdirp(destPath).then((err) => {
     if (err) {
       return res.status(500).json(err)
     }
@@ -48,7 +48,7 @@ const readDir = function (req, res, basePath, dirPath) {
     if (err) {
       return res.status(200).json([])
     }
-    mkdirp(destPath, (err) => {
+    mkdirp(destPath).then((err) => {
       if (err) {
         return res.status(500).json(err)
       }
@@ -75,7 +75,7 @@ const deleteFile = function (req, res, basePath, dirPath, filename) {
   if (path.normalize(destPath).indexOf(path.normalize(basePath)) != 0) {
     return res.status(403).send("invalid dirname.")
   }
-  mkdirp(destPath, (err) => {
+  mkdirp(destPath).then((err) => {
     if (err) {
       return res.status(500).json(err)
     }

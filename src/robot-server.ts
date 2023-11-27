@@ -30,7 +30,7 @@ const MemoryStore = require("memorystore")(session)
 import * as passport from "passport"
 // const DoraChat = require("./doraChat")
 const LocalStrategy = require("passport-local").Strategy
-import * as mkdirp from "mkdirp"
+import { mkdirp } from "mkdirp"
 import UserDefaults from "./user-defaults"
 import { upload, readDir, deleteFile } from "./fileServer"
 import * as csrf from "csurf"
@@ -58,7 +58,6 @@ const PICT =
   process.platform === "darwin"
     ? path.join(process.env.HOME, "Documents", workFolder, "Pictures")
     : path.join(process.env.HOME, "Pictures")
-const PART_LIST_FILE_PATH = path.join(HOME, "quiz-student.txt")
 
 const isLogined = function (view = null) {
   return function (req, res, next) {
@@ -213,8 +212,6 @@ if (typeof robotData.autoStart === "undefined") robotData.autoStart = {}
 if (speech.setParams) {
   speech.setParams(robotData.voice)
 }
-
-let { students } = utils.attendance.load(null, PART_LIST_FILE_PATH, null)
 
 let saveDelay = false
 let savedData = null
@@ -1166,9 +1163,6 @@ async function quizPacket(payload) {
     }
     payload.name = quiz_master
   }
-  if (payload.members) {
-    payload.members = students.map((v) => v.name)
-  }
   if (payload.area) {
     const readFile = (path) => {
       return new Promise<string>((resolve) => {
@@ -1218,7 +1212,6 @@ function loadQuizPayload(payload) {
   } else {
     val = robotData.quizPayload["others"] || {}
   }
-  val.members = students.map((v) => v.name)
   console.log(`loadQuizPayload`, val)
   return m(val, { initializeLoad: true })
 }
@@ -1584,7 +1577,7 @@ const postCommand = async (req, res, credential) => {
           ? req.params.filename
           : null
       const base = path.join(HOME, "Documents")
-      mkdirp(path.join(base, username, ".cache"), async function (err) {
+      mkdirp(path.join(base, username, ".cache")).then(async (err) => {
         if (uri) {
           try {
             const payload = await axios({
@@ -1667,88 +1660,11 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
   const base = path.join(HOME, "Documents")
   const username = req.body.name ? path.basename(req.body.name) : null
   const filename = req.body.filename ? path.basename(req.body.filename) : null
-  if (username === "admin-user") {
-    if (req.body.action == "save") {
-      if (filename === "生徒リスト") {
-        if (typeof req.body.text !== "undefined") {
-          if (filename) {
-            mkdirp(HOME, function (err) {
-              fs.writeFile(PART_LIST_FILE_PATH, req.body.text, (err) => {
-                let r = utils.attendance.load(null, PART_LIST_FILE_PATH, null)
-                if (typeof r.students !== "undefined") students = r.students
-                res.send({ status: !err ? "OK" : err.code })
-              })
-            })
-          } else {
-            res.send({ status: "Not found filename" })
-          }
-        } else {
-          res.send({ status: "No data" })
-        }
-      } else if (filename === "出席CSV") {
-        res.send({ status: "OK" })
-      } else if (filename === "日付リスト") {
-        if (typeof req.body.text !== "undefined") {
-          if (filename) {
-            mkdirp(HOME, function (err) {
-              fs.writeFile(path.join(HOME, "date-list.txt"), req.body.text, (err) => {
-                res.send({ status: !err ? "OK" : err.code })
-              })
-            })
-          } else {
-            res.send({ status: "Not found filename" })
-          }
-        } else {
-          res.send({ status: "No data" })
-        }
-      } else {
-        res.send({ status: "OK" })
-      }
-    } else if (req.body.action == "load") {
-      if (filename === "生徒リスト") {
-        fs.readFile(PART_LIST_FILE_PATH, "utf8", (err, data) => {
-          res.send({
-            status: !err ? "OK" : err.code,
-            text: data ? data : "",
-          })
-        })
-      } else if (filename === "出席CSV") {
-        const { dates, students } = utils.attendance.load(
-          null,
-          PART_LIST_FILE_PATH,
-          path.join(HOME, "date-list.txt")
-        )
-        if (USE_DB) {
-          db.loadAttendance().then((robotData) => {
-            res.send({
-              status: "OK",
-              text: utils.attendance.csv(robotData, dates, students),
-            })
-          })
-        } else {
-          res.send({
-            status: "OK",
-            text: utils.attendance.csv(robotData, dates, students),
-          })
-        }
-      } else if (filename === "日付リスト") {
-        fs.readFile(path.join(HOME, "date-list.txt"), "utf8", (err, data) => {
-          res.send({
-            status: !err ? "OK" : err.code,
-            text: data ? data : "",
-          })
-        })
-      } else {
-        res.send({ status: "OK" })
-      }
-    } else {
-      res.send({ status: "OK" })
-    }
-  } else if (students.some((m) => m.name === username) || config.editorAccessControl) {
+  if (config.editorAccessControl) {
     if (req.body.action == "save" || req.body.action == "create") {
       if (typeof req.body.text !== "undefined" || req.body.action == "create") {
         if (isValidFilename(filename)) {
-          mkdirp(path.join(base, username), function (err) {
+          mkdirp(path.join(base, username)).then(() => {
             if (req.body.action === "create") {
               console.log(`create ${path.join(base, username, filename)}`)
               fs.open(path.join(base, username, filename), "a", function (err, file) {
@@ -1771,7 +1687,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
       }
     } else if (req.body.action == "load") {
       if (isValidFilename(filename)) {
-        mkdirp(path.join(base, username), function (err) {
+        mkdirp(path.join(base, username)).then(() => {
           console.log(`>> load ${path.join(base, username, filename)}`)
           fs.readFile(path.join(base, username, filename), "utf8", (err, data) => {
             if (err) console.log(err)
@@ -1795,7 +1711,7 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
         res.send({ status: "Not found filename" })
       }
     } else if (req.body.action == "list") {
-      mkdirp(path.join(base, username), function (err) {
+      mkdirp(path.join(base, username)).then(() => {
         console.log(`>> list ${path.join(base, username)}`)
         readdirFileOnly(path.join(base, username), (err, items) => {
           if (err) console.log(err)

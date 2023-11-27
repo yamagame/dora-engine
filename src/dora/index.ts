@@ -10,7 +10,6 @@ import { Nlp } from "./modules/nlp"
 import { Chat } from "./modules/chat"
 
 import * as utils from "./libs/utils"
-const util = require("util")
 
 const removeQuote = (str) => {
   if (!str) return str
@@ -414,7 +413,7 @@ export class Dora {
   emit(flow, node, msg) {
     if (msg === null || typeof msg === "undefined") {
       return
-    } else if (!util.isArray(msg)) {
+    } else if (!Array.isArray(msg)) {
       msg = [msg]
     }
     let numOutputs = node.wires.length
@@ -479,7 +478,7 @@ export class Dora {
 
   nextLabel(node, label, index = 0) {
     if (typeof label === "undefined" || label === null) return []
-    if (!util.isArray(label)) {
+    if (!Array.isArray(label)) {
       label = label.split("/")
     }
     label = label.slice(index)
