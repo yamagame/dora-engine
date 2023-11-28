@@ -1,6 +1,6 @@
 :QATOP
 /slide/images/omikuji/001.gif
-/quiz.edit/images/omikuji/001.gif.json
+//quiz.edit/images/omikuji/001.gif.json
 /led.blink
 /wait-event
 /sound/Pop.wav

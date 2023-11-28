@@ -1,6 +1,6 @@
 {
-  "image": "001",
+  "image": "001.gif",
   "area": [
-    { "x": 8, "y": 9, "width": 1905, "height": 1063, "title": "start" }
+    { "x": 7, "y": 9, "width": 1905, "height": 1063, "title": "start" }
   ]
 }
