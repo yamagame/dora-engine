@@ -1,0 +1,25 @@
+/.server/http://localhost:3000
+:LOOP
+/slide/images/e-word-quiz/eword-title.gif.json
+//quiz.edit/images/e-word-quiz/eword-title.gif.json
+/wait-event
+/http.post/{{{server}}}/start
+/call/e-word.dora
+/call/e-word.dora
+/call/e-word.dora
+/call/e-word.dora
+/call/e-word.dora
+/slide/images/e-word-quiz/result.jpeg
+/quiz.speech
+Your result is ..
+/1s
+/sound/Pop.wav
+/quiz.title/Result
+/quiz.init/Result
+/select/Result
+/quiz.iframe/http://localhost:3000/result
+/quiz.open/no-time/no-title/style-deepblue
+/quiz.show/no-save
+/quiz.wait
+/3s
+/goto/:LOOP
