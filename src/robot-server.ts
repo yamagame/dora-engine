@@ -5,6 +5,7 @@ import * as ip from "ip"
 import "dotenv/config"
 import { exec, spawn } from "child_process"
 import { Socket } from "socket.io"
+import * as platform from "./platform"
 
 import { config } from "./config"
 import {
@@ -50,14 +51,11 @@ const bcrypt = (() => {
     return require("bcryptjs")
   }
 })()
-const HOME =
-  process.platform === "darwin"
-    ? path.join(process.env.HOME, "Documents", workFolder)
-    : process.env.HOME
-const PICT =
-  process.platform === "darwin"
-    ? path.join(process.env.HOME, "Documents", workFolder, "Pictures")
-    : path.join(process.env.HOME, "Pictures")
+
+const HOME = platform.isDarwin() ? path.join("scenario") : process.env.HOME
+const PICT = platform.isDarwin()
+  ? path.join("scenario", "Pictures")
+  : path.join(process.env.HOME, "Pictures")
 
 const isLogined = function (view = null) {
   return function (req, res, next) {
@@ -168,7 +166,7 @@ const quiz_master = process.env.QUIZ_MASTER || "_quiz_master_"
 let led_mode = "auto"
 let mode_slave = false
 
-talk.robot_voice = process.env["ROBOT_VOICE"] || os.type() == "Darwin" ? "mac" : "default"
+talk.robot_voice = process.env["ROBOT_VOICE"] || platform.isDarwin() ? "mac" : "default"
 
 let robotDataPath = process.argv[2] || path.join(HOME, "robot-data.json")
 
@@ -1357,27 +1355,23 @@ const postCommand = async (req, res, credential) => {
       const { filename, imageMap } = req.body
       if (filename && imageMap) {
         let savefilePath = path.join(PICT, filename)
-        if (path.resolve(savefilePath) === savefilePath) {
-          if (path.extname(savefilePath.toLowerCase()) !== ".json") {
-            savefilePath = `${savefilePath}.json`
-          }
-          const writeFile = (path, data) => {
-            return new Promise<void>((resolve) => {
-              console.log(`write imageMap ${path}`)
-              fs.writeFile(path, data, (err) => {
-                console.log(err)
-                resolve()
-              })
-            })
-          }
-          await writeFile(savefilePath, imageMap)
-          try {
-            const { area } = JSON.parse(imageMap)
-            storeQuizPayload({ area })
-          } catch (err) {}
-        } else {
-          console.log(`invalid filename ${filename}`)
+        if (path.extname(savefilePath.toLowerCase()) !== ".json") {
+          savefilePath = `${savefilePath}.json`
         }
+        const writeFile = (path, data) => {
+          return new Promise<void>((resolve) => {
+            console.log(`write imageMap ${path}`)
+            fs.writeFile(path, data, (err) => {
+              console.log(err)
+              resolve()
+            })
+          })
+        }
+        await writeFile(savefilePath, imageMap)
+        try {
+          const { area } = JSON.parse(imageMap)
+          storeQuizPayload({ area })
+        } catch (err) {}
       } else {
         console.log(`invalid 'imageMap' save command `)
       }

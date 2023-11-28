@@ -33,3 +33,5 @@ robot-defaults.json
 /modules/*
 !/modules/.gitkeep
 *.log
+
+scenario/robot-data.json
