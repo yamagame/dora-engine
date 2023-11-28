@@ -1,0 +1,10 @@
+//ELYZA連携
+:TOP
+/speech-to-text
+/if/timeout/:TOP
+/chat.ask/{{speechText}}
+:LOOP
+/chat.get
+/if/end/:TOP
+{{payload}}
+/goto/:LOOP
