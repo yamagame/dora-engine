@@ -4,4 +4,4 @@
 #
 
 echo $@
-./modules/aquestalkpi/AquesTalkPi $@ | aplay
+./modules/aquestalkpi/AquesTalkPi $@ | aplay -Dplug:softvol

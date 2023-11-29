@@ -960,8 +960,8 @@ function execSoundCommand(payload, callback = null) {
     const base = path.join(HOME, "Sound")
     const p = path.normalize(path.join(base, sound))
     if (p.indexOf(base) == 0) {
-      const cmd = process.platform === "darwin" ? "afplay" : "aplay"
-      const opt = process.platform === "darwin" ? [p] : config.voiceHat ? [p] : [p]
+      const cmd = platform.isDarwin() ? "afplay" : "aplay"
+      const opt = platform.isDarwin() ? [p] : ["-Dplug:softvol", p]
       console.log(`/usr/bin/${cmd} ${p}`)
       const playone = spawn(`/usr/bin/${cmd}`, opt)
       playone.on("close", function () {
