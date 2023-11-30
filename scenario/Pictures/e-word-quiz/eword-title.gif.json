@@ -1,4 +1,6 @@
 {
   "image": "eword-title.gif",
-  "area": [{ "x": 6, "y": 5, "width": 2996, "height": 1687, "title": "screen-button" }]
+  "area": [
+    { "x": 9, "y": 9, "width": 1060, "height": 590 }
+  ]
 }
