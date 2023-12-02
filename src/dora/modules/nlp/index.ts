@@ -40,7 +40,7 @@ const slotPattern = {
 }
 
 const convertMatchString = (transcript, re, slot, date: Date) => {
-  if (slot === "歳" || slot === "月") {
+  if (slot === "歳" || slot === "月" || slot === "日") {
     transcript = TextKan2Num(transcript)
   }
   if (Array.isArray(re)) {
