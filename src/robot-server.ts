@@ -488,6 +488,45 @@ app.post("/login-guest-client", function (req, res, next) {
   })(req, res, next)
 })
 
+app.post("/login", async function (req, res, next) {
+  const { username } = req.body
+  const filename = "シナリオ.dora"
+  const base = path.join(HOME, "Documents")
+  const filepath = path.join(base, username, filename)
+  const isExistsScenarioFile = () => {
+    return new Promise((resolve) => {
+      if (!fs.existsSync(path.join(base, username))) {
+        resolve(false)
+        return
+      }
+      readdirFileOnly(path.join(base, username), (err, items) => {
+        if (items?.length > 0) {
+          resolve(true)
+        } else {
+          resolve(false)
+        }
+      })
+    })
+  }
+  // シナリオファイルが一つもない場合
+  if (!(await isExistsScenarioFile())) {
+    // シナリオファイルを作成
+    if (isValidFilename(filename)) {
+      mkdirp(path.join(base, username)).then(() => {
+        console.log(`create ${path.join(base, username, filename)}`)
+        fs.open(filepath, "a", function (err, file) {
+          if (err) console.log(err)
+          res.send({ status: !err ? "OK" : err.code, filename })
+        })
+      })
+    } else {
+      res.send({ status: "Not found filename" })
+    }
+  } else {
+    res.send("OK")
+  }
+})
+
 app.post("/access-token", isLogined(), function (req, res) {
   if (req.user) {
     createSignature(req.user.id, (signature) => {
