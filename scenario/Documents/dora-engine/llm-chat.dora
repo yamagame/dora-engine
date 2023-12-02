@@ -1,7 +1,10 @@
 //ELYZA連携
+/slide/images/llm-chat/001.png
 :TOP
+/quiz.speech
 /speech-to-text
 /if/timeout/:TOP
+/quiz.speech/{{speechText}}
 /chat.ask/{{speechText}}
 :LOOP
 /chat.get
