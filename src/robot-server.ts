@@ -633,6 +633,8 @@ function text_to_speech(payload, callback) {
   }
 }
 
+let speech_timeout_timer: NodeJS.Timeout = null
+
 function speech_to_text(payload, callback) {
   console.log("speech_to_text", payload.timeout)
 
@@ -675,7 +677,8 @@ function speech_to_text(payload, callback) {
   }
 
   if (payload.timeout != 0) {
-    setTimeout(() => {
+    if (speech_timeout_timer) clearTimeout(speech_timeout_timer)
+    speech_timeout_timer = setTimeout(() => {
       if (!done) {
         stopRecording()
         removeListener()
@@ -826,7 +829,6 @@ app.get("/recordingTime", (req, res) => {
 app.post("/text-to-speech", hasPermission("control.write"), (req, res) => {
   console.log("/text-to-speech")
   console.log(req.body)
-
   text_to_speech(
     {
       ...req.body,
@@ -1476,6 +1478,8 @@ const postCommand = async (req, res, credential) => {
         }
       })
       chat.stop()
+      if (speech_timeout_timer) clearTimeout(speech_timeout_timer)
+      speech_timeout_timer = null
     }
     if (action == "play") {
       run_scenario = true
