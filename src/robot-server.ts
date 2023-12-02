@@ -20,6 +20,7 @@ import {
 import * as express from "express"
 import * as cookieParser from "cookie-parser"
 import axios, { Method } from "axios"
+import { ChatController } from "./chat-controller"
 import { selectEngine } from "./speech"
 import { Talk } from "./voice"
 import { ButtonClient } from "./button-client"
@@ -1474,6 +1475,7 @@ const postCommand = async (req, res, credential) => {
           playerSocket.emit("movie", { action: "cancel" }, (data) => {})
         }
       })
+      chat.stop()
     }
     if (action == "play") {
       run_scenario = true
@@ -1807,7 +1809,7 @@ const iochat = io.of("chat")
 const iop = io.of("player")
 let playerSocket = null
 
-const chatServers: { [index: string]: { socket: Socket } } = {}
+const chat = new ChatController()
 const quiz_masters: { [index: string]: Socket } = {}
 const imageServers = {}
 
@@ -1822,20 +1824,17 @@ iochat.on("connection", function (socket) {
   }
   socket.on("disconnect", function () {
     console.log("disconnect io chat")
-    delete chatServers[socket.id]
+    chat.remove(socket)
   })
   socket.on("notify", function (payload) {
+    console.log("notify", payload)
     localhostCheck(payload)
     checkPermission(payload, "", (verified) => {
       if (verified) {
-        const ip = socket.conn.remoteAddress.match(/^::ffff:(.+)$/)
-        if (ip != null && payload.role === "chatServer") {
+        if (payload.role === "chatServer") {
           // payload.host = ip[1]
-          const messages = []
-          const chatServer = {
-            socket,
-          }
-          chatServers[socket.id] = chatServer
+          console.log("add", payload)
+          chat.add(socket)
         }
       }
     })
@@ -2097,21 +2096,7 @@ io.on("connection", function (socket: Socket) {
     localhostCheck(payload)
     checkPermission(payload, "control.write", (verified) => {
       if (verified) {
-        if (
-          !Object.keys(chatServers).some((key) => {
-            try {
-              const chatServer = chatServers[key]
-              chatServer.socket.emit("ask", { text: payload.text }, (payload) => {
-                if (callback) callback()
-              })
-            } catch (err) {
-              console.error(err)
-            }
-            return true
-          })
-        ) {
-          if (callback) callback()
-        }
+        chat.ask(payload, callback)
       }
     })
   })
@@ -2123,22 +2108,7 @@ io.on("connection", function (socket: Socket) {
     localhostCheck(payload)
     checkPermission(payload, "control.write", (verified) => {
       if (verified) {
-        if (
-          !Object.keys(chatServers).some((key) => {
-            try {
-              const chatServer = chatServers[key]
-              chatServer.socket.emit("get", {}, (payload) => {
-                console.log(payload)
-                if (callback) callback({ text: payload.text })
-              })
-            } catch (err) {
-              console.error(err)
-            }
-            return true
-          })
-        ) {
-          if (callback) callback({ text: "error" })
-        }
+        chat.get(callback)
       }
     })
   })
