@@ -1,5 +1,13 @@
 //オウム返し
+/slide/images/echo/001.png
 :LOOP
+/timeout/20
+/quiz.speech
 /speech-to-text
+/quiz.speech/{{speechText}}
+/if/timeout/:WAIT
 /text-to-speech/{{speechText}}
+/goto/:LOOP
+:WAIT
+/1s
 /goto/:LOOP
