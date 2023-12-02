@@ -2,7 +2,7 @@ import * as EventEmitter from "events"
 const io = require("socket.io-client")
 import * as ping from "ping"
 
-import { createSignature } from "./accessCheck"
+import { createSignature } from "./access-check"
 
 function ipResolver(client, callback) {
   function _resolve() {

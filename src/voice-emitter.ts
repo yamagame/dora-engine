@@ -1,7 +1,7 @@
 import * as EventEmitter from "events"
 import { ChildProcess } from "child_process"
 
-import { localhostToken } from "./accessCheck"
+import { localhostToken } from "./access-check"
 
 const axios = require("axios")
 const utils = require("./utils")

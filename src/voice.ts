@@ -1,7 +1,7 @@
 import { VoiceEmitter } from "./voice-emitter"
 import { spawn } from "child_process"
 import { config } from "./config"
-import { localhostToken } from "./accessCheck"
+import { localhostToken } from "./access-check"
 import * as path from "path"
 
 const macvoice_speedrate = 210 / 100

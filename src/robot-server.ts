@@ -15,7 +15,7 @@ import {
   localhostToken,
   hasPermission,
   checkPermission,
-} from "./accessCheck"
+} from "./access-check"
 
 import * as express from "express"
 import * as cookieParser from "cookie-parser"
@@ -34,7 +34,7 @@ import * as passport from "passport"
 const LocalStrategy = require("passport-local").Strategy
 import { mkdirp } from "mkdirp"
 import UserDefaults from "./user-defaults"
-import { upload, readDir, deleteFile } from "./fileServer"
+import { upload, readDir, deleteFile } from "./file-server"
 import * as csrf from "csurf"
 
 // const router = express.Router()
