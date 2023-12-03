@@ -25,7 +25,7 @@ import { selectEngine } from "./speech"
 import { Talk } from "./voice"
 import { ButtonClient } from "./button-client"
 import { ButtonModule } from "./button-module"
-import { RobotDB } from "./robot-db"
+import { RobotDB, RobotData } from "./robot-db"
 import { router as googleRouter } from "./google-router"
 import * as session from "express-session"
 const MemoryStore = require("memorystore")(session)
@@ -41,9 +41,7 @@ import * as csrf from "csurf"
 const speech = selectEngine(process.env["SPEECH"])
 const buttonClient = ButtonClient(config)
 const talk = Talk()
-const workFolder = "DoraEngine" //for macOS(development)
 const USE_DB = config.useDB
-const saveInterval = 1000
 const csrfProtection = csrf({ cookie: true })
 const bcrypt = (() => {
   try {
@@ -179,73 +177,20 @@ const m = function (...a) {
   return res
 }
 
-let robotData: {
-  quizAnswers?: any
-  quizEntry?: any
-  quizPayload?: { [index: string]: any }
-  quizList?: any
-  recordingTime?: string
-  voice?: { level: number; threshold: number }
-  barData?: any
-  calendarData?: any
-  autoStart?: any
-  chatRecvTime?: Date
-} = {}
-try {
-  const robotJson = fs.readFileSync(robotDataPath, "utf8")
-  robotData = JSON.parse(robotJson)
-} catch (err) {
-  console.log(err)
+const robotData = new RobotData()
+if (!robotData.load(robotDataPath)) {
+  process.exit(1)
 }
-if (typeof robotData.quizAnswers === "undefined") robotData.quizAnswers = {}
-if (typeof robotData.quizEntry === "undefined") robotData.quizEntry = {}
-if (typeof robotData.quizPayload === "undefined") robotData.quizPayload = {}
-if (typeof robotData.quizList === "undefined") robotData.quizList = {}
-if (typeof robotData.recordingTime !== "undefined")
-  speech.recordingTime = parseInt(robotData.recordingTime)
-if (typeof robotData.voice === "undefined") robotData.voice = { level: 100, threshold: 2000 }
-if (typeof robotData.barData === "undefined") robotData.barData = []
-if (typeof robotData.calendarData === "undefined") robotData.calendarData = {}
-if (typeof robotData.autoStart === "undefined") robotData.autoStart = {}
+function writeRobotData(robotData) {
+  robotData.save(robotDataPath)
+}
 
+if (typeof robotData.recordingTime !== "undefined") {
+  speech.recordingTime = parseInt(robotData.recordingTime)
+}
 if (speech.setParams) {
   speech.setParams(robotData.voice)
 }
-
-let saveDelay = false
-let savedData = null
-let saveWFlag = false
-let quizAnswersCache = {}
-
-function writeRobotData() {
-  saveWFlag = true
-  if (!saveDelay) {
-    const save = () => {
-      if (saveWFlag) {
-        saveWFlag = false
-        saveDelay = true
-        const data = JSON.stringify(robotData, null, "  ")
-        if (savedData == null || savedData !== data) {
-          savedData = data
-          try {
-            console.log(`write ${robotDataPath}`)
-            fs.writeFile(robotDataPath, data, () => {
-              setTimeout(() => {
-                save()
-              }, saveInterval)
-            })
-            return
-          } catch (err) {
-            console.error(err)
-          }
-        }
-      }
-      saveDelay = false
-    }
-    save()
-  }
-}
-
 speech.recording = false
 
 let last_led_action = "led-off"
@@ -564,39 +509,6 @@ app.post("/listen/stop", function (req, res) {
   res.send("OK")
 })
 
-// const doraChat = DoraChat(
-//   (function () {
-//     const r = {
-//       post: function (key, fn) {
-//         r[key] = fn
-//       },
-//     }
-//     return r
-//   })(),
-//   {
-//     credentialPath: config.googleSheet.credentialPath,
-//     tokenPath: config.googleSheet.tokenPath,
-//     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-//     cacheDir: config.doraChat.dataDir,
-//     wikipedia: config.doraChat.wikipedia,
-//     weather: config.doraChat.weather,
-//   }
-// )
-
-// function dora_chat(payload, callback) {
-//   const req = {
-//     body: {
-//       ...payload,
-//     },
-//   }
-//   const res = {
-//     send: function (res) {
-//       callback(null, res)
-//     },
-//   }
-//   doraChat[`/${payload.action}`](req, res)
-// }
-
 let playing = false
 
 function text_to_speech(payload, callback) {
@@ -654,7 +566,7 @@ function speech_to_text(payload, callback) {
     speech.eventWating = false
     speech.emit("stopRecording")
     robotData.recordingTime = speech.recordingTime
-    writeRobotData()
+    writeRobotData(robotData)
   }
 
   const startRecording = () => {
@@ -917,19 +829,6 @@ app.post("/text-to-speech/stop", hasPermission("control.write"), (req, res) => {
   })
 })
 
-// app.use(
-//   "/dora-chat",
-//   hasPermission("control.write"),
-//   DoraChat(router, {
-//     credentialPath: config.googleSheet.credentialPath,
-//     tokenPath: config.googleSheet.tokenPath,
-//     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-//     cacheDir: config.doraChat.dataDir,
-//     wikipedia: config.doraChat.wikipedia,
-//     weather: config.doraChat.weather,
-//   })
-// )
-
 /*
   マイクによる音声認識の閾値を変更する
   閾値が0に近い程マイクの感度は高くなる
@@ -1033,7 +932,7 @@ async function quizPacket(payload) {
   }
   if (payload.action === "quiz-entry-init") {
     robotData.quizEntry = {}
-    writeRobotData()
+    writeRobotData(robotData)
     const result = await quizPacket({
       action: "entry",
       name: quiz_master,
@@ -1066,13 +965,33 @@ async function quizPacket(payload) {
     storeQuizPayload(params)
   }
   if (payload.action === "quiz-init") {
+    const startTime = new Date()
     //クイズデータの保存
-    if (USE_DB) {
-      const startTime = new Date()
-      if (payload.quizId) {
-        if (payload.pages) {
-          for (let i = 0; i < payload.pages.length; i++) {
-            const page = payload.pages[i]
+    if (payload.quizId && payload.pages) {
+      {
+        if (!robotData.quizList) {
+          robotData.quizList = {}
+        }
+        if (!robotData.quizList[payload.quizId]) {
+          robotData.quizList[payload.quizId] = {}
+        }
+        if (payload.quizName) {
+          robotData.quizList[payload.quizId].name = payload.quizName
+        }
+        if (!robotData.quizList[payload.quizId].quiz) {
+          robotData.quizList[payload.quizId].quiz = {}
+        }
+        payload.pages.forEach((page) => {
+          if (page.action == "quiz" && page.question) {
+            robotData.quizList[payload.quizId].quiz[page.question] = {
+              choices: page.choices,
+              answers: page.answers,
+              category: page.category,
+            }
+          }
+        })
+        if (USE_DB) {
+          payload.pages.forEach((page, i) => {
             if (page.action == "quiz" && page.question) {
               const a = {
                 quizId: payload.quizId,
@@ -1087,64 +1006,27 @@ async function quizPacket(payload) {
               if (payload.quizName) {
                 a.quizName = payload.quizName
               }
-              db.update("updateQuiz", a)
-            }
-          }
-        }
-      }
-      payload.quizStartTime = startTime
-    }
-    {
-      if (payload.quizId) {
-        if (!robotData.quizList) {
-          robotData.quizList = {}
-        }
-        if (!robotData.quizList[payload.quizId]) {
-          robotData.quizList[payload.quizId] = {}
-        }
-        if (payload.quizName) {
-          robotData.quizList[payload.quizId].name = payload.quizName
-        }
-        if (payload.pages) {
-          if (!robotData.quizList[payload.quizId].quiz) {
-            robotData.quizList[payload.quizId].quiz = {}
-          }
-          payload.pages.forEach((page) => {
-            if (page.action == "quiz" && page.question) {
-              robotData.quizList[payload.quizId].quiz[page.question] = {
-                choices: page.choices,
-                answers: page.answers,
-                category: page.category,
-              }
+              robotserver.update("updateQuiz", a)
             }
           })
         }
-        if (!USE_DB) {
-          writeRobotData()
-        }
-      }
-      if (!USE_DB) {
-        payload.quizStartTime = new Date()
+        writeRobotData(robotData)
       }
     }
+    payload.quizStartTime = startTime
   }
   if (payload.action === "quiz-show") {
     //クイズの表示
     payload.action = "quiz-init"
   }
   if (payload.action === "quiz-ranking") {
-    if (USE_DB) {
-      if (typeof payload.quizId !== "undefined") {
-        const { answers } = await db.findAnswers({
-          quizId: payload.quizId,
-          startTime: payload.quizStartTime,
-        })
-        //ゲストプレイヤーはランキングから外す
-        const ret = {}
+    if (typeof payload.quizId !== "undefined") {
+      const ret = {}
+      const removeGuestPlayers = (answers) => {
         if (answers) {
-          Object.keys(answers).forEach((quizTitle) => {
-            const players = answers[quizTitle]
-            ret[quizTitle] = {}
+          Object.keys(answers).forEach((quizId) => {
+            const players = answers[quizId]
+            ret[quizId] = {}
             if (players) {
               Object.keys(players).forEach((clientId) => {
                 const player = players[clientId]
@@ -1153,7 +1035,7 @@ async function quizPacket(payload) {
                   player.name.indexOf("guest") != 0 &&
                   player.name.indexOf("学生講師") != 0
                 ) {
-                  ret[quizTitle][clientId] = {
+                  ret[quizId][clientId] = {
                     name: player.name,
                     answer: player.answer,
                     time: player.time,
@@ -1163,40 +1045,21 @@ async function quizPacket(payload) {
             }
           })
         }
-        payload.quizAnswers = ret
-      } else {
-        payload.quizAnswers = await db.answerAll()
       }
+      if (USE_DB) {
+        const { answers } = await robotserver.findAnswers({
+          quizId: payload.quizId,
+          startTime: payload.quizStartTime,
+        })
+        removeGuestPlayers(answers)
+      } else {
+        const answers = robotData.quizAnswers[payload.quizId]
+        removeGuestPlayers(answers)
+      }
+      payload.quizAnswers = ret
     } else {
-      if (typeof payload.quizId !== "undefined") {
-        payload.quizAnswers = robotData.quizAnswers[payload.quizId]
-        //ゲストプレイヤーはランキングから外す
-        const ret = {}
-        if (payload.quizAnswers) {
-          Object.keys(payload.quizAnswers).forEach((quizId) => {
-            const players = payload.quizAnswers[quizId]
-            ret[quizId] = {}
-            if (players) {
-              Object.keys(players).forEach((clientId) => {
-                const player = players[clientId]
-                if (player.quizStartTime === payload.quizStartTime) {
-                  if (
-                    player.name.indexOf("ゲスト") != 0 &&
-                    player.name.indexOf("guest") != 0 &&
-                    player.name.indexOf("学生講師") != 0
-                  ) {
-                    ret[quizId][clientId] = {
-                      name: player.name,
-                      answer: player.answer,
-                      time: player.time,
-                    }
-                  }
-                }
-              })
-            }
-          })
-        }
-        payload.quizAnswers = ret
+      if (USE_DB) {
+        payload.quizAnswers = await robotserver.answerAll()
       } else {
         payload.quizAnswers = robotData.quizAnswers
       }
@@ -1242,7 +1105,7 @@ function storeQuizPayload(payload) {
     robotData.quizPayload["others"] = m(robotData.quizPayload["others"], payload)
   }
   robotData.quizPayload[quiz_master] = m(robotData.quizPayload[quiz_master], payload)
-  writeRobotData()
+  writeRobotData(robotData)
 }
 
 function loadQuizPayload(payload) {
@@ -1261,40 +1124,8 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
     if (req.body.quizId) {
       if (req.body.startTime) {
         const showSum = typeof req.body.showSum === "undefined" || !req.body.showSum ? false : true
-        //スタート時間が同じものだけを返す
-        if (USE_DB) {
-          if (showSum) {
-            const result = {}
-            const quizAnswers = quizAnswersCache[req.body.quizId]
-            if (quizAnswers) {
-              Object.keys(quizAnswers).map((quiz) => {
-                const qq = quizAnswers[quiz]
-                const tt = {}
-                Object.keys(qq).forEach((clientId) => {
-                  const answer = qq[clientId]
-                  if (answer.quizStartTime === req.body.startTime) {
-                    tt[clientId] = answer
-                  }
-                })
-                if (Object.keys(tt).length > 0) {
-                  result[quiz] = tt
-                }
-              })
-              const question = robotData.quizList ? robotData.quizList[req.body.quizId] : null
-              res.send({ answers: result, question: question })
-            } else {
-              res.send({ answers: result, question: null })
-            }
-          } else {
-            const retval = await db.findAnswers({
-              quizId: req.body.quizId,
-              startTime: req.body.startTime,
-            })
-            res.send(retval)
-          }
-        } else {
+        const quizResult = (quizAnswers) => {
           const result = {}
-          const quizAnswers = robotData.quizAnswers[req.body.quizId]
           Object.keys(quizAnswers).map((quiz) => {
             const qq = quizAnswers[quiz]
             const tt = {}
@@ -1308,13 +1139,37 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
               result[quiz] = tt
             }
           })
-          const question = robotData.quizList ? robotData.quizList[req.body.quizId] : null
-          res.send({ answers: result, question: question })
+          return result
+        }
+        const makeResponse = (quizAnswers) => {
+          if (quizAnswers) {
+            const result = quizResult(quizAnswers)
+            const question = robotData.quizList ? robotData.quizList[req.body.quizId] : null
+            return { answers: result, question: question }
+          }
+          const result = {}
+          return { answers: result, question: null }
+        }
+        //スタート時間が同じものだけを返す
+        if (USE_DB) {
+          if (showSum) {
+            const quizAnswers = robotserver.quizAnswersCache[req.body.quizId]
+            res.send(makeResponse(quizAnswers))
+          } else {
+            const retval = await robotserver.findAnswers({
+              quizId: req.body.quizId,
+              startTime: req.body.startTime,
+            })
+            res.send(retval)
+          }
+        } else {
+          const quizAnswers = robotData.quizAnswers[req.body.quizId]
+          res.send(makeResponse(quizAnswers))
         }
       } else {
         //スタート時間のリストを返す
         if (USE_DB) {
-          const retval = await db.startTimeList({ quizId: req.body.quizId })
+          const retval = await robotserver.startTimeList({ quizId: req.body.quizId })
           res.send(retval)
         } else {
           const quizAnswers = robotData.quizAnswers[req.body.quizId]
@@ -1331,7 +1186,7 @@ app.post("/result", hasPermission("result.read"), async (req, res) => {
     } else {
       //クイズIDを返す
       if (USE_DB) {
-        const list = await db.quizIdList()
+        const list = await robotserver.quizIdList()
         res.send(list)
       } else {
         const list = { quizIds: Object.keys(robotData.quizAnswers) }
@@ -1769,7 +1624,7 @@ app.post("/autostart", hasPermission("control.write"), async (req, res) => {
   const autostart = "autostart" in req.body ? { ...req.body.autostart } : null
   if (autostart) {
     robotData.autoStart = autostart
-    writeRobotData()
+    writeRobotData(robotData)
   }
   res.send({ status: "OK" })
 })
@@ -2187,7 +2042,7 @@ io.on("connection", function (socket: Socket) {
             if (payload.name === quiz_master) {
               quiz_masters[socket.id] = socket
             }
-            writeRobotData()
+            writeRobotData(robotData)
             const quizPayload = await quizPacket({
               action: "entry",
               name: quiz_master,
@@ -2211,16 +2066,16 @@ io.on("connection", function (socket: Socket) {
           if (USE_DB) {
             if (showSum) {
               const quizId = payload.quizId
-              if (quizAnswersCache[quizId] == null) {
-                quizAnswersCache[quizId] = {}
+              if (robotserver.quizAnswersCache[quizId] == null) {
+                robotserver.quizAnswersCache[quizId] = {}
               }
-              if (quizAnswersCache[quizId][payload.question] == null) {
-                quizAnswersCache[quizId][payload.question] = {}
+              if (robotserver.quizAnswersCache[quizId][payload.question] == null) {
+                robotserver.quizAnswersCache[quizId][payload.question] = {}
               }
               const p = { ...payload }
               delete p.question
               delete p.quizId
-              quizAnswersCache[quizId][payload.question][payload.clientId] = p
+              robotserver.quizAnswersCache[quizId][payload.question][payload.clientId] = p
             }
             const a = {
               quizId: payload.quizId,
@@ -2231,7 +2086,7 @@ io.on("connection", function (socket: Socket) {
               time: payload.time,
               startTime: payload.quizStartTime,
             }
-            if (!noSave) await db.update("updateAnswer", a)
+            if (!noSave) await robotserver.update("updateAnswer", a)
           } else {
             const quizId = payload.quizId
             if (robotData.quizAnswers[quizId] == null) {
@@ -2244,7 +2099,7 @@ io.on("connection", function (socket: Socket) {
             delete p.question
             delete p.quizId
             robotData.quizAnswers[quizId][payload.question][payload.clientId] = p
-            if (!noSave) writeRobotData()
+            if (!noSave) writeRobotData(robotData)
           }
           Object.keys(quiz_masters).forEach((key) => {
             quiz_masters[key].emit("quiz", {
@@ -2317,41 +2172,12 @@ io.on("connection", function (socket: Socket) {
 })
 
 const startServer = function () {
-  if (USE_DB) {
-    return RobotDB(
-      `${HOME}/robot-server.db`,
-      {
-        operatorsAliases: false,
-      },
-      async (err, db) => {
-        server.listen(config.port, () =>
-          console.log(`robot-server listening on port ${config.port}!`)
-        )
-      }
-    )
-  }
-  server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
-  return {
-    findAnswers: () => {
-      return { answers: {} }
-    },
-    updateAnswer: () => {},
-    updateQuiz: () => {},
-    update: () => {},
-    createBar: () => {},
-    loadBars: () => {},
-    findBars: () => {},
-    deleteBar: async () => {},
-    updateBar: async () => {},
-    loadAttendance: async () => {},
-    quizIdList: async () => {},
-    startTimeList: async () => {},
-    answerAll: async () => {},
-    Op: null,
-  }
+  return RobotDB({ USE_DB, HOME }, () => {
+    server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
+  })
 }
 
-const db = startServer()
+const robotserver = startServer()
 
 let shutdownTimer = null
 let shutdownLEDTimer = null
