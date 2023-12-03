@@ -1,4 +1,4 @@
-import express from "express"
+import * as express from "express"
 import { Server } from "http"
 import { Server as SocketIOServer } from "socket.io"
 import bodyParser from "body-parser"
