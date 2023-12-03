@@ -1,0 +1,17 @@
+/quiz.title/Result
+/quiz.init/Result
+:LOOP
+/quiz.speech
+/quiz.init/クイズ
+/select/Result
+/ok/選択1
+/ng/選択2
+/ng/選択3
+/ng/選択4
+/quiz.open/no-time
+/quiz.show/speech-button
+/quiz.wait
+/wait-event
+/quiz.speech/{{{payload}}}
+{{{payload}}}
+/goto/:LOOP
