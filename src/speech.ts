@@ -12,7 +12,7 @@ const _selectEngine = (mode: string) => {
 }
 
 export const selectEngine = (mode: string) => {
-  return _selectEngine(mode).default
+  return _selectEngine(mode).default()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////

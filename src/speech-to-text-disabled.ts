@@ -4,4 +4,4 @@ function Speech() {
   return new RecordingEmitter()
 }
 
-export default Speech()
+export default Speech
