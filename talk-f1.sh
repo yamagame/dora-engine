@@ -4,4 +4,8 @@
 #
 
 echo $@
-./modules/aquestalkpi/AquesTalkPi $@ | aplay -Dplug:softvol
+if [ $PULSE_SERVER == "host.docker.internal" ]; then
+  ./modules/aquestalkpi/AquesTalkPi $@ | aplay
+else
+  ./modules/aquestalkpi/AquesTalkPi $@ | aplay -Dplug:softvol
+fi
