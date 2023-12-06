@@ -89,46 +89,42 @@ export class Mic {
     const format = this.format
     if (this.audioProcess === null) {
       if (isWindows) {
-        this.audioProcess = spawn(
-          "sox",
-          [
-            "-b",
-            bitwidth,
-            "--endian",
-            endian,
-            "-c",
-            channels,
-            "-r",
-            rate,
-            "-e",
-            encoding,
-            "-t",
-            "waveaudio",
-            "default",
-            "-p",
-          ],
-          this.audioProcessOptions
-        )
+        const options = [
+          "-b",
+          bitwidth,
+          "--endian",
+          endian,
+          "-c",
+          channels,
+          "-r",
+          rate,
+          "-e",
+          encoding,
+          "-t",
+          "waveaudio",
+          "default",
+          "-p",
+        ]
+        this.audioProcess = spawn("sox", options, this.audioProcessOptions)
       } else if (isMac) {
-        this.audioProcess = spawn(
-          "rec",
-          [
-            "-b",
-            bitwidth,
-            "--endian",
-            endian,
-            "-c",
-            channels,
-            "-r",
-            rate,
-            "-e",
-            encoding,
-            "-t",
-            fileType,
-            "-",
-          ],
-          this.audioProcessOptions
-        )
+        const options = [
+          "--no-show-progress",
+          "-b",
+          bitwidth,
+          "--endian",
+          endian,
+          "-c",
+          channels,
+          "-r",
+          rate,
+          "-e",
+          encoding,
+          "-t",
+          fileType,
+          "-",
+        ]
+        console.log(options)
+        this.audioProcess = spawn("rec", options, this.audioProcessOptions)
       } else {
         this.audioProcess = spawn(
           "arecord",

@@ -9,6 +9,9 @@ export class VADProps {
   smoothingTimeConstant: number = 0.99
   fftSize: number = 512
   frequencyBinCount: number = 256
+  energy_threshold_ratio_pos: number = 2
+  energy_threshold_ratio_neg: number = 0.5
+  sampleRate: number = 48000
 }
 
 class VADOptions {

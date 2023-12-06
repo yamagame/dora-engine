@@ -13,7 +13,12 @@ export class Recorder extends EventEmitter {
   state: RecorderState = "idle"
   _recording: boolean = false
 
-  constructor() {
+  constructor(
+    { energyThresholdRatioPos, energyThresholdRatioNeg } = {
+      energyThresholdRatioPos: 2,
+      energyThresholdRatioNeg: 0.5,
+    }
+  ) {
     super()
 
     // VAD のオプション設定 (詳細後述)
@@ -33,17 +38,32 @@ export class Recorder extends EventEmitter {
         this.emit("voice_start")
       }
     }
+    VadOptions.energy_threshold_ratio_pos = energyThresholdRatioPos
+    VadOptions.energy_threshold_ratio_neg = energyThresholdRatioNeg
 
     const vad = new Vad.VAD(VadOptions)
     const micInstance = new Mic({
       rate: "48000",
       channels: "1",
-      debug: false,
+      debug: true,
       exitOnSilence: 0,
       encoding: "signed-integer",
       fileType: "raw",
-      endian: "big",
+      endian: "little",
     })
+
+    const toShort = (data, i) => {
+      let speechSample = 0
+      const sign = (byte) => {
+        if (byte > 128) {
+          return (byte - 256) * 256
+        }
+        return byte * 256
+      }
+      speechSample = sign(data[i + 1])
+      speechSample += data[i]
+      return speechSample
+    }
 
     const micInputStream = micInstance.getAudioStream()
 
@@ -58,12 +78,7 @@ export class Recorder extends EventEmitter {
       let speechSample = 0
       minmax1.reset()
       for (let i = 0; i < data.length; i += 2) {
-        if (data[i] > 128) {
-          speechSample = (data[i] - 256) * 256
-        } else {
-          speechSample = data[i] * 256
-        }
-        speechSample += data[i + 1]
+        const speechSample = toShort(data, i)
         buffer[i / 2] = speechSample
         sampleData[n] = speechSample / 0x7fff
         minmax1.set(sampleData[n])
@@ -98,7 +113,7 @@ export class Recorder extends EventEmitter {
       } else if (this.state === "idle") {
         this.buffers = this.buffers.slice(-3)
       }
-      this.emit("data", { data: buffer })
+      this.emit("data", { data: buffer, raw: data })
       // minmax1.print()
     })
 
@@ -158,6 +173,10 @@ export class Recorder extends EventEmitter {
     } else {
       this.pause()
     }
+  }
+
+  get recording() {
+    return this._recording
   }
 
   isRecording() {
