@@ -17,18 +17,41 @@
 
 ### 音声認識
 
-音声認識には [Google Speech-to-Text](https://cloud.google.com/speech-to-text/) を使っています。[Google Speech-to-Text](https://cloud.google.com/speech-to-text/) はマイクに入力した音声を文字列に変換するサービスです。
+音声認識はマイクに入力した音声を文字列に変換する機能です。
+デフォルトでは Chrome の [Web Speech API Speech Recognition](https://developer.mozilla.org/ja/docs/Web/API/SpeechRecognition) を使います。
+
+Speech API を使用するには https 接続か localhost 接続が必要です。Raspberry Pi で dora-engine を動かす場合は、そのままでは音声認識できませんので、Chrome ブラウザを開く PC に dora-engine へのプロキシー(nginxなど)を立てて接続します。
+
+[プロキシーのサンプル / nginx-proxy](https://github.com/yamagame/nginx-proxy)
+
+以下の URL を Chrome ブラウザで開き、localhost 接続で dora-engine へ接続します。
+
+http://localhost:3090/browser-speech
+
+あわせて以下の URL でシナリオを編集できます。
+
+http://localhost:3090/scenario-editor
+
+環境変数を設定することで以下の音声認識を選択することもできます。
+
+- Google Speech-to-Text
+- ReazonSpeech
+- Whisper (Whisper は現在、正しく動作していません)
+
 [Google Speech-to-Text](https://cloud.google.com/speech-to-text/) を使うことで以下のことができます。
 
 - 多言語認識：日本語だけでなく外国語の認識もできます。
 - 言語判定：入力した音声がどの言語のものなのかを判定できます。
+
+ReazonSpeech を使用すると、インターネット接続なしで音声認識させることができます。
 
 ### 音声合成
 
 音声合成には以下のものを選択できます。
 
 - [OpenJTalk](http://open-jtalk.sp.nitech.ac.jp/)
-- [AquesTalk Pi](https://www.a-quest.com/products/aquestalkpi.html)
+- [AquesTalk Pi](https://www.a-quest.com/products/aquestalkpi.html) (linuxのみ/デフォルト)
+- say コマンド (macのみ/デフォルト)
 - [Google Text-to-Speech](https://cloud.google.com/text-to-speech/)
 - [AWS Polly](https://aws.amazon.com/jp/polly/)
 
@@ -42,7 +65,7 @@
 
 サーボモーター２つを使って頭が上下左右に動きます。頭の動きは自動的に行われます。何も指示がないときにはロボットの頭部は上下左右にランダムに動きます。ロボットがおしゃべりしているときは頭が上下に動きます。
 
-### 専用スクリプト言語 ([DoraScript](https://github.com/yamagame/dora))
+### 専用スクリプト言語
 
 専用のスクリプト言語を使ってシナリオを作成できます。シナリオで音声認識や音声合成、プレゼンテーション画面の切り替え、お腹のボタンのコントロールなどができます。シナリオはブラウザベースのエディタを使って編集できます。特定のシナリオを電源投入時に自動的に実行することもできます。
 
@@ -69,6 +92,12 @@
 
 - [ロボット組立方法](http://bit.ly/2zTPUfn)
 
+### ハードウェアの構成について
+
+もともとは、Google の [Voice Kit V1](https://aiyprojects.withgoogle.com/voice-v1/) を利用したロボットでした。現在は販売されていませんので、市販の部品を組み合わせることで作ることができます。詳しくは以下のリンクを参照してください。
+
+[https://yamagame.github.io/dora-board/](https://yamagame.github.io/dora-board/)
+
 ### サーボモーターについて
 
 ダンボールロボットの設計図はマイクロサーボを２つ使う設計になっています。一つは頭部を左右に、もう一つは上下に動かします。しかし、Servo MG90D の様なマイクロサーボは稼働させ続けると壊れやすい様です。長時間動かす場合はマイクロサーボではなく、MG996R の様な大きめのサーボをオススメします。
@@ -79,7 +108,11 @@ MG996R ではダンボールロボットのサイズに合いませんので上�
 
 ## 準備
 
-Raspberry Pi のホームページから [Raspbian](https://www.raspberrypi.org/downloads/) をダウンロードして、Raspbian の入った microSD カードを作成します。
+[Raspberry Pi OS](https://www.raspberrypi.org/downloads/) から Raspberry Pi OS をダウンロードして microSD カードを作成します。Raspberry Pi Imager を使用すると選択画面から OS を選ぶことができます。
+
+![Raspberry Pi Imager](./docs/images/raspi-os-imager.png)
+
+OSは「Raspberry Pi OS (64-bit)」や「Raspberry Pi OS Lite (64-bit)」を選択します。
 
 Raspberry Pi のターミナルで、以下のコマンドを入力して、ロボットエンジンをダウンロードします。
 
@@ -95,7 +128,7 @@ $ cd dora-engine
 $ ./setup-system.sh
 ```
 
-setup-nodejs.sh で NodeJS をセットアップします。 NodeJS は v18.13.0 以上をインストールします。
+setup-nodejs.sh で NodeJS をセットアップします。 NodeJS は v18.13.0 以上をインストールします。このドキュメントを記入した時点では Debian Bookworm で NodeJS をインストールすると v18.13.0 になるようです。
 
 ```
 $ ./setup-nodejs.sh
@@ -117,6 +150,8 @@ $ ./setup-autolaunch.sh
 
 ### /boot/config.txt を編集する
 
+I2S 接続の音声デバイスをりようする場合は以下の手順を進めます。dora-engine は I2S 接続の「MAX98357A」と「SPH0645LM4H」を利用することを前提として実装しています。
+
 以下の項目をコメントアウトして無効化します。
 
 ```
@@ -131,7 +166,7 @@ dtoverlay=i2s-mmap
 dtoverlay=googlevoicehat-soundcard
 ```
 
-hdmi の音声出力を無効にします。
+以下の行を編集して hdmi の音声出力を無効にします。
 
 ```
 dtoverlay=vc4-kms-v3d,noaudio       # <== noaudio を追記
@@ -139,6 +174,8 @@ dtoverlay=dietpi-disable_hdmi_audio # <== 行追加
 ```
 
 ### /etc/asound.conf を作成
+
+asound.confg を作成して、plug:softvol と plug:micboost デバイスを利用できるように設定します。
 
 ```
 options snd_rpi_googlemihat_soundcard index=0
@@ -206,6 +243,12 @@ $ tar xvf aquestalkpi-20220207.tar
 $ popd
 ```
 
+以下のスクリプトを実行して必要なモジュールをインストールします。
+
+```
+$ ./scripts/setup-rpi-64bit.sh
+```
+
 以下のコマンドを入力して、音声合成のテストを行います。
 
 ```
@@ -213,9 +256,9 @@ $ cd ~/dora-engine
 $ ./talk-f1.sh こんにちは
 ```
 
-音声合成を Open JTalk から変更する場合は、環境変数 ROBOT_DEFAULT_VOICE の設定を外します。
+音声合成を Open JTalk から変更する場合は、環境変数 ROBOT_DEFAULT_VOICE の設定を外します。デフォルトで無効になってます。
 
-[start-robot-server.sh](./start-robot-server.sh) の以下の行のコメントアウトします。
+[start-robot-server.sh](./start-robot-server.sh) の以下の行のコメントアウトを外します。
 
 ```
 #export ROBOT_DEFAULT_VOICE=open-jTalk
@@ -255,7 +298,6 @@ chrome ブラウザで http://localhost:3090/browser-speech を開きます。�
 ## Google Text-To-Speech API による音声認識の場合
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
-
 認証ファイル (JSON ファイル) の取得方法については以下を参照してください。
 
 [https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries)
@@ -327,6 +369,8 @@ export SPEECH=reazon
 
 ## whisper.cpp による音声認識の場合
 
+注意： whisper 連携は現在正しく動作していません。
+
 whisper.cpp の使用方法は whisper.cpp に従いますので、whisper.cpp の README.md を参照してください。
 
 /modules ディレクトリに https://github.com/ggerganov/whisper.cpp を clone します。
@@ -356,11 +400,13 @@ export SPEECH=whisper
 
 ブラウザで以下の URL を開きます。
 
-```
-http://[dora-engineのIPアドレス]:3090/
-```
+    http://[dora-engineのIPアドレス]:3090/
 
 この画面にコマンドで指示したスライドなどが表示されます。シナリオを作ることでスライドと連動したプレゼンテーションロボットとして稼働させることができます。
+
+Chrome ブラウザで音声認識させる場合は以下の URL を開きます。
+
+    http://locahost:3090/browser-speech
 
 ## シナリオエディター画面
 
@@ -372,9 +418,7 @@ http://[dora-engineのIPアドレス]:3090/
 
 ブラウザで以下の URL を開きます。
 
-```
-http://[dora-engineのIPアドレス]:3090/scenario-editor/
-```
+    http://[dora-engineのIPアドレス]:3090/scenario-editor/
 
 あなたのお名前のエリアに名前を入力します。名前はなんでもよいです。
 
@@ -402,9 +446,8 @@ http://[dora-engineのIPアドレス]:3090/scenario-editor/
 地球の大気は、太陽からの青いろの光を拡散する性質を持っています。
 ```
 
-スクリプトの詳細は doc フォルダを参照してください。
-
-[DoraScript Language Specification](./docs/DORA-SCRIPT.md)
+スクリプトの詳細は [DoraScript Language Specification](./docs/DORA-SCRIPT.md)
+ を参照してください。
 
 ### コメント
 
