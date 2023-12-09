@@ -3,6 +3,8 @@ class Filter {
   v: number = 0
 }
 
+const debuglog = false
+
 export class VADProps {
   voice_stop?: () => void
   voice_start?: () => void
@@ -67,6 +69,8 @@ export class VAD {
   log_limit: number
   energy: number = 0
 
+  _flag: boolean
+
   constructor(options: VADProps) {
     // Default options
     this.options = new VADOptions()
@@ -121,8 +125,14 @@ export class VAD {
     this.voiceTrend = 0
     this.voiceTrendMax = 10
     this.voiceTrendMin = -10
-    this.voiceTrendStart = 5
-    this.voiceTrendEnd = -5
+
+    if (this.options.sampleRate === 16000) {
+      this.voiceTrendStart = 2
+      this.voiceTrendEnd = -3
+    } else {
+      this.voiceTrendStart = 5
+      this.voiceTrendEnd = -5
+    }
 
     // Setup local storage of the Linear FFT data
     this.floatFrequencyData = new Float32Array(this.options.frequencyBinCount)
@@ -184,9 +194,17 @@ export class VAD {
     if (signal > this.energy_threshold_pos) {
       this.voiceTrend =
         this.voiceTrend + 1 > this.voiceTrendMax ? this.voiceTrendMax : this.voiceTrend + 1
+      if (!this._flag && debuglog) {
+        console.log("pos", signal * 100000, this.energy_threshold_pos * 100000)
+        this._flag = true
+      }
     } else if (signal < -this.energy_threshold_neg) {
       this.voiceTrend =
         this.voiceTrend - 1 < this.voiceTrendMin ? this.voiceTrendMin : this.voiceTrend - 1
+      if (this._flag && debuglog) {
+        console.log("ng", signal * 100000, this.energy_threshold_neg * 100000)
+        this._flag = false
+      }
     } else {
       // voiceTrend gets smaller
       if (this.voiceTrend > 0) {
@@ -201,9 +219,15 @@ export class VAD {
     if (this.voiceTrend > this.voiceTrendStart) {
       // Start of speech detected
       start = true
+      if (!this.vadState && debuglog) {
+        console.log("start", this.voiceTrend, this.voiceTrendStart)
+      }
     } else if (this.voiceTrend < this.voiceTrendEnd) {
       // End of speech detected
       end = true
+      if (this.vadState && debuglog) {
+        console.log("end", this.voiceTrend, this.voiceTrendEnd)
+      }
     }
 
     // Integration brings in the real-time aspect through the relationship with the frequency this functions is called.

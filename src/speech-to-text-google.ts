@@ -1,19 +1,34 @@
+import * as fs from "fs"
 import { RecordingEmitter } from "./recording-emitter"
-import { config } from "./config"
-import Mic from "./voice/mic"
+import { Recorder } from "./voice/recorder"
 
-const speech = require("@google-cloud/speech").v1p1beta1
-
+const VOICE_RECORDER_ENERGY_POS = process.env["VOICE_RECORDER_ENERGY_POS"] || "2"
+const VOICE_RECORDER_ENERGY_NEG = process.env["VOICE_RECORDER_ENERGY_NEG"] || "0.5"
 const PRELOAD_COUNT = 3
+
+const defaultRequestOpts = {
+  config: {
+    encoding: "LINEAR16",
+    sampleRateHertz: 16000,
+    languageCode: "ja-JP",
+    // alternativeLanguageCodes: null,
+    // maxAlternatives: 3,
+  },
+  interimResults: false,
+  // languageCode: "",
+}
+
+const timestamp = () => {
+  const now = new Date()
+  return now.getTime()
+}
 
 class GoogleSpeechRecordingEmitter extends RecordingEmitter {
   recording = false
-  _recording = false
+  writing = false
   _preloadRecording = false
-  writing = true
   recordingTime = 0
   state = "recoding-stop"
-  stream?: any
   status = ""
   setParams = (any) => {}
 
@@ -22,371 +37,218 @@ class GoogleSpeechRecordingEmitter extends RecordingEmitter {
   }
 }
 
+class TimeoutTimer {
+  timer: NodeJS.Timeout = null
+
+  clear() {
+    if (this.timer) clearTimeout(this.timer)
+    this.timer = null
+  }
+
+  start(callback: () => void, ms: number) {
+    this.clear()
+    this.timer = setTimeout(() => {
+      this.timer = null
+      if (callback) callback()
+    }, ms)
+  }
+}
+
+class SpeechStream {
+  stream = null
+  filename = null
+
+  isActive() {
+    return this.stream != null
+  }
+
+  clear() {
+    this.stream = null
+    this.filename = null
+  }
+}
+
 function Speech() {
-  let waveSkip = 80
-
-  function uint8toint16(buffer) {
-    function abs(a) {
-      return a > 0 ? a : -a
-    }
-    const a = []
-    let _waveSkip = waveSkip
-    if (_waveSkip > buffer.length / 2) _waveSkip = buffer.length / 2
-    for (let i = 0; i < buffer.length; i += _waveSkip * 2) {
-      let maxSample = null
-      let sum = 0
-      let buff = []
-      for (let j = i; j < i + _waveSkip * 2; j += 2) {
-        let sample = 0
-        if (buffer[j + 1] > 128) {
-          sample = (buffer[j + 1] - 256) * 256
-        } else {
-          sample = buffer[j + 1] * 256
-        }
-        sample += buffer[j]
-        sum += sample
-        buff.push(sample)
-      }
-      const avg = sum / buff.length
-      buff.forEach((sample) => {
-        if (maxSample === null || abs(maxSample) < abs(sample - avg)) {
-          maxSample = sample - avg
-        }
-      })
-      a.push({
-        y: maxSample,
-      })
-    }
-    return a
-  }
-
-  const t = new GoogleSpeechRecordingEmitter()
-
-  const defaultRequestOpts = {
-    config: {
-      encoding: "LINEAR16",
-      sampleRateHertz: 16000,
-      languageCode: "ja-JP",
-      alternativeLanguageCodes: null,
-      maxAlternatives: 3,
-    },
-    interimResults: false,
-    languageCode: "",
-  }
-
-  let device = ""
-  if (config.voiceHat == true && config.usbUSBMIC == false) {
-    device = "plug:micboost"
-  } else {
-    device = config.usbUSBMICDevice //e.g. 'plughw:1,0';
-  }
-  const micInstance = new Mic({
-    device: device,
-    rate: "16000",
-    channels: "1",
-    debug: false,
-    exitOnSilence: 6,
+  const opts = { ...defaultRequestOpts }
+  const speechEmitter = new GoogleSpeechRecordingEmitter()
+  const recorder = new Recorder({
+    energyThresholdRatioPos: parseFloat(VOICE_RECORDER_ENERGY_POS),
+    energyThresholdRatioNeg: parseFloat(VOICE_RECORDER_ENERGY_NEG),
+    sampleRate: opts.config.sampleRateHertz,
   })
-  const micInputStream = micInstance.getAudioStream()
-  t.stream = micInputStream
 
-  let recognizeStream = null
-  let recognizeStreams = null
-  let requestOpts = [{ ...defaultRequestOpts }]
-  let startTime = 0
-  let writingStep = 0
-  let speechClients = []
+  const speechStream = new SpeechStream()
   let streamQue = []
-  let streamDataReuest = false
 
-  speechClients[0] = new speech.SpeechClient()
+  const speech = require("@google-cloud/speech")
+  const googleSpeechClient = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    ? new speech.SpeechClient()
+    : null
+
+  // 認識結果を返す
+  const emitResult = (result) => {
+    // console.log(`result ${JSON.stringify(result, null, "  ")}`)
+    speechEmitter.emit("data", result)
+  }
+
+  // 認識エラーを返す
+  const emitError = (err) => {
+    const result = {
+      languageCode: opts.config.languageCode,
+      errorString: err.toString(),
+      transcript: "error",
+      confidence: 0,
+      payload: "error",
+    }
+    // console.log(`error ${JSON.stringify(result, null, "  ")}`)
+    speechEmitter.emit("data", result)
+  }
+
+  const writing_timer = new TimeoutTimer()
+
+  // 音声検出後、1sの遊びを設ける
+  const writing_timeout = () => {
+    writing_timer.clear()
+    if (!speechEmitter.writing) {
+      return
+    }
+    writing_timer.start(() => {
+      speechEmitter.writing = false
+      if (googleSpeechClient) {
+        end_recording(true)
+      } else {
+        const filename = speechStream.filename
+        end_recording()
+        emitResult({
+          filename,
+        })
+      }
+      console.log("writing_timeout")
+    }, 1000)
+  }
+
+  const start_recording = () => {
+    recorder.recording = true
+    speechEmitter.recording = true
+    streamQue = []
+  }
+
+  const end_recording = (mode = false) => {
+    recorder.recording = false
+    if (!mode) {
+      speechEmitter.recording = false
+    }
+    writing_timer.clear()
+    if (speechStream.isActive()) {
+      console.log("end_stream")
+      speechStream.stream.end()
+      speechStream.clear()
+    }
+  }
+
+  // 認識ストリームの作成 GOOGLE_APPLICATION_CREDENTIALS が未設定の場合はファイル書き出し
+  const getStream = (props: { fname: string }) => {
+    if (googleSpeechClient) {
+      console.log("new google speech stream")
+      return googleSpeechClient
+        .streamingRecognize(opts)
+        .on("error", (err) => {
+          // console.error(err, JSON.stringify(opts))
+          if (!speechEmitter.recording) return
+          end_recording()
+          speechEmitter.writing = false
+          emitError(err)
+        })
+        .on("data", (data) => {
+          // console.log(JSON.stringify(data, null, "  "))
+          if (!speechEmitter.recording) return
+          end_recording()
+          let candidate = {
+            confidence: 0,
+            languageCode: "",
+          }
+          if (data.results) {
+            data.results.forEach((result) => {
+              const languageCode = result.languageCode
+              result.alternatives.forEach((alt) => {
+                if (candidate.confidence < alt.confidence) {
+                  candidate = alt
+                  candidate.languageCode = languageCode
+                }
+              })
+            })
+          }
+          emitResult(candidate)
+        })
+    } else {
+      console.log("new file stream")
+      return fs.createWriteStream(props.fname)
+    }
+  }
+
+  // 音声区間検出
+  recorder.on("voice_start", () => {
+    if (!recorder.recording) return
+    console.log("writing_start")
+    if (!speechStream.isActive()) {
+      const fname = `./work/output-${timestamp()}.raw`
+      if (!googleSpeechClient) {
+        console.log("writing...", fname)
+      }
+      speechStream.stream = getStream({ fname })
+      speechStream.filename = fname
+    }
+    speechEmitter.writing = true
+    writing_timer.clear()
+  })
+
+  // 無音区間検出
+  recorder.on("voice_stop", () => {
+    if (!recorder.recording) return
+    console.log("writing_stop")
+    writing_timeout()
+  })
+
+  // 音声データ受信
+  recorder.on("data", (payload) => {
+    if (speechEmitter.writing && speechEmitter.recording) {
+      speechEmitter.writing = true
+      if (speechStream.isActive()) {
+        if (streamQue.length > 0) {
+          console.log(">", streamQue.length)
+          streamQue.forEach((raw) => {
+            speechStream.stream.write(raw)
+          })
+          streamQue = []
+        } else {
+          console.log(">")
+        }
+        speechStream.stream.write(payload.raw)
+      }
+    } else {
+      streamQue.push(payload.raw)
+      streamQue = streamQue.slice(-PRELOAD_COUNT)
+    }
+  })
 
   // マイクの音声認識の閾値を変更
-  t.on("mic_threshold", function (threshold) {
-    if (threshold !== "keep") {
-      if (micInputStream.changeParameters) {
-        micInputStream.changeParameters({ threshold })
-      } else if (micInputStream.changeSilentThreshold) {
-        micInputStream.changeSilentThreshold(threshold)
-      }
-    }
+  speechEmitter.on("mic_threshold", (threshold) => {
+    //
   })
 
   // 音声解析開始
-  t.on("startRecording", function (params) {
-    if (micInputStream.changeParameters) {
-      if ("threshold" in params) {
-        if (params.threshold === "keep") {
-          delete params.threshold
-        }
-      }
-      if ("level" in params) {
-        if (params.level === "keep") {
-          delete params.level
-        }
-      }
-      micInputStream.changeParameters(params)
-    } else if (micInputStream.changeSilentThreshold) {
-      if ("threshold" in params) {
-        if (params.threshold !== "keep") {
-          micInputStream.changeSilentThreshold(params.threshold)
-        }
-      }
-    }
-    requestOpts = []
-    const opts = { ...defaultRequestOpts }
-    let alternativeLanguageCodes = {}
-    if ("alternativeLanguageCodes" in params) {
-      if (params.alternativeLanguageCodes) {
-        const t = params.alternativeLanguageCodes.trim().split("/")
-        t.forEach((v) => {
-          alternativeLanguageCodes[v] = true
-        })
-      }
-    }
-    if ("languageCode" in params) {
-      if (typeof params.languageCode === "string") {
-        opts.languageCode = params.languageCode.trim()
-      } else {
-        params.languageCode.forEach((code, i) => {
-          if (i == 0) {
-            opts.config = { ...defaultRequestOpts.config }
-            opts.config.languageCode = code.trim()
-          } else {
-            alternativeLanguageCodes[code.trim()] = true
-          }
-        })
-      }
-    }
-    if (Object.keys(alternativeLanguageCodes).length > 0) {
-      opts.config.alternativeLanguageCodes = [...Object.keys(alternativeLanguageCodes)]
-    }
-    requestOpts.push(opts)
-    streamQue = []
-    console.log("startRecording")
-    console.log(JSON.stringify(requestOpts, null, "  "))
+  speechEmitter.on("startRecording", async (params) => {
+    start_recording()
+    console.log("#", "startRecording", recorder.recording)
   })
 
-  // 音声解析終了
-  t.on("stopRecording", function () {
-    console.log("stopRecording")
+  // 音声解析停止
+  speechEmitter.on("stopRecording", async () => {
+    end_recording()
+    console.log("#", "stopRecording")
   })
 
-  //解析用ストリームデータを送信開始
-  t.on("startStreamData", function () {
-    streamDataReuest = true
-  })
-
-  //解析用ストリームデータを送信停止
-  t.on("stopStreamData", function () {
-    streamDataReuest = false
-  })
-
-  t.setParams = function (params) {
-    if (micInputStream.changeParameters) {
-      if ("threshold" in params) {
-        if (params.threshold === "keep") {
-          delete params.threshold
-        }
-      }
-      if ("level" in params) {
-        if (params.level === "keep") {
-          delete params.level
-        }
-      }
-      micInputStream.changeParameters(params)
-    }
-  }
-
-  micInputStream.on("data", function (data) {
-    if (t.recording && !t._recording) {
-      streamQue = []
-      t._preloadRecording = true
-      // if (t._preloadRecordingTimeout) clearTimeout(t._preloadRecordingTimeout);
-      // t._preloadRecordingTimeout = setTimeout(() => {
-      // }, 1000)
-    }
-    if (!t.recording) {
-      // if (t._preloadRecordingTimeout) clearTimeout(t._preloadRecordingTimeout);
-      // t._preloadRecordingTimeout = null;
-      t._preloadRecording = false
-    }
-    t._recording = t.recording
-    if (streamDataReuest) {
-      t.emit("wave-data", {
-        state: t.state,
-        wave: uint8toint16(data),
-        threshold: micInputStream.silent_threshold,
-        level: micInputStream.mic_level,
-      })
-    }
-    if (micInputStream.incrConsecSilenceCount() >= micInputStream.getNumSilenceFramesExitThresh()) {
-      if (t._preloadRecording) {
-        streamQue.push(data)
-        streamQue = streamQue.slice(-PRELOAD_COUNT)
-      }
-      if (writingStep == 1) {
-        console.log("end writing")
-        writingStep = 0
-      }
-      if (recognizeStreams) {
-        console.log("endStream A")
-        recognizeStreams.forEach((stream) => stream.end())
-        recognizeStreams = null
-        if (startTime > 0) {
-          t.recordingTime += new Date().getTime() - startTime
-          startTime = 0
-        }
-      }
-    } else {
-      if (recognizeStreams == null && t.recording) {
-        console.log("startStream")
-        startTime = new Date().getTime()
-        recognizeStreams = []
-        const rec_length = requestOpts.length
-        const results = []
-        requestOpts.forEach((opts, i) => {
-          const client = ((i) => {
-            if (speechClients[i] == null) {
-              speechClients[i] = new speech.SpeechClient()
-            }
-            return speechClients[i]
-          })(i)
-          console.log("createStream")
-          recognizeStreams.push(
-            client
-              .streamingRecognize(opts)
-              .on("error", (err) => {
-                console.log("error", JSON.stringify(opts))
-                console.log(err)
-                // if (!t.recording) return;
-                // const result = {
-                //   languageCode: opts.config.languageCode,
-                //   errorString: err.toString(),
-                //   transcript: 'error',
-                //   confidence: 0,
-                //   payload: 'error',
-                // }
-                // t.emit('data', result);
-                // if (!t.writing) {
-                //   t.recording = false;
-                // }
-              })
-              .on("data", (data) => {
-                console.log(JSON.stringify(data, null, "  "))
-                if (!t.recording) return
-                const emitResult = (result) => {
-                  console.log(`result ${JSON.stringify(result, null, "  ")}`)
-                  t.emit("data", result)
-                  if (!t.writing) {
-                    t.recording = false
-                  }
-                }
-                if (data.results) {
-                  let candidate = {
-                    confidence: 0,
-                    languageCode: "",
-                  }
-                  data.results.forEach((result) => {
-                    const languageCode = result.languageCode
-                    result.alternatives.forEach((alt) => {
-                      if (candidate.confidence < alt.confidence) {
-                        candidate = alt
-                        candidate.languageCode = languageCode
-                      }
-                    })
-                  })
-                  emitResult(candidate)
-                }
-              })
-          )
-        })
-      }
-      if (t.recording && t.writing) {
-        if (writingStep == 0) {
-          console.log("start writing")
-          writingStep = 1
-        }
-        if (t._preloadRecording) {
-          streamQue.forEach((data) => {
-            recognizeStreams.forEach((stream) => stream.write(data))
-          })
-          recognizeStreams.forEach((stream) => stream.write(data))
-          streamQue = []
-        } else {
-          recognizeStreams.forEach((stream) => stream.write(data))
-        }
-      } else {
-        if (t._preloadRecording) {
-          streamQue.push(data)
-          streamQue = streamQue.slice(-PRELOAD_COUNT)
-        }
-        if (writingStep == 1) {
-          console.log("end writing")
-          writingStep = 0
-        }
-        if (recognizeStreams) {
-          console.log("endStream B")
-          recognizeStreams.forEach((stream) => stream.end())
-          recognizeStreams = null
-          if (startTime > 0) {
-            t.recordingTime += new Date().getTime() - startTime
-            startTime = 0
-          }
-        }
-      }
-    }
-    if (writingStep == 1 && !t.recording) {
-      console.log("end writing")
-      writingStep = 0
-    }
-  })
-
-  micInputStream.on("error", function (err) {
-    console.log("Error in Input Stream: " + err)
-  })
-
-  micInputStream.on("startComplete", function () {
-    console.log("Got SIGNAL startComplete")
-    t.status = "start"
-  })
-
-  micInputStream.on("stopComplete", function () {
-    console.log("Got SIGNAL stopComplete")
-    t.status = "stop"
-  })
-
-  micInputStream.on("pauseComplete", function () {
-    console.log("Got SIGNAL pauseComplete")
-    t.status = "pause"
-  })
-
-  micInputStream.on("resumeComplete", function () {
-    console.log("Got SIGNAL resumeComplete")
-    t.status = "start"
-  })
-
-  micInputStream.on("silence", function () {
-    //console.log("Got SIGNAL silence");
-  })
-
-  micInputStream.on("processExitComplete", function () {
-    console.log("Got SIGNAL processExitComplete")
-  })
-
-  micInputStream.on("speech-start", function () {
-    console.log("Got SIGNAL speech-start")
-    t.state = "recoding-start"
-  })
-
-  micInputStream.on("speech-stop", function () {
-    console.log("Got SIGNAL speech-stop")
-    t.state = "recoding-stop"
-  })
-
-  micInstance.start()
-
-  return t
+  return speechEmitter
 }
 
 export default Speech
@@ -395,71 +257,78 @@ export default Speech
 // main
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function main() {
+// function nodeRecorder() {
+//   // Imports the Google Cloud client library
+//   const speech = require("@google-cloud/speech")
+//   const recorder = require("node-record-lpcm16")
+
+//   // Creates a client
+//   const client = new speech.SpeechClient({
+//     // projectId: "robotproject-226207",
+//     // keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || "",
+//   })
+
+//   const encoding = "LINEAR16"
+//   const sampleRateHertz = 16000
+//   const languageCode = "ja-JP"
+
+//   const request = {
+//     config: {
+//       encoding: encoding,
+//       sampleRateHertz: sampleRateHertz,
+//       languageCode: languageCode,
+//     },
+//     interimResults: false, // If you want interim results, set this to true
+//   }
+
+//   // Create a recognize stream
+//   const recognizeStream = client
+//     .streamingRecognize(request)
+//     .on("error", console.error)
+//     .on("data", (data) =>
+//       process.stdout.write(
+//         data.results[0] && data.results[0].alternatives[0]
+//           ? `Transcription: ${data.results[0].alternatives[0].transcript}\n`
+//           : `\n\nReached transcription time limit, press Ctrl+C\n`
+//       )
+//     )
+
+//   const outputFileStream = fs.createWriteStream("./work/output.raw")
+
+//   const record = recorder.record({
+//     sampleRateHertz: sampleRateHertz,
+//     // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+//     verbose: false,
+//     recorder: "sox", // Try also "arecord" or "sox"
+//     silence: "0.5",
+//   })
+
+//   // Start recording and send the microphone input to the Speech API
+//   record.stream().pipe(recognizeStream)
+//   // record.stream().pipe(outputFileStream)
+
+//   console.log("Listening, press Ctrl+C to stop.")
+// }
+
+function micRecorder() {
   const sp = Speech()
-
-  const express = require("express")
-  const socketIO = require("socket.io")
-  const PORT = 4300
-
-  const app = express()
-
-  app.post("/access-token", function (req, res) {
-    res.json({ user_id: "no-name", signature: "dummy" })
-  })
-
-  const server = require("http").Server(app)
-  server.listen(PORT, () => console.log(`server listening on port ${PORT}!`))
-
-  const io = new socketIO(server)
-  const ioa = io.of("audio")
-
-  const clients = {
-    length: 0,
+  const startRecording = () => {
+    setTimeout(() => {
+      sp.emit("startRecording", {
+        languageCode: ["ja-JP"],
+      })
+    }, 1000)
   }
-
-  ioa.on("connection", (socket) => {
-    console.log("connected")
-    socket.on("start-stream-data", (payload) => {
-      console.log("startStreamData", JSON.stringify(payload))
-      if (Object.keys(clients).length == 0) {
-        sp.emit("startStreamData")
-      }
-      clients[socket.id] = socket
-    })
-    socket.on("speech-config", (params) => {
-      console.log(params)
-      sp.stream.changeParameters(params)
-    })
-    socket.on("disconnect", () => {
-      delete clients[socket.id]
-      if (clients.length == 0) {
-        sp.emit("stopStreamData")
-      }
-    })
+  sp.on("data", (payload) => {
+    console.log(payload)
+    startRecording()
   })
+  startRecording()
+}
 
-  const threshold = (() => {
-    if (process.argv.length > 2 && process.argv[2]) {
-      return parseInt(process.argv[2])
-    }
-    return 4000
-  })()
-
-  console.log(`threshold ${threshold}`)
-
-  sp.recording = true
-  sp.emit("startRecording", {
-    languageCode: ["ja-JP"],
-    threshold,
-  })
-  // sp.emit('startRecording', {
-  //   languageCode: [ 'ja-JP', 'en-US' ]
-  //   threshold,
-  // });
-  sp.on("wave-data", function (data) {
-    ioa.emit("wave-data", data)
-  })
+function main() {
+  // nodeRecorder()
+  micRecorder()
 }
 
 if (require.main === module) {

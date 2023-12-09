@@ -14,9 +14,10 @@ export class Recorder extends EventEmitter {
   _recording: boolean = false
 
   constructor(
-    { energyThresholdRatioPos, energyThresholdRatioNeg } = {
+    { energyThresholdRatioPos, energyThresholdRatioNeg, sampleRate } = {
       energyThresholdRatioPos: 2,
       energyThresholdRatioNeg: 0.5,
+      sampleRate: 48000,
     }
   ) {
     super()
@@ -40,10 +41,11 @@ export class Recorder extends EventEmitter {
     }
     VadOptions.energy_threshold_ratio_pos = energyThresholdRatioPos
     VadOptions.energy_threshold_ratio_neg = energyThresholdRatioNeg
+    VadOptions.sampleRate = sampleRate
 
     const vad = new Vad.VAD(VadOptions)
     const micInstance = new Mic({
-      rate: "48000",
+      rate: `${sampleRate}`,
       channels: "1",
       debug: true,
       exitOnSilence: 0,
@@ -52,7 +54,7 @@ export class Recorder extends EventEmitter {
       endian: "little",
     })
 
-    const toShort = (data, i) => {
+    const toShort = (high, low) => {
       let speechSample = 0
       const sign = (byte) => {
         if (byte > 128) {
@@ -60,8 +62,8 @@ export class Recorder extends EventEmitter {
         }
         return byte * 256
       }
-      speechSample = sign(data[i + 1])
-      speechSample += data[i]
+      speechSample = sign(high)
+      speechSample += low
       return speechSample
     }
 
@@ -75,10 +77,9 @@ export class Recorder extends EventEmitter {
     micInputStream.on("data", (data) => {
       const buffer = new Int16Array(data.length / 2)
       // console.log("Recieved Input Stream of Size %d: %d", data.length, chunkCounter++)
-      let speechSample = 0
       minmax1.reset()
       for (let i = 0; i < data.length; i += 2) {
-        const speechSample = toShort(data, i)
+        const speechSample = toShort(data[i + 1], data[i])
         buffer[i / 2] = speechSample
         sampleData[n] = speechSample / 0x7fff
         minmax1.set(sampleData[n])

@@ -6,6 +6,7 @@ const _selectEngine = (mode: string) => {
   } else if (mode === "reazon") {
     return require("./speech-to-text-reazon")
   } else if (mode === "google") {
+    // return require("./speech-to-text-google-old")
     return require("./speech-to-text-google")
   }
   return require("./speech-to-text-disabled")

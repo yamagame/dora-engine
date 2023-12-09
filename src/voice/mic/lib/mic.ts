@@ -108,23 +108,23 @@ export class Mic {
         this.audioProcess = spawn("sox", options, this.audioProcessOptions)
       } else if (isMac) {
         const options = [
+          "--default-device",
           "--no-show-progress",
-          "-b",
+          "--bits",
           bitwidth,
           "--endian",
           endian,
-          "-c",
+          "--channels",
           channels,
-          "-r",
+          "--rate",
           rate,
-          "-e",
+          "--encoding",
           encoding,
-          "-t",
+          "--type",
           fileType,
           "-",
         ]
-        console.log(options)
-        this.audioProcess = spawn("rec", options, this.audioProcessOptions)
+        this.audioProcess = spawn("sox", options, this.audioProcessOptions)
       } else {
         this.audioProcess = spawn(
           "arecord",
