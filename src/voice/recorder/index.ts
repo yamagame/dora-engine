@@ -52,6 +52,7 @@ export class Recorder extends EventEmitter {
       encoding: "signed-integer",
       fileType: "raw",
       endian: "little",
+      device: "plug:micboost",
     })
 
     const toShort = (high, low) => {

@@ -85,7 +85,7 @@ Raspberry Pi のターミナルで、以下のコマンドを入力して、ロ�
 
 ```
 $ cd ~
-$ git clone https://github.com/yamagame/dora-engine
+$ git clone https://github.com/yamagame/dora-engine.git
 ```
 
 dora-engine フォルダに移動して、setup-system.sh を実行します。
@@ -95,7 +95,7 @@ $ cd dora-engine
 $ ./setup-system.sh
 ```
 
-setup-nodejs.sh で Node.js をセットアップします。
+setup-nodejs.sh で NodeJS をセットアップします。 NodeJS は v18.13.0 以上をインストールします。
 
 ```
 $ ./setup-nodejs.sh
@@ -120,7 +120,7 @@ $ ./setup-autolaunch.sh
 以下の項目をコメントアウトして無効化します。
 
 ```
-dtparam=audio=on
+#dtparam=audio=on
 ```
 
 以下の３項目を記入して有効化します。
@@ -129,6 +129,13 @@ dtparam=audio=on
 dtparam=i2s=on
 dtoverlay=i2s-mmap
 dtoverlay=googlevoicehat-soundcard
+```
+
+hdmi の音声出力を無効にします。
+
+```
+dtoverlay=vc4-kms-v3d,noaudio       # <== noaudio を追記
+dtoverlay=dietpi-disable_hdmi_audio # <== 行追加
 ```
 
 ### /etc/asound.conf を作成

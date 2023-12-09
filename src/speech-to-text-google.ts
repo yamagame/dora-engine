@@ -216,13 +216,10 @@ function Speech() {
       speechEmitter.writing = true
       if (speechStream.isActive()) {
         if (streamQue.length > 0) {
-          console.log(">", streamQue.length)
           streamQue.forEach((raw) => {
             speechStream.stream.write(raw)
           })
           streamQue = []
-        } else {
-          console.log(">")
         }
         speechStream.stream.write(payload.raw)
       }
