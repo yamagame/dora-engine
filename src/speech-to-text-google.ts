@@ -5,17 +5,17 @@ import { Recorder } from "./voice/recorder"
 const VOICE_RECORDER_ENERGY_POS = process.env["VOICE_RECORDER_ENERGY_POS"] || "2"
 const VOICE_RECORDER_ENERGY_NEG = process.env["VOICE_RECORDER_ENERGY_NEG"] || "0.5"
 const PRELOAD_COUNT = 3
+const SAMPLE_RATE_HERTZ = 16000
 
 const defaultRequestOpts = {
   config: {
     encoding: "LINEAR16",
-    sampleRateHertz: 16000,
+    sampleRateHertz: SAMPLE_RATE_HERTZ,
     languageCode: "ja-JP",
-    // alternativeLanguageCodes: null,
-    // maxAlternatives: 3,
+    alternativeLanguageCodes: null,
+    maxAlternatives: 3,
   },
   interimResults: false,
-  // languageCode: "",
 }
 
 const timestamp = () => {
@@ -69,16 +69,16 @@ class SpeechStream {
 }
 
 function Speech() {
-  const opts = { ...defaultRequestOpts }
   const speechEmitter = new GoogleSpeechRecordingEmitter()
   const recorder = new Recorder({
     energyThresholdRatioPos: parseFloat(VOICE_RECORDER_ENERGY_POS),
     energyThresholdRatioNeg: parseFloat(VOICE_RECORDER_ENERGY_NEG),
-    sampleRate: opts.config.sampleRateHertz,
+    sampleRate: SAMPLE_RATE_HERTZ,
   })
 
   const speechStream = new SpeechStream()
   let streamQue = []
+  let requestOpts = { ...defaultRequestOpts }
 
   const speech = require("@google-cloud/speech")
   const googleSpeechClient = process.env.GOOGLE_APPLICATION_CREDENTIALS
@@ -94,7 +94,7 @@ function Speech() {
   // 認識エラーを返す
   const emitError = (err) => {
     const result = {
-      languageCode: opts.config.languageCode,
+      languageCode: requestOpts.config.languageCode,
       errorString: err.toString(),
       transcript: "error",
       confidence: 0,
@@ -147,11 +147,12 @@ function Speech() {
   }
 
   // 認識ストリームの作成 GOOGLE_APPLICATION_CREDENTIALS が未設定の場合はファイル書き出し
-  const getStream = (props: { fname: string }) => {
+  const genStream = (props: { fname: string }) => {
+    console.log("genStream", requestOpts)
     if (googleSpeechClient) {
       console.log("new google speech stream")
       return googleSpeechClient
-        .streamingRecognize(opts)
+        .streamingRecognize(requestOpts)
         .on("error", (err) => {
           // console.error(err, JSON.stringify(opts))
           if (!speechEmitter.recording) return
@@ -195,7 +196,7 @@ function Speech() {
       if (!googleSpeechClient) {
         console.log("writing...", fname)
       }
-      speechStream.stream = getStream({ fname })
+      speechStream.stream = genStream({ fname })
       speechStream.filename = fname
     }
     speechEmitter.writing = true
@@ -238,7 +239,40 @@ function Speech() {
 
   // 音声解析開始
   speechEmitter.on("startRecording", async (params) => {
+    console.log("startRecording", params)
     start_recording()
+    const opts = { ...defaultRequestOpts }
+
+    let alternativeLanguageCodes = {}
+    // alternativeLanguageCodes による指定
+    if ("alternativeLanguageCodes" in params) {
+      if (params.alternativeLanguageCodes) {
+        const t = params.alternativeLanguageCodes.trim().split("/")
+        t.forEach((code) => {
+          alternativeLanguageCodes[code.trim()] = true
+        })
+      }
+    }
+    // languageCode による指定
+    if ("languageCode" in params) {
+      if (typeof params.languageCode === "string") {
+        opts.config.languageCode = params.languageCode.trim()
+      } else {
+        params.languageCode.forEach((code, i) => {
+          if (i == 0) {
+            opts.config = { ...defaultRequestOpts.config }
+            opts.config.languageCode = code.trim()
+          } else {
+            alternativeLanguageCodes[code.trim()] = true
+          }
+        })
+      }
+    }
+    if (Object.keys(alternativeLanguageCodes).length > 0) {
+      opts.config.alternativeLanguageCodes = [...Object.keys(alternativeLanguageCodes)]
+    }
+
+    requestOpts = opts
     console.log("#", "startRecording", recorder.recording)
   })
 
@@ -257,65 +291,12 @@ export default Speech
 // main
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// function nodeRecorder() {
-//   // Imports the Google Cloud client library
-//   const speech = require("@google-cloud/speech")
-//   const recorder = require("node-record-lpcm16")
-
-//   // Creates a client
-//   const client = new speech.SpeechClient({
-//     // projectId: "robotproject-226207",
-//     // keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || "",
-//   })
-
-//   const encoding = "LINEAR16"
-//   const sampleRateHertz = 16000
-//   const languageCode = "ja-JP"
-
-//   const request = {
-//     config: {
-//       encoding: encoding,
-//       sampleRateHertz: sampleRateHertz,
-//       languageCode: languageCode,
-//     },
-//     interimResults: false, // If you want interim results, set this to true
-//   }
-
-//   // Create a recognize stream
-//   const recognizeStream = client
-//     .streamingRecognize(request)
-//     .on("error", console.error)
-//     .on("data", (data) =>
-//       process.stdout.write(
-//         data.results[0] && data.results[0].alternatives[0]
-//           ? `Transcription: ${data.results[0].alternatives[0].transcript}\n`
-//           : `\n\nReached transcription time limit, press Ctrl+C\n`
-//       )
-//     )
-
-//   const outputFileStream = fs.createWriteStream("./work/output.raw")
-
-//   const record = recorder.record({
-//     sampleRateHertz: sampleRateHertz,
-//     // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
-//     verbose: false,
-//     recorder: "sox", // Try also "arecord" or "sox"
-//     silence: "0.5",
-//   })
-
-//   // Start recording and send the microphone input to the Speech API
-//   record.stream().pipe(recognizeStream)
-//   // record.stream().pipe(outputFileStream)
-
-//   console.log("Listening, press Ctrl+C to stop.")
-// }
-
 function micRecorder() {
   const sp = Speech()
   const startRecording = () => {
     setTimeout(() => {
       sp.emit("startRecording", {
-        languageCode: ["ja-JP"],
+        languageCode: ["ja-JP", "en-US"],
       })
     }, 1000)
   }
@@ -327,7 +308,6 @@ function micRecorder() {
 }
 
 function main() {
-  // nodeRecorder()
   micRecorder()
 }
 
