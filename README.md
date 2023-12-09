@@ -210,23 +210,23 @@ ctl.!default {
 }
 ```
 
-## マイクとスピーカーをテストする
+### マイクとスピーカーをテストする
 
-### 録音する場合
+#### 録音する場合
 
 ```
 $ arecord -Dplug:micboost -f S16_LE -r 16000 test.wav
 ```
 
-### 再生する場合
+#### 再生する場合
 
 ```
 $ aplay -Dplug:softvol test.wav
 ```
 
-## AquesTalk Pi の準備
+### AquesTalk Pi の準備
 
-デフォルトの音声合成は Open JTalk になってます。AquesTalk Pi を使用する場合は以下の手順で準備します。
+デフォルトの音声合成である AquesTalk Pi を使用する場合は、以下の手順で準備します。
 
 ブラウザで以下の URL を開きます。
 
@@ -256,9 +256,9 @@ $ cd ~/dora-engine
 $ ./talk-f1.sh こんにちは
 ```
 
-音声合成を Open JTalk から変更する場合は、環境変数 ROBOT_DEFAULT_VOICE の設定を外します。デフォルトで無効になってます。
+### Open JTalk を有効にする
 
-[start-robot-server.sh](./start-robot-server.sh) の以下の行のコメントアウトを外します。
+音声合成を Open JTalk に変更する場合は、[start-robot-server.sh](./start-robot-server.sh) の以下の行のコメントアウトを外します。
 
 ```
 #export ROBOT_DEFAULT_VOICE=open-jTalk
@@ -270,7 +270,7 @@ $ ./talk-f1.sh こんにちは
 
 [Google Speech API](https://cloud.google.com/speech-to-text?hl=ja) と　[whisper.cpp](https://github.com/ggerganov/whisper.cpp) が選択できます。
 
-## Chrome ブラウザの音声認識APIを使用する場合
+### Chrome ブラウザの音声認識APIを使用する場合
 
 ```sh
 # ロボットエンジンの起動
@@ -295,7 +295,7 @@ chrome ブラウザで http://localhost:3090/browser-speech を開きます。�
 初回はマイクの利用許可を求められますので許可します。ブラウザの音声認識を利用するにはインターネットが必要です。  
 ブラウザの音声認識は chrome のみで機能します。音声認識できる時間は 15 秒間で 15 秒経つとタイムアウトします。
 
-## Google Text-To-Speech API による音声認識の場合
+### Google Text-To-Speech API による音声認識の場合
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS に使用する Google Cloud Project の認証ファイルへのパスを指定します。
 認証ファイル (JSON ファイル) の取得方法については以下を参照してください。
@@ -319,13 +319,13 @@ export SPEECH=google
 
 [Google Text-to-Speech](https://cloud.google.com/text-to-speech/) は最長で 60 秒間音声認識します。60 秒以上になるとエラーになります。そのため、DoraEngine では初期設定では 30 秒で音声認識はタイムアウトします。
 
-## Google Translation API の準備
+### Google Translation API の準備
 
 環境変数 GOOGLE_APPLICATION_CREDENTIALS で指定したプロジェクトの Translation API を有効にします。
 
 環境変数 ROBOT_GOOGLE_TRANSLATE_PROJECT_ID に Google Cloud Project の ProjectID を設定します。
 
-## ReazonSpeech による音声認識の場合
+### ReazonSpeech による音声認識の場合
 
 [https://github.com/yamagame/node-voice-recorder.git](https://github.com/yamagame/node-voice-recorder.git) を起動します。
 
@@ -367,7 +367,7 @@ export REAZON_SPEECH_PORT=3393
 export SPEECH=reazon
 ```
 
-## whisper.cpp による音声認識の場合
+### whisper.cpp による音声認識の場合
 
 注意： whisper 連携は現在正しく動作していません。
 
@@ -392,7 +392,11 @@ $ bash ./models/download-ggml-model.sh ggml-large-v3
 export SPEECH=whisper
 ```
 
-## プレゼンテーション画面
+## Webサーバ
+
+dora-engine は Web サーバになっており、プレゼンテーション画面やシナリオエディタをホストしています。
+
+### プレゼンテーション画面
 
 <p align="center">
   <img style="border:solid 1px lightgray;" src="./images/presentation.png"/>
@@ -408,7 +412,7 @@ Chrome ブラウザで音声認識させる場合は以下の URL を開きま�
 
     http://locahost:3090/browser-speech
 
-## シナリオエディター画面
+### シナリオエディター画面
 
 <p align="center">
   <img style="border:solid 1px lightgray;" src="./images/scenario-editor.png"/>
