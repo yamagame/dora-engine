@@ -50,6 +50,9 @@ export class ChatController extends EventEmitter {
   get(callback: chatControllerCallback = null) {
     this.call("get", {}, (payload) => {
       console.log(payload)
+      if ("text" in payload) {
+        payload.text = payload.text.replaceAll(",", "")
+      }
       if (callback) callback(payload)
     })
   }

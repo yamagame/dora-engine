@@ -902,7 +902,7 @@ function execSoundCommand(payload, callback = null) {
     const p = path.normalize(path.join(base, sound))
     if (p.indexOf(base) == 0) {
       const cmd = platform.isDarwin() ? "afplay" : "aplay"
-      const opt = platform.isDarwin() ? [p] : ["-Dplug:softvol", p]
+      const opt = platform.isDarwin() || platform.isDocker() ? [p] : ["-Dplug:softvol", p]
       console.log(`/usr/bin/${cmd} ${p}`)
       const playone = spawn(`/usr/bin/${cmd}`, opt)
       playone.on("close", function () {

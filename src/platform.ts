@@ -23,3 +23,8 @@ export function isDarwin() {
   const u = uname()
   return u.toString().startsWith("Darwin")
 }
+
+export function isDocker() {
+  if (process.env.PULSE_SERVER === "host.docker.internal") return true
+  return false
+}
