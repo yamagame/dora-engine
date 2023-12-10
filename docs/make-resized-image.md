@@ -186,7 +186,7 @@ $ echo $((( 11976703 *512)/(32*1024)+1))
 念のため、計算したブロック数でイメージを作成します。
 
 ```bash
-$ sudo dd if=/dev/sda of=~/Documents/cardbot-os.img count=187136 bs=4M status=progress
+$ sudo dd if=/dev/sda of=~/Documents/cardbot-os.img count=187136 bs=32k status=progress
 ```
 
 if で読み込み元を、of で書き出し先を指定します。
@@ -205,7 +205,7 @@ $ sudo fdisk -l
 以下のコマンドでイメージを書き込みます。
 
 ```bash
-$ sudo dd if=~/Documents/cardbot-os.img of=/dev/sda bs=4M status=progress
+$ sudo dd if=~/Documents/cardbot-os.img of=/dev/sda bs=32k status=progress
 ```
 
 if で読み込み元を、of で書き出し先を指定します。
