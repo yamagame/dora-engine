@@ -134,6 +134,12 @@ setup-nodejs.sh で NodeJS をセットアップします。 NodeJS は v18.13.0
 $ ./setup-nodejs.sh
 ```
 
+NodeJS の準備ができたらビルドします。
+
+```
+$ yarn build
+```
+
 setup-open-jTalk.sh で Open JTalk をセットアップします。
 
 ```
