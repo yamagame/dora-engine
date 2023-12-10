@@ -112,7 +112,7 @@ MG996R ではダンボールロボットのサイズに合いませんので上�
 
 ![Raspberry Pi Imager](./docs/images/raspi-os-imager.png)
 
-OSは「Raspberry Pi OS (64-bit)」や「Raspberry Pi OS Lite (64-bit)」を選択します。
+OSは「Raspberry Pi OS (64-bit)」や「Raspberry Pi OS Lite (64-bit)」を選択します。メモリ使用量が少なくて済むので「Raspberry Pi OS Lite (64-bit)」がおすすめです。
 
 Raspberry Pi のターミナルで、以下のコマンドを入力して、ロボットエンジンをダウンロードします。
 
