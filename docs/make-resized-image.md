@@ -205,7 +205,7 @@ $ sudo fdisk -l
 以下のコマンドでイメージを書き込みます。
 
 ```bash
-$ sudo dd if=~/Documents/cardbot-os.img of=/dev/sda bs=32k status=progress
+$ sudo dd if=~/Documents/cardbot-os.img of=/dev/sda bs=4M status=progress
 ```
 
 if で読み込み元を、of で書き出し先を指定します。
