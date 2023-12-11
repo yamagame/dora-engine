@@ -16,13 +16,6 @@ echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | sudo tee 
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 sudo apt-get update && sudo apt-get install google-cloud-sdk -y
 
-#sudo apt-get install mecab libmecab-dev mecab-ipadic-utf8 -y
-sudo apt-get install ibus-anthy -y
-sudo apt-get install ntp -y
-sudo apt-get install sqlite3 -y
-
-#cd `dirname $0`
-#sudo cp asound.conf /etc/
-#sudo chown root:root /etc/asound.conf
+#sudo apt-get install sqlite3 -y
 
 mkdir -p Sound
