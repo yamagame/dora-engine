@@ -1,5 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
+import { Log } from "~/logger"
 
 //首振り
 const pigpio = require("pigpio")
@@ -110,7 +111,7 @@ function changeLed(payload) {
     led_mode = "on"
   }
   led_bright = typeof payload.value !== "undefined" ? payload.value : led_bright
-  //console.log(`led_mode ${led_mode} led_bright ${led_bright} `);
+  //Log.info(`led_mode ${led_mode} led_bright ${led_bright} `);
 }
 
 raspi.init(() => {
@@ -142,12 +143,12 @@ raspi.init(() => {
           try {
             const p = JSON.parse(data)
             if (typeof p.v !== "undefined") {
-              console.log(`vertical ${p.v}`)
+              Log.info(`vertical ${p.v}`)
               servo0.initialCenter = parseFloat(p.v)
               servo0.center = servo0.initialCenter
             }
             if (typeof p.h !== "undefined") {
-              console.log(`horizontal ${p.h}`)
+              Log.info(`horizontal ${p.h}`)
               servo1.initialCenter = parseFloat(p.h)
               servo1.center = servo1.initialCenter
             }
@@ -202,7 +203,7 @@ raspi.init(() => {
           led_mode = "off"
           setTimeout(() => {
             res.end("OK\n", () => {
-              console.log("exit")
+              Log.info("exit")
               process.exit(0)
             })
           }, 3000)
@@ -213,18 +214,18 @@ raspi.init(() => {
   }
 
   app.listen(port, () => {
-    console.log(`servo-head listening on port ${port}!`)
+    Log.info(`servo-head listening on port ${port}!`)
   })
 
   io.on("connection", function (socket) {
-    console.log("connected", socket.id, socket.handshake.address)
+    Log.info("connected", socket.id, socket.handshake.address)
     if (config.credentialAccessControl) {
       if (config.localhostIPs.indexOf(socket.handshake.address) === -1) {
-        console.log("permission denied")
+        Log.info("permission denied")
         return
       }
     }
-    console.log("start action")
+    Log.info("start action")
 
     socket.on("led-command", (payload, callback) => {
       changeLed(payload)
@@ -232,7 +233,7 @@ raspi.init(() => {
     })
 
     socket.on("disconnect", function () {
-      console.log("disconnect")
+      Log.info("disconnect")
     })
 
     socket.on("message", function (payload, callback) {

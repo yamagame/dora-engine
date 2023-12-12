@@ -1,5 +1,6 @@
 import { RecordingEmitter } from "./recording-emitter"
 import { spawn } from "child_process"
+import { Log } from "~/logger"
 
 const WHISPER = process.env["WHISPER_PATH"] || "./whisper.sh"
 
@@ -12,7 +13,7 @@ class SpeechEmitter extends RecordingEmitter {
 }
 
 function Speech() {
-  console.log(`WHISPER_PATH ${WHISPER}`)
+  Log.info(`WHISPER_PATH ${WHISPER}`)
 
   const t = new SpeechEmitter()
   let streamDataReuest = false
@@ -62,7 +63,7 @@ function Speech() {
               transcript,
             }
             const emitResult = (result) => {
-              console.log(`result ${JSON.stringify(result, null, "  ")}`)
+              Log.info(`result ${JSON.stringify(result, null, "  ")}`)
               t.emit("data", result)
               if (!t.writing) {
                 t.recording = false
@@ -76,7 +77,7 @@ function Speech() {
       startRecording = true
     }
     if (childProcess) {
-      console.log("<<start>>")
+      Log.info("<<start>>")
       // childProcess.stdin.write("start\n")
     }
     commingText = ""
@@ -84,9 +85,9 @@ function Speech() {
 
   // 音声解析終了
   t.on("stopRecording", function () {
-    console.log("stopRecording")
+    Log.info("stopRecording")
     if (childProcess) {
-      console.log("<<stop>>")
+      Log.info("<<stop>>")
       childProcess.stdin.write("stop\n")
     }
   })
@@ -119,7 +120,7 @@ function main() {
   const app = express()
 
   const server = require("http").Server(app)
-  server.listen(PORT, () => console.log(`server listening on port ${PORT}!`))
+  server.listen(PORT, () => Log.info(`server listening on port ${PORT}!`))
 
   sp.emit("startRecording", {})
 }

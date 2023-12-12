@@ -1,6 +1,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { ulid } from "ulid"
+import pino from "pino"
 
 const logfile = "log.csv"
 
@@ -17,7 +18,7 @@ function obj2csv(message: MessageType) {
     .join(",")
 }
 
-export class Logger {
+export class CSVRecordingLogger {
   outdir: string
   count: number = 0
   logfile = "recording-log.csv"
@@ -28,7 +29,7 @@ export class Logger {
     }
   }
   log(message: MessageType) {
-    console.log(JSON.stringify(message))
+    Log.info(JSON.stringify(message))
     fs.appendFile(
       path.join(this.outdir, logfile),
       `${obj2csv({ ...empty, ...message })}\n`,
@@ -49,3 +50,32 @@ export class Logger {
     return ulid()
   }
 }
+
+export class Logger {
+  logger = pino({ level: process.env.LOG_LEVEL || "info" })
+  constructor() {}
+
+  args(msg, ...payload) {
+    if (payload.length > 0) {
+      return [{ payload }, msg]
+    }
+    return [msg]
+  }
+
+  info(msg, ...payload) {
+    const args = this.args(msg, ...payload)
+    this.logger.info(args[0], args[1])
+  }
+
+  warn(msg, ...payload) {
+    const args = this.args(msg, ...payload)
+    this.logger.warn(args[0], args[1])
+  }
+
+  error(msg, ...payload) {
+    const args = this.args(msg, ...payload)
+    this.logger.error(args[0], args[1])
+  }
+}
+
+export const Log = new Logger()

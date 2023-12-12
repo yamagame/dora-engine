@@ -1,5 +1,6 @@
 import * as EventEmitter from "events"
 import { Socket } from "socket.io"
+import { Log } from "~/logger"
 
 type chatControllerCallback = (payload?: any) => void
 
@@ -14,7 +15,7 @@ export class ChatController extends EventEmitter {
       socket,
     }
     this._chatServers[socket.id] = chatServer
-    console.log("chat server", socket.id)
+    Log.info("chat server", socket.id)
   }
 
   remove(socket: Socket) {
@@ -49,7 +50,7 @@ export class ChatController extends EventEmitter {
 
   get(callback: chatControllerCallback = null) {
     this.call("get", {}, (payload) => {
-      console.log(payload)
+      Log.info(payload)
       if ("text" in payload) {
         payload.text = payload.text.replaceAll(",", "")
       }

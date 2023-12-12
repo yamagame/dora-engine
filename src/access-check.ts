@@ -1,6 +1,7 @@
 import * as fs from "fs"
 
 import { config } from "./config"
+import { Log } from "~/logger"
 
 const jws = require("jws")
 const bcrypt = (() => {
@@ -49,7 +50,7 @@ function checkIPs(ips, mode = "allow") {
     } else {
       if (ips.indexOf(ipaddress) === -1) return next()
     }
-    console.log(`deny ipaddress ${ipaddress}`)
+    Log.info(`deny ipaddress ${ipaddress}`)
     res.statusCode = 401
     res.end("Unauthorized")
   }
@@ -165,7 +166,7 @@ function hasPermission(permission) {
           return next()
         }
       }
-      console.log("not login")
+      Log.info("not login")
       unauthorized()
     } else {
       //ログインしていなければ
@@ -174,7 +175,7 @@ function hasPermission(permission) {
         if (testPermission(config.localhostPermissions, permission)) {
           return next()
         }
-        console.log("not localhost")
+        Log.info("not localhost")
         unauthorized()
       } else {
         //publicKeyで検証
@@ -185,11 +186,11 @@ function hasPermission(permission) {
                 return next()
               }
             }
-            console.log("invalid signature")
+            Log.info("invalid signature")
             unauthorized()
           })
         } else {
-          console.log("not has signature")
+          Log.info("not has signature")
           unauthorized()
         }
       }
@@ -263,7 +264,7 @@ export {
 if (require.main === module) {
   createSignature("admin", (signature) => {
     verifySignature("admin", signature, (verified) => {
-      console.log(`verified ${verified}`)
+      Log.info(`verified ${verified}`)
     })
   })
 }

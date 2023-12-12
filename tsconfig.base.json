@@ -4,9 +4,9 @@
     "composite": true,
     "module": "CommonJS",
     "outDir": "./build/",
-    "baseUrl": "./src/",
+    "baseUrl": ".",
     "paths": {
-      "~/*": ["*"]
+      "~/*": ["src/*"]
     }
   }
 }

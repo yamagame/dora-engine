@@ -1,6 +1,7 @@
 import * as EventEmitter from "events"
 const io = require("socket.io-client")
 import * as ping from "ping"
+import { Log } from "~/logger"
 
 import { createSignature } from "./access-check"
 
@@ -84,14 +85,14 @@ function ButtonSocket(client, config, manager) {
   const connect = (client) => {
     ipResolver(client, (res) => {
       if (client.state !== "open") return
-      console.log(`found button ${client.host} ${res.numeric_host}`)
+      Log.info(`found button ${client.host} ${res.numeric_host}`)
       const host = `http://${res.numeric_host}:${t.port}`
       const socket = io(host)
       t.socket_id = socket.id
       socket.on("connect", function () {
         createSignature(config.robotSecretKey, (signature) => {
           socket.emit("start-slave", { signature })
-          console.log("connect", socket.id, host)
+          Log.info("connect", socket.id, host)
           t.socket_id = socket.id
           buttons[socket.id] = {
             socket,
@@ -107,7 +108,7 @@ function ButtonSocket(client, config, manager) {
         manager.emit("speech", { ...client, speech: payload.speech })
       })
       socket.on("disconnect", function () {
-        console.log("disconnect", t.socket_id)
+        Log.info("disconnect", t.socket_id)
         delete buttons[t.socket_id]
         socket.close()
         connect(client)

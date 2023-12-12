@@ -2,6 +2,7 @@ import * as path from "path"
 import * as fs from "fs"
 import { spawn } from "child_process"
 import * as platform from "./platform"
+import { Log } from "~/logger"
 
 import { config } from "./config"
 
@@ -17,13 +18,13 @@ const googleSpeech = (() => {
     try {
       const textToSpeech = require("@google-cloud/text-to-speech")
       const ret = new textToSpeech.TextToSpeechClient()
-      console.log("google text-to-speech initialized.")
+      Log.info("google text-to-speech initialized.")
       return ret
     } catch (err) {
-      console.log(err)
+      Log.info(err)
     }
   }
-  console.log("google text-to-speech disabled.")
+  Log.info("google text-to-speech disabled.")
   return null
 })()
 const polly = (() => {
@@ -39,13 +40,13 @@ const polly = (() => {
         apiVersion: "2016-06-10",
         region: "us-west-2",
       })
-      console.log("aws text-to-speech initialized.")
+      Log.info("aws text-to-speech initialized.")
       return polly
     } catch (err) {
-      console.log(err)
+      Log.info(err)
     }
   }
-  console.log("aws text-to-speech disabled.")
+  Log.info("aws text-to-speech disabled.")
   return null
 })()
 const crypto = require("crypto")
@@ -64,7 +65,7 @@ const googleTranslate = (() => {
     try {
       const { TranslationServiceClient } = require("@google-cloud/translate").v3beta1
       const translationClient = new TranslationServiceClient()
-      console.log("google translate api initialized.")
+      Log.info("google translate api initialized.")
       return async function (text, source, target) {
         // Construct request
         const request = {
@@ -82,10 +83,10 @@ const googleTranslate = (() => {
         return response.translations.map((t) => t.translatedText)
       }
     } catch (err) {
-      console.log(err)
+      Log.info(err)
     }
   }
-  console.log("google translate api disabled.")
+  Log.info("google translate api disabled.")
   return null
 })()
 
@@ -106,9 +107,9 @@ const cacheDB = (() => {
       return json
     } catch (err) {
       if (err.code === "ENOENT") {
-        console.log(`no such file or directory, open '${cacheDBPath}'`)
+        Log.info(`no such file or directory, open '${cacheDBPath}'`)
       } else {
-        console.log(err)
+        Log.info(err)
       }
     }
   }
@@ -246,7 +247,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
     if (mode === "silence") return callback(null, 0)
     const cmd = process.platform === "darwin" ? "afplay" : "aplay"
     const opt = platform.isRaspi() ? ["-Dplug:softvol", sndfilepath] : [sndfilepath]
-    console.log(`/usr/bin/${cmd} ${sndfilepath}`)
+    Log.info(`/usr/bin/${cmd} ${sndfilepath}`)
     text_to_speech.playone = spawn(`/usr/bin/${cmd}`, opt)
     text_to_speech.playone.on("close", function (code) {
       text_to_speech.playone = null
@@ -380,7 +381,7 @@ function ReqTextToSpeech(req, res, mode = "play") {
     })
   }
 
-  console.log(`audioEncoding`, audioConfig.audioEncoding)
+  Log.info(`audioEncoding`, audioConfig.audioEncoding)
 
   const filename = `robot-snd-${crypto
     .createHash("md5")
@@ -392,23 +393,23 @@ function ReqTextToSpeech(req, res, mode = "play") {
       //ファイルがないので作成
       requestSynthesizeSpeech(request, sndfilepath, (err) => {
         if (err) {
-          console.log("ERROR:", err)
+          Log.info("ERROR:", err)
           res.send("NG\n")
           return
         }
         fs.stat(sndfilepath, (err, stats) => {
           if (err) {
-            console.log("ERROR:", err)
+            Log.info("ERROR:", err)
             res.send("NG\n")
             return
           }
           playone(sndfilepath, (err, code) => {
             if (err) {
-              console.log("ERROR:", err)
+              Log.info("ERROR:", err)
               res.send("NG\n")
               return
             }
-            console.log("close", code)
+            Log.info("close", code)
             cacheDB[filename] = {
               text,
               filename,
@@ -426,11 +427,11 @@ function ReqTextToSpeech(req, res, mode = "play") {
       //ファイルがあるので再生
       playone(sndfilepath, (err, code) => {
         if (err) {
-          console.log("ERROR:", err)
+          Log.info("ERROR:", err)
           res.send("NG\n")
           return
         }
-        console.log("close", code)
+        Log.info("close", code)
         cacheDB[filename].counter++
         cacheDB[filename].atime = new Date()
         saveCacheDB()
@@ -480,7 +481,7 @@ router.post("/translate", async (req, res) => {
     translateCache.count++
     res.json(translations)
   } catch (err) {
-    console.log(err)
+    Log.info(err)
     res.json([`[error: ${err.message}]`])
   }
 })
@@ -510,7 +511,7 @@ const getNewToken = (oAuth2Client, callback) => {
     access_type: "offline",
     scope: SCOPES,
   })
-  console.log("Authorize this app by visiting this url:", authUrl)
+  Log.info("Authorize this app by visiting this url:", authUrl)
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -519,12 +520,12 @@ const getNewToken = (oAuth2Client, callback) => {
     rl.close()
     oAuth2Client.getToken(code, (err, token) => {
       if (err) {
-        console.log("Error while trying to retrieve access token", err)
+        Log.info("Error while trying to retrieve access token", err)
         return callback(err)
       }
       fs.writeFile(config.googleSheet.tokenPath, JSON.stringify(token), (err) => {
         if (err) {
-          console.log(err)
+          Log.info(err)
           return callback(err)
         }
         callback(err, token)
@@ -549,7 +550,7 @@ const getToken = (oAuth2Client, callback) => {
 
 function apeendToSheet({ sheetId, payload }, callback) {
   const appendData = (sheets, title, values, callback) => {
-    console.log(`append-to-sheet ${sheetId}, ${JSON.stringify(values)}`)
+    Log.info(`append-to-sheet ${sheetId}, ${JSON.stringify(values)}`)
     sheets.spreadsheets.values.append(
       {
         spreadsheetId: sheetId,
@@ -727,16 +728,16 @@ if (require.main === module) {
   // app.use(bodyParser.json({ type: 'application/json' }))
   // app.use(router);
   // const server = require('http').Server(app);
-  // server.listen(PORT, () => console.log(`server listening on port ${PORT}!`))
+  // server.listen(PORT, () => Log.info(`server listening on port ${PORT}!`))
 
   if (config.googleSheet.credentialPath !== null && config.googleSheet.tokenPath !== null) {
     loadCredential((err, credentials) => {
       if (err) {
-        console.log(err)
+        Log.info(err)
         return
       }
       if (credentials === null || !credentials.installed) {
-        console.log(new Error("Error: spread sheet credentials is null"))
+        Log.info(new Error("Error: spread sheet credentials is null"))
         return
       }
       const { client_secret, client_id, redirect_uris } = credentials.installed
@@ -745,14 +746,14 @@ if (require.main === module) {
         if (err) {
           getNewToken(oAuth2Client, (err, token) => {
             if (err) {
-              console.log(err)
+              Log.info(err)
               return
             }
-            console.log("token saved")
+            Log.info("token saved")
             process.exit(0)
           })
         } else {
-          console.log("already exist token.")
+          Log.info("already exist token.")
           process.exit(0)
         }
       })

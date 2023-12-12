@@ -1,4 +1,5 @@
 import * as EventEmitter from "events"
+import { Log } from "~/logger"
 
 function sgn(a) {
   if (a < 0) return -1
@@ -170,11 +171,11 @@ class ActionEmitter extends EventEmitter {
         this.servo1.target = this.servo1.center
       }
       if (t1 != this.servo0.target) {
-        console.log(`servo0 ${this.servo0.target}`)
+        Log.info(`servo0 ${this.servo0.target}`)
         t1 = this.servo0.target
       }
       if (t0 != this.servo1.target) {
-        console.log(`servo1 ${this.servo1.target}`)
+        Log.info(`servo1 ${this.servo1.target}`)
         t0 = this.servo1.target
       }
     }

@@ -37,6 +37,7 @@
     "passport": "^0.6.0",
     "passport-local": "^1.0.0",
     "ping": "^0.4.4",
+    "pino": "^8.16.2",
     "ps-tree": "^1.1.0",
     "pug": "^3.0.2",
     "sequelize": "^6.35.1",

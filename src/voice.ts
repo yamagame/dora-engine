@@ -3,6 +3,7 @@ import { spawn } from "child_process"
 import { config } from "./config"
 import { localhostToken } from "./access-check"
 import * as path from "path"
+import { Log } from "~/logger"
 
 const macvoice_speedrate = 210 / 100
 const axios = require("axios")
@@ -49,7 +50,7 @@ export class Voice extends VoiceEmitter {
         playone()
         return
       }
-      console.log(text, `languageCode:${languageCode}`, `robot_voice:${this.robot_voice}`)
+      Log.info(text, `languageCode:${languageCode}`, `robot_voice:${this.robot_voice}`)
       if ("host" in params) {
         // 発話の中継処理
         const p = { ...params }
@@ -74,7 +75,7 @@ export class Voice extends VoiceEmitter {
         if (this.robot_voice === "dummy") {
           playone()
         } else if (this.robot_voice === "mac") {
-          console.log("macvoice", languageCode)
+          Log.info("macvoice", languageCode)
           startCallback()
           this._playone = spawn(path.join(basedir, "talk-mac.sh"), [
             `-r`,

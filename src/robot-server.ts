@@ -6,6 +6,7 @@ import "dotenv/config"
 import { exec, spawn } from "child_process"
 import { Socket } from "socket.io"
 import * as platform from "./platform"
+import { Log } from "~/logger"
 
 import { config } from "./config"
 import {
@@ -213,7 +214,7 @@ function servoAction(action, payload = {}, callback = null) {
   gpioSocket.emit("message", { action, ...payload }, (payload) => {
     if (done) return
     done = true
-    //console.log(payload);
+    //Log.info(payload);
     if (callback) callback()
   })
   if (callback) {
@@ -236,8 +237,8 @@ talk.on("talk", function () {
 const app = express()
 
 app.use((req, res, next) => {
-  // console.log(`# ${new Date().toLocaleString()} ${req.ip} ${req.url}`)
-  // console.log(`${JSON.stringify(req.headers)}`)
+  // Log.info(`# ${new Date().toLocaleString()} ${req.ip} ${req.url}`)
+  // Log.info(`${JSON.stringify(req.headers)}`)
   next()
 })
 
@@ -268,8 +269,8 @@ app.use(
 )
 
 app.use((req, res, next) => {
-  // console.log("SessionID: " + req.sessionID)
-  // console.log("session: " + JSON.stringify(req.session))
+  // Log.info("SessionID: " + req.sessionID)
+  // Log.info("session: " + JSON.stringify(req.session))
   next()
 })
 
@@ -291,7 +292,7 @@ passport.use(
       passReqToCallback: true,
     },
     function (req, name, password, done) {
-      //console.log(`name:${name} password:${password}`);
+      //Log.info(`name:${name} password:${password}`);
       setTimeout(function () {
         let auth: { permissions?: any; username?: string; password?: string } = {}
         const checkPass = () => {
@@ -344,7 +345,7 @@ passport.use(
             timestamp: new Date(),
           })
         } else {
-          console.log("Incorrect password")
+          Log.info("Incorrect password")
           done(null, false, { message: "Incorrect password." })
         }
       }, 1000)
@@ -459,9 +460,9 @@ app.post("/login", async function (req, res, next) {
     // シナリオファイルを作成
     if (isValidFilename(filename)) {
       mkdirp(path.join(base, username)).then(() => {
-        console.log(`create ${path.join(base, username, filename)}`)
+        Log.info(`create ${path.join(base, username, filename)}`)
         fs.open(filepath, "a", function (err, file) {
-          if (err) console.log(err)
+          if (err) Log.error(err)
           res.send({ status: !err ? "OK" : err.code, filename })
         })
       })
@@ -548,7 +549,7 @@ function text_to_speech(payload, callback) {
 let speech_timeout_timer: NodeJS.Timeout = null
 
 function speech_to_text(payload, callback) {
-  console.log("speech_to_text", payload.timeout)
+  Log.info("speech_to_text", payload.timeout)
 
   let done = false
   speech.eventWating = true
@@ -561,7 +562,7 @@ function speech_to_text(payload, callback) {
   const alternativeLanguageCodes = payload.alternativeLanguageCodes
 
   const stopRecording = () => {
-    console.log("stopRecording", "robot-server")
+    Log.info("stopRecording", "robot-server")
     speech.recording = false
     speech.eventWating = false
     speech.emit("stopRecording")
@@ -570,7 +571,7 @@ function speech_to_text(payload, callback) {
   }
 
   const startRecording = () => {
-    console.log("startRecording", "robot-server")
+    Log.info("startRecording", "robot-server")
     speech.recording = true
     speech.emit("startRecording", {
       threshold,
@@ -603,7 +604,7 @@ function speech_to_text(payload, callback) {
       done = true
     }, payload.timeout)
 
-    console.log("speech_to_text", payload.recording)
+    Log.info("speech_to_text", payload.recording)
     if (payload.recording) {
       startRecording()
     }
@@ -611,6 +612,7 @@ function speech_to_text(payload, callback) {
 
   const dataListener = (payload) => {
     if (!done) {
+      Log.info("speech_to_text:data", payload)
       stopRecording()
       removeListener()
       if (callback) callback(null, payload)
@@ -624,6 +626,7 @@ function speech_to_text(payload, callback) {
 
   const speechListener = (payload) => {
     if (!done) {
+      Log.info("speech_to_text:speech", payload)
       const retval = {
         speechRequest: true,
         payload,
@@ -642,6 +645,7 @@ function speech_to_text(payload, callback) {
   const buttonListener = (payload) => {
     if (payload) {
       if (!done) {
+        Log.info("speech_to_text:button-client:button", payload)
         stopRecording()
         removeListener()
         if (callback) callback(null, "[canceled]")
@@ -656,6 +660,7 @@ function speech_to_text(payload, callback) {
 
   const listenerButton = (payload) => {
     if (!done) {
+      Log.info("speech_to_text:button-client:button", payload)
       const data = {
         ...payload,
       }
@@ -673,6 +678,7 @@ function speech_to_text(payload, callback) {
 
   const listenerSpeech = (payload) => {
     if (!done) {
+      Log.info("speech_to_text:button-client:speech", payload)
       const data = {
         speechRequest: true,
         payload: payload.speech,
@@ -739,8 +745,8 @@ app.get("/recordingTime", (req, res) => {
 
 // curl -X POST -d '{"message":"こんにちは"}' -H 'content-type:application/json' http://localhost:3090/text-to-speech
 app.post("/text-to-speech", hasPermission("control.write"), (req, res) => {
-  console.log("/text-to-speech")
-  console.log(req.body)
+  Log.info("/text-to-speech")
+  Log.info(req.body)
   text_to_speech(
     {
       ...req.body,
@@ -752,8 +758,8 @@ app.post("/text-to-speech", hasPermission("control.write"), (req, res) => {
 })
 
 app.post("/speech-to-text", hasPermission("control.write"), (req, res) => {
-  console.log("/speech-to-text")
-  console.log(req.body)
+  Log.info("/speech-to-text")
+  Log.info(req.body)
 
   speech_to_text(
     {
@@ -903,10 +909,10 @@ function execSoundCommand(payload, callback = null) {
     if (p.indexOf(base) == 0) {
       const cmd = platform.isDarwin() ? "afplay" : "aplay"
       const opt = platform.isDarwin() || platform.isDocker() ? [p] : ["-Dplug:softvol", p]
-      console.log(`/usr/bin/${cmd} ${p}`)
+      Log.info(`/usr/bin/${cmd} ${p}`)
       const playone = spawn(`/usr/bin/${cmd}`, opt)
       playone.on("close", function () {
-        console.log("close")
+        Log.info("close")
         delete playsnd[playone.pid]
         if (callback) callback()
       })
@@ -1100,7 +1106,7 @@ async function quizPacket(payload) {
 }
 
 function storeQuizPayload(payload) {
-  console.log(`storeQuizPayload`, payload)
+  Log.info(`storeQuizPayload`, payload)
   if (payload.name !== quiz_master) {
     robotData.quizPayload["others"] = m(robotData.quizPayload["others"], payload)
   }
@@ -1115,7 +1121,7 @@ function loadQuizPayload(payload) {
   } else {
     val = robotData.quizPayload["others"] || {}
   }
-  console.log(`loadQuizPayload`, val)
+  Log.info(`loadQuizPayload`, val)
   return m(val, { initializeLoad: true })
 }
 
@@ -1257,9 +1263,9 @@ const postCommand = async (req, res, credential) => {
         }
         const writeFile = (path, data) => {
           return new Promise<void>((resolve) => {
-            console.log(`write imageMap ${path}`)
+            Log.info(`write imageMap ${path}`)
             fs.writeFile(path, data, (err) => {
-              console.log(err)
+              Log.error(err)
               resolve()
             })
           })
@@ -1270,13 +1276,13 @@ const postCommand = async (req, res, credential) => {
           storeQuizPayload({ area })
         } catch (err) {}
       } else {
-        console.log(`invalid 'imageMap' save command `)
+        Log.info(`invalid 'imageMap' save command `)
       }
     } else if (action === "defaults") {
       UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
         UserDefaults.save(config.robotUserDefaultsPath, req.body.data, (err) => {
           if (err) {
-            console.log(err)
+            Log.error(err)
             res.send({ state: "ng" })
             return
           }
@@ -1293,7 +1299,7 @@ const postCommand = async (req, res, credential) => {
     if (action === "defaults") {
       UserDefaults.load(config.robotUserDefaultsPath, (err, data) => {
         if (err) {
-          console.log(err)
+          Log.error(err)
           res.send({ state: "ng" })
           return
         }
@@ -1341,8 +1347,8 @@ const postCommand = async (req, res, credential) => {
       const play = ({ filename, range, name }, defaults = {}) => {
         stopAll()
         function emitError(err) {
-          console.log(err)
-          console.log(dora.errorInfo())
+          Log.error(err)
+          Log.info(dora.errorInfo())
           err.info = dora.errorInfo()
           if (!err.info.reason) {
             err.info.reason = err.toString()
@@ -1375,7 +1381,7 @@ const postCommand = async (req, res, credential) => {
               })
               .then(() => {
                 dora.credential = credential
-                console.log(robotData.voice)
+                Log.info(robotData.voice)
                 dora.play(
                   {
                     username,
@@ -1405,16 +1411,16 @@ const postCommand = async (req, res, credential) => {
                       emitError(err)
                       if (err.info) {
                         if (err.info.lineNumber >= 1) {
-                          console.log(
+                          Log.info(
                             `${err.info.lineNumber}行目でエラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`
                           )
                         } else {
-                          console.log(
+                          Log.info(
                             `エラーが発生しました。\n\n${err.info.code}\n\n${err.info.reason}`
                           )
                         }
                       } else {
-                        console.log(`エラーが発生しました。\n\n`)
+                        Log.info(`エラーが発生しました。\n\n`)
                       }
                       run_scenario = false
                     } else {
@@ -1426,7 +1432,7 @@ const postCommand = async (req, res, credential) => {
                       // buttonClient.emit('close-all', {});
                       speech.emit("data", "stoped")
                       if (typeof msg._nextscript !== "undefined") {
-                        console.log(`msg._nextscript ${msg._nextscript}`)
+                        Log.info(`msg._nextscript ${msg._nextscript}`)
                         if (run_scenario) {
                           play({
                             filename: msg._nextscript,
@@ -1435,7 +1441,7 @@ const postCommand = async (req, res, credential) => {
                           })
                         }
                       }
-                      console.log(msg)
+                      Log.info(msg)
                     }
                   }
                 )
@@ -1460,8 +1466,8 @@ const postCommand = async (req, res, credential) => {
       talk.stop()
     }
     if (action == "load") {
-      console.log(JSON.stringify(req.body))
-      console.log(JSON.stringify(req.params))
+      Log.info(JSON.stringify(req.body))
+      Log.info(JSON.stringify(req.params))
       const username = "username" in req.body ? req.body.username : "default-user"
       const uri = "uri" in req.body ? req.body.uri : null
       const filename =
@@ -1489,7 +1495,7 @@ const postCommand = async (req, res, credential) => {
                 path.join(base, username, ".cache", payload.data.filename),
                 payload.data.text,
                 (err) => {
-                  if (err) console.log(err)
+                  if (err) Log.error(err)
                   res.send({
                     status: !err ? "OK" : err.code,
                     next_script: `.cache/${payload.filename}`,
@@ -1500,21 +1506,21 @@ const postCommand = async (req, res, credential) => {
               res.send({ status: "Not found" })
             }
           } catch (err) {
-            console.log(err)
+            Log.error(err)
             res.send({ status: "Not found" })
           }
           return
         } else {
           if (filename) {
             const p = path.join(base, username, filename)
-            console.log(`load ${p}`)
+            Log.info(`load ${p}`)
             fs.readFile(p, "utf8", (err, data) => {
               if (err) {
-                console.log(err)
+                Log.error(err)
                 res.send({ status: "Err" })
                 return
               }
-              console.log(data)
+              Log.info(data)
               res.send({ status: "OK", text: data, filename })
             })
           } else {
@@ -1560,15 +1566,15 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
         if (isValidFilename(filename)) {
           mkdirp(path.join(base, username)).then(() => {
             if (req.body.action === "create") {
-              console.log(`create ${path.join(base, username, filename)}`)
+              Log.info(`create ${path.join(base, username, filename)}`)
               fs.open(path.join(base, username, filename), "a", function (err, file) {
-                if (err) console.log(err)
+                if (err) Log.error(err)
                 res.send({ status: !err ? "OK" : err.code, filename })
               })
             } else {
-              console.log(`save ${path.join(base, username, filename)}`)
+              Log.info(`save ${path.join(base, username, filename)}`)
               fs.writeFile(path.join(base, username, filename), req.body.text, (err) => {
-                if (err) console.log(err)
+                if (err) Log.error(err)
                 res.send({ status: !err ? "OK" : err.code })
               })
             }
@@ -1582,9 +1588,9 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
     } else if (req.body.action == "load") {
       if (isValidFilename(filename)) {
         mkdirp(path.join(base, username)).then(() => {
-          console.log(`>> load ${path.join(base, username, filename)}`)
+          Log.info(`>> load ${path.join(base, username, filename)}`)
           fs.readFile(path.join(base, username, filename), "utf8", (err, data) => {
-            if (err) console.log(err)
+            if (err) Log.error(err)
             res.send({
               status: !err ? "OK" : err.code,
               text: data ? data : "",
@@ -1596,9 +1602,9 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
       }
     } else if (req.body.action == "remove") {
       if (isValidFilename(filename)) {
-        console.log(`unlink ${path.join(base, username, filename)}`)
+        Log.info(`unlink ${path.join(base, username, filename)}`)
         fs.unlink(path.join(base, username, filename), function (err) {
-          if (err) console.log(err)
+          if (err) Log.error(err)
           res.send({ status: !err ? "OK" : err.code })
         })
       } else {
@@ -1606,9 +1612,9 @@ app.post("/scenario", hasPermission("scenario.write"), (req, res) => {
       }
     } else if (req.body.action == "list") {
       mkdirp(path.join(base, username)).then(() => {
-        console.log(`>> list ${path.join(base, username)}`)
+        Log.info(`>> list ${path.join(base, username)}`)
         readdirFileOnly(path.join(base, username), (err, items) => {
-          if (err) console.log(err)
+          if (err) Log.error(err)
           res.send({ status: !err ? "OK" : err.code, items })
         })
       })
@@ -1675,24 +1681,24 @@ const imageServers = {}
 speech.masters = quiz_masters
 
 iochat.on("connection", function (socket) {
-  console.log("connected io chat", socket.conn.remoteAddress)
+  Log.info("connected io chat", socket.conn.remoteAddress)
   const localhostCheck = (payload: { localhostToken?: string } = {}) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken()
     }
   }
   socket.on("disconnect", function () {
-    console.log("disconnect io chat")
+    Log.info("disconnect io chat")
     chat.remove(socket)
   })
   socket.on("notify", function (payload) {
-    console.log("notify", payload)
+    Log.info("notify", payload)
     localhostCheck(payload)
     checkPermission(payload, "", (verified) => {
       if (verified) {
         if (payload.role === "chatServer") {
           // payload.host = ip[1]
-          console.log("add", payload)
+          Log.info("add", payload)
           chat.add(socket)
         }
       }
@@ -1701,7 +1707,7 @@ iochat.on("connection", function (socket) {
 })
 
 iop.on("connection", function (socket) {
-  console.log("connected io player", socket.conn.remoteAddress)
+  Log.info("connected io player", socket.conn.remoteAddress)
   playerSocket = socket
   const localhostCheck = (payload: { localhostToken?: string } = {}) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
@@ -1710,7 +1716,7 @@ iop.on("connection", function (socket) {
   }
   socket.on("disconnect", function () {
     playerSocket = null
-    console.log("disconnect io player")
+    Log.info("disconnect io player")
     delete imageServers[socket.id]
     io.emit("imageServers", imageServers)
   })
@@ -1730,7 +1736,7 @@ iop.on("connection", function (socket) {
 })
 
 io.on("connection", function (socket: Socket) {
-  console.log("connected io", socket.conn.remoteAddress)
+  Log.info("connected io", socket.conn.remoteAddress)
   const localhostCheck = (payload) => {
     if (localhostIPs.indexOf(socket.handshake.address) === -1) {
       payload.localhostToken = localhostToken()
@@ -1739,9 +1745,9 @@ io.on("connection", function (socket: Socket) {
   socket.on("disconnect", function () {
     mode_slave = false
     speech.recording = false
-    console.log("disconnect")
+    Log.info("disconnect")
     delete quiz_masters[socket.id]
-    console.log(Object.keys(quiz_masters))
+    Log.info(Object.keys(quiz_masters))
   })
   socket.on("start-slave", function (payload, callback) {
     if (typeof payload === "undefined") {
@@ -1915,7 +1921,7 @@ io.on("connection", function (socket: Socket) {
         const args = payload.args || ""
         if (cmd.indexOf(base) == 0) {
         } else {
-          console.log("NG")
+          Log.info("NG")
           if (callback) callback()
           return
         }
@@ -1924,7 +1930,7 @@ io.on("connection", function (socket: Socket) {
             console.error(err)
             return
           }
-          console.log(stdout)
+          Log.info(stdout)
         })
         if (callback) callback()
         return
@@ -1942,7 +1948,7 @@ io.on("connection", function (socket: Socket) {
     localhostCheck(payload)
     checkPermission(payload, "control.write", (verified) => {
       if (verified) {
-        console.log("message", payload)
+        Log.info("message", payload)
       }
       if (callback) callback()
     })
@@ -2038,7 +2044,7 @@ io.on("connection", function (socket: Socket) {
           //参加登録
           if (typeof payload.clientId !== "undefined") {
             robotData.quizEntry[payload.clientId] = payload
-            console.log(payload.name)
+            Log.info(payload.name)
             if (payload.name === quiz_master) {
               quiz_masters[socket.id] = socket
             }
@@ -2057,7 +2063,7 @@ io.on("connection", function (socket: Socket) {
           const speechButton =
             typeof payload.speechButton === "undefined" || !payload.speechButton ? false : true
           if (speechButton) {
-            console.log(`emit speech ${payload.answer}`)
+            Log.info(`emit speech ${payload.answer}`)
             speech.emit("speech", payload.answer)
           }
           if (payload.name === quiz_master) return
@@ -2173,7 +2179,7 @@ io.on("connection", function (socket: Socket) {
 
 const startServer = function () {
   return RobotDB({ USE_DB, HOME }, () => {
-    server.listen(config.port, () => console.log(`robot-server listening on port ${config.port}!`))
+    server.listen(config.port, () => Log.info(`robot-server listening on port ${config.port}!`))
   })
 }
 
@@ -2194,7 +2200,7 @@ function execPowerOff() {
     } else {
       const _playone = spawn("/usr/bin/sudo", ["shutdown", "-f", "now"])
       _playone.on("close", function (code) {
-        console.log("shutdown done")
+        Log.info("shutdown done")
       })
     }
     doShutdown = false
@@ -2212,7 +2218,7 @@ function execReboot() {
     } else {
       const _playone = spawn("/usr/bin/sudo", ["reboot"])
       _playone.on("close", function (code) {
-        console.log("shutdown done")
+        Log.info("shutdown done")
       })
     }
     doShutdown = false
@@ -2220,7 +2226,7 @@ function execReboot() {
 }
 
 gpioSocket.on("button", (payload) => {
-  // console.log(payload);
+  // Log.info(payload);
   if (shutdownTimer) {
     clearTimeout(shutdownTimer)
     shutdownTimer = null
@@ -2261,7 +2267,7 @@ const ioClient = require("socket.io-client")
 const localSocket = ioClient(`http://localhost:${config.port}`)
 
 localSocket.on("connect", () => {
-  console.log("localSocket connected")
+  Log.info("localSocket connected")
 })
 
 const checkScenarioFile = (name, filename, callback) => {
@@ -2281,7 +2287,7 @@ const checkScenarioFile = (name, filename, callback) => {
 function startSenario(username, filename) {
   checkScenarioFile(username, filename, () => {
     setTimeout(() => {
-      console.log(`request scenario ${username}:${filename}`)
+      Log.info(`request scenario ${username}:${filename}`)
       createSignature(username, (signature) => {
         postCommand(
           {

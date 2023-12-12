@@ -1,4 +1,5 @@
 import * as fs from "fs"
+import { Log } from "~/logger"
 
 class UserDefaults {
   defaults: any
@@ -19,7 +20,7 @@ class UserDefaults {
             })
           }
         } catch (err) {
-          // console.log(err);
+          // Log.info(err);
           this.defaults = defaults
         }
       } else {
@@ -85,19 +86,19 @@ async function main() {
   async function test() {
     let data
     data = await load()
-    console.log(data)
+    Log.info(data)
     await save("hello")
     data = await load()
-    console.log(data)
+    Log.info(data)
     await save({ value1: "A", value2: "B" })
     data = await load()
-    console.log(data)
+    Log.info(data)
     await save({ value3: "C", value2: "D" })
     data = await load()
-    console.log(data)
+    Log.info(data)
     await save("hello")
     data = await load()
-    console.log(data)
+    Log.info(data)
   }
   test()
 }

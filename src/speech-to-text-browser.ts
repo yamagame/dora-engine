@@ -1,6 +1,5 @@
-import { config } from "./config"
-import axios from "axios"
 import { RecordingEmitter } from "./recording-emitter"
+import { Log } from "~/logger"
 
 function Speech() {
   const t = new RecordingEmitter()
@@ -48,7 +47,7 @@ function main() {
 
   sp.emit("startRecording", {})
   sp.on("data", (res) => {
-    console.log(res)
+    Log.info(res)
   })
 }
 

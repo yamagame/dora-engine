@@ -3,6 +3,7 @@ import Mic from "../mic"
 import Vad from "../vad"
 import DFT from "../dtf"
 import { MinMax } from "../utils"
+import { Log } from "~/logger"
 
 type RecorderState = "idle" | "recording" | "speaking" | "delay" | "transcribe"
 
@@ -77,7 +78,7 @@ export class Recorder extends EventEmitter {
     const minmax2 = new MinMax("fft")
     micInputStream.on("data", (data) => {
       const buffer = new Int16Array(data.length / 2)
-      // console.log("Recieved Input Stream of Size %d: %d", data.length, chunkCounter++)
+      // Log.info("Recieved Input Stream of Size %d: %d", data.length, chunkCounter++)
       minmax1.reset()
       for (let i = 0; i < data.length; i += 2) {
         const speechSample = toShort(data[i + 1], data[i])
@@ -86,7 +87,7 @@ export class Recorder extends EventEmitter {
         minmax1.set(sampleData[n])
         n++
         if (n >= vad.floatFrequencyData.length * 2) {
-          // console.log(sampleData.length)
+          // Log.info(sampleData.length)
           DFT.fftHighSpeed(vad.floatFrequencyData.length, sampleData)
           minmax2.reset()
           for (let i = 0; i < sampleData.length; i += 2) {
@@ -120,31 +121,31 @@ export class Recorder extends EventEmitter {
     })
 
     micInputStream.on("error", function (err) {
-      console.log("Error in Input Stream: " + err)
+      Log.info("Error in Input Stream: " + err)
     })
 
     micInputStream.on("startComplete", () => {
-      console.log("Got SIGNAL startComplete")
+      Log.info("Got SIGNAL startComplete")
     })
 
     micInputStream.on("stopComplete", () => {
-      console.log("Got SIGNAL stopComplete")
+      Log.info("Got SIGNAL stopComplete")
     })
 
     micInputStream.on("pauseComplete", () => {
-      console.log("Got SIGNAL pauseComplete")
+      Log.info("Got SIGNAL pauseComplete")
     })
 
     micInputStream.on("resumeComplete", () => {
-      console.log("Got SIGNAL resumeComplete")
+      Log.info("Got SIGNAL resumeComplete")
     })
 
     micInputStream.on("silence", () => {
-      console.log("Got SIGNAL silence")
+      Log.info("Got SIGNAL silence")
     })
 
     micInputStream.on("processExitComplete", () => {
-      console.log("Got SIGNAL processExitComplete")
+      Log.info("Got SIGNAL processExitComplete")
     })
 
     micInstance.start()

@@ -1,4 +1,5 @@
 import * as fs from "fs"
+import { Log } from "~/logger"
 const psTree = require("ps-tree")
 
 function kill(pid, signal, callback) {
@@ -90,7 +91,7 @@ function AttendanceCSV(robot_data, dates_list, student_list) {
             r += "出席"
           }
         } catch (err) {
-          console.log(err)
+          Log.info(err)
         }
       })
     })
@@ -183,5 +184,5 @@ if (require.main === module) {
   )
   const attendList = AttendanceList(quiz, dates, students)
   const csv = AttendanceCSV(quiz, dates, students)
-  console.log(csv)
+  Log.info(csv)
 }

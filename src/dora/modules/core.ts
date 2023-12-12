@@ -1,4 +1,5 @@
 import { Node } from ".."
+import { Log } from "~/logger"
 const utils = require("../libs/utils")
 import { QuizOK, QuizOKImage, QuizNG, QuizNGImage, QuizCategory, QuizSlide } from "./quiz"
 
@@ -165,7 +166,7 @@ export const Core = function (DORA, config = {}) {
       } catch (err) {
         logstr = options
       }
-      console.log(`log-->\n${logstr}\n<--log`)
+      Log.info(`log-->\n${logstr}\n<--log`)
       utils.logMessage(node, socket, logstr)
       node.send(msg)
     })

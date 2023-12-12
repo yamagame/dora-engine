@@ -1,6 +1,7 @@
 import { RecordingEmitter } from "./recording-emitter"
 import { config } from "./config"
 import axios from "axios"
+import { Log } from "~/logger"
 
 function Speech() {
   const t = new RecordingEmitter()
@@ -17,13 +18,13 @@ function Speech() {
   t.on("startRecording", async function (params) {
     try {
       const url = `http://${this.host}:${this.port}/listen/start`
-      console.log("reazon", "startRecording", url)
+      Log.info("reazon", "startRecording", url)
       const body = await axios({
         url,
         method: "POST",
         data: {},
       })
-      console.log(body.data.toString().trim())
+      Log.info(body.data.toString().trim())
     } catch (err) {
       console.error(err)
     }
@@ -33,13 +34,13 @@ function Speech() {
   t.on("stopRecording", async function () {
     try {
       const url = `http://${this.host}:${this.port}/listen/stop`
-      console.log("reazon", "stopRecording", url)
+      Log.info("reazon", "stopRecording", url)
       const body = await axios({
         url,
         method: "POST",
         data: {},
       })
-      console.log(body.data.toString().trim())
+      Log.info(body.data.toString().trim())
     } catch (err) {
       console.error(err)
     }
@@ -59,7 +60,7 @@ function main() {
 
   sp.emit("startRecording", {})
   sp.on("data", (res) => {
-    console.log(res)
+    Log.info(res)
   })
 }
 

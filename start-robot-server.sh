@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # RaspberryPi でロボットシステムを起動する
-# 音声認識はレアゾン、音声合成は aquesTalkPi を使用
+# デフォルトでは音声認識はブラウザ、音声合成は aquesTalkPi / say コマンド を使用する
 #
 
 cd `dirname $0`
@@ -19,6 +19,7 @@ cd `dirname $0`
 #export ROBOT_CREDENTIAL_ACCESS_CONTROL=true
 #export ROBOT_ALLOW_LOCALHOST_ACCESS=false
 #export ROBOT_DEFAULT_VOICE=open-jTalk
+export LOG_LEVEL=info
 export SPEECH=browser
 export ROBOT_BASE_DIR=`pwd`
-node build/src/robot-server.js | tee robot-server.log
+node build/src/robot-server.js | tee -a robot-server.log

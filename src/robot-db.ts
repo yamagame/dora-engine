@@ -1,6 +1,7 @@
 import * as fs from "fs"
 import { RobotDB as RobotDBSQlite } from "./robot-db-sqlite"
 import { RobotDB as RobotDBDummy } from "./robot-db-dummy"
+import { Log } from "~/logger"
 
 export function RobotDB({ USE_DB, HOME }: { USE_DB: boolean; HOME: string }, callback: () => void) {
   if (USE_DB) {
@@ -107,10 +108,10 @@ export class RobotData {
       data = JSON.parse(robotJson)
     } catch (err) {
       if (err.code !== "ENOENT") {
-        console.log(err)
+        Log.info(err)
         return false
       }
-      console.log(`no such file or directory, open '${robotDataPath}'`)
+      Log.info(`no such file or directory, open '${robotDataPath}'`)
     }
     Object.keys(data).forEach((key) => {
       this.robotData[key] = data[key]
@@ -129,7 +130,7 @@ export class RobotData {
           if (this.savedData == null || this.savedData !== data) {
             this.savedData = data
             try {
-              console.log(`write ${robotDataPath}`)
+              Log.info(`write ${robotDataPath}`)
               fs.writeFile(robotDataPath, data, () => {
                 setTimeout(() => {
                   save()

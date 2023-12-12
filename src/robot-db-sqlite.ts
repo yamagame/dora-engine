@@ -1,5 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
+import { Log } from "~/logger"
 
 export const RobotDB = function (databasePath, options, callback) {
   const Sequelize = require("sequelize")
@@ -439,7 +440,7 @@ export const RobotDB = function (databasePath, options, callback) {
         name: v.username,
       }
     })
-    console.log(JSON.stringify(quizAnswers, null, "  "))
+    Log.info(JSON.stringify(quizAnswers, null, "  "))
     return {
       quizAnswers,
     }
@@ -606,16 +607,16 @@ if (require.main === module) {
       }
       /*
     const list = await db.quizIdList();
-    console.log(JSON.stringify(list));
+    Log.info(JSON.stringify(list));
 
     const time = await db.startTimeList({ quizId: '文字列操作の話' });
-    // console.log(JSON.stringify(time));
+    // Log.info(JSON.stringify(time));
 
     const answers = await db.findAnswers({ quizId: '文字列操作の話', startTime: '2018-05-13T02:37:16.823Z' });
-    // console.log(JSON.stringify(answers, null, '  '));
+    // Log.info(JSON.stringify(answers, null, '  '));
 
     const answerAll = await db.Answer.findAll();
-    // console.log(JSON.stringify(answerAll));
+    // Log.info(JSON.stringify(answerAll));
 */
     }
   )

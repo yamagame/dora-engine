@@ -1,6 +1,7 @@
 import * as fs from "fs"
 import { RecordingEmitter } from "./recording-emitter"
 import { Recorder } from "./voice/recorder"
+import { Log } from "~/logger"
 
 const VOICE_RECORDER_ENERGY_POS = process.env["VOICE_RECORDER_ENERGY_POS"] || "2"
 const VOICE_RECORDER_ENERGY_NEG = process.env["VOICE_RECORDER_ENERGY_NEG"] || "0.5"
@@ -87,7 +88,7 @@ function Speech() {
 
   // 認識結果を返す
   const emitResult = (result) => {
-    // console.log(`result ${JSON.stringify(result, null, "  ")}`)
+    // Log.info(`result ${JSON.stringify(result, null, "  ")}`)
     speechEmitter.emit("data", result)
   }
 
@@ -100,7 +101,7 @@ function Speech() {
       confidence: 0,
       payload: "error",
     }
-    // console.log(`error ${JSON.stringify(result, null, "  ")}`)
+    // Log.info(`error ${JSON.stringify(result, null, "  ")}`)
     speechEmitter.emit("data", result)
   }
 
@@ -123,7 +124,7 @@ function Speech() {
           filename,
         })
       }
-      console.log("writing_timeout")
+      Log.info("writing_timeout")
     }, 1000)
   }
 
@@ -140,7 +141,7 @@ function Speech() {
     }
     writing_timer.clear()
     if (speechStream.isActive()) {
-      console.log("end_stream")
+      Log.info("end_stream")
       speechStream.stream.end()
       speechStream.clear()
     }
@@ -148,9 +149,9 @@ function Speech() {
 
   // 認識ストリームの作成 GOOGLE_APPLICATION_CREDENTIALS が未設定の場合はファイル書き出し
   const genStream = (props: { fname: string }) => {
-    console.log("genStream", requestOpts)
+    Log.info("genStream", requestOpts)
     if (googleSpeechClient) {
-      console.log("new google speech stream")
+      Log.info("new google speech stream")
       return googleSpeechClient
         .streamingRecognize(requestOpts)
         .on("error", (err) => {
@@ -161,7 +162,7 @@ function Speech() {
           emitError(err)
         })
         .on("data", (data) => {
-          // console.log(JSON.stringify(data, null, "  "))
+          // Log.info(JSON.stringify(data, null, "  "))
           if (!speechEmitter.recording) return
           end_recording()
           let candidate = {
@@ -182,7 +183,7 @@ function Speech() {
           emitResult(candidate)
         })
     } else {
-      console.log("new file stream")
+      Log.info("new file stream")
       return fs.createWriteStream(props.fname)
     }
   }
@@ -190,11 +191,11 @@ function Speech() {
   // 音声区間検出
   recorder.on("voice_start", () => {
     if (!recorder.recording) return
-    console.log("writing_start")
+    Log.info("writing_start")
     if (!speechStream.isActive()) {
       const fname = `./work/output-${timestamp()}.raw`
       if (!googleSpeechClient) {
-        console.log("writing...", fname)
+        Log.info("writing...", fname)
       }
       speechStream.stream = genStream({ fname })
       speechStream.filename = fname
@@ -206,7 +207,7 @@ function Speech() {
   // 無音区間検出
   recorder.on("voice_stop", () => {
     if (!recorder.recording) return
-    console.log("writing_stop")
+    Log.info("writing_stop")
     writing_timeout()
   })
 
@@ -236,7 +237,7 @@ function Speech() {
 
   // 音声解析開始
   speechEmitter.on("startRecording", async (params) => {
-    console.log("startRecording", params)
+    Log.info("startRecording", params)
     start_recording()
     const opts = { ...defaultRequestOpts }
 
@@ -270,13 +271,13 @@ function Speech() {
     }
 
     requestOpts = opts
-    console.log("#", "startRecording", recorder.recording)
+    Log.info("#", "startRecording", recorder.recording)
   })
 
   // 音声解析停止
   speechEmitter.on("stopRecording", async () => {
     end_recording()
-    console.log("#", "stopRecording")
+    Log.info("#", "stopRecording")
   })
 
   return speechEmitter
@@ -298,7 +299,7 @@ function micRecorder() {
     }, 1000)
   }
   sp.on("data", (payload) => {
-    console.log(payload)
+    Log.info(payload)
     startRecording()
   })
   startRecording()

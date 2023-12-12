@@ -2,6 +2,7 @@ import * as express from "express"
 import { Server } from "http"
 import { Server as SocketIOServer } from "socket.io"
 import bodyParser from "body-parser"
+import { Log } from "~/logger"
 
 const app = express()
 const server = new Server(app)
@@ -41,7 +42,7 @@ function changeLed(payload) {
     led_mode = "on"
   }
   led_bright = typeof payload.value !== "undefined" ? payload.value : led_bright
-  //console.log(`led_mode ${led_mode} led_bright ${led_bright} `);
+  //Log.info(`led_mode ${led_mode} led_bright ${led_bright} `);
 }
 
 if (config.voiceHat && raspiMode) {
@@ -96,28 +97,28 @@ if (raspiMode) {
 }
 
 io.on("connection", function (socket) {
-  console.log("connected", socket.id)
+  Log.info("connected", socket.id)
   socket.on("led-command", (payload, callback) => {
     changeLed(payload)
     if (callback) callback()
   })
   socket.on("disconnect", function () {
-    console.log("disconnect")
+    Log.info("disconnect")
   })
 })
 
-server.listen(config.gpioPort, () => console.log(`listening on port ${config.gpioPort}!`))
+server.listen(config.gpioPort, () => Log.info(`listening on port ${config.gpioPort}!`))
 
 if (require.main === module) {
   let state = "off"
   const io = require("socket.io-client")
   const socket = io(`http://localhost:${config.gpioPort}`)
   socket.on("connect", () => {
-    console.log("connected")
+    Log.info("connected")
     socket.emit("led-command", { action: state })
   })
   socket.on("button", (data) => {
-    console.log(data)
+    Log.info(data)
     if (data.state) {
       state = state === "on" ? "off" : "on"
     }

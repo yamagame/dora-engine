@@ -1,6 +1,7 @@
 import * as EventEmitter from "events"
 import * as path from "path"
 import * as fs from "fs"
+import { Log } from "~/logger"
 
 import { config } from "./config"
 
@@ -56,7 +57,7 @@ function MovieClient(host, callback) {
     }
     const socket = io(`http://${host}:${config.port}/player`)
     socket.on("connect", function () {
-      console.log("connect", socket.id)
+      Log.info("connect", socket.id)
       if (imageServer) {
         socket.emit("notify", {
           role: "imageServer",
@@ -92,7 +93,7 @@ function MovieClient(host, callback) {
       if (callback) callback({ state: player.state })
     })
     socket.on("disconnect", function () {
-      console.log("disconnected")
+      Log.info("disconnected")
     })
     player.on("done", function () {
       socket.emit("done")
@@ -106,7 +107,7 @@ if (imageServer) {
   const app = express()
 
   app.use((req, res, next) => {
-    console.log(`# ${new Date().toLocaleString()} ${req.ip} ${req.url}`)
+    Log.info(`# ${new Date().toLocaleString()} ${req.ip} ${req.url}`)
     next()
   })
 
@@ -117,7 +118,7 @@ if (imageServer) {
 
   const server = require("http").Server(app)
 
-  server.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
+  server.listen(PORT, () => Log.info(`Example app listening on port ${PORT}!`))
 }
 
 module.exports = MovieClient
@@ -139,7 +140,7 @@ function ipResolver(host, callback) {
 
 if (require.main === module) {
   ipResolver(host, (res) => {
-    console.log(`start movie clinet ${res.numeric_host}`)
+    Log.info(`start movie clinet ${res.numeric_host}`)
     const t = MovieClient(host, (err) => {
       if (err) console.error(`${err.name}: ${err.statusCode} - ${err.error}`)
     })

@@ -1,4 +1,5 @@
 import { Flow } from "./flow"
+import { Log } from "~/logger"
 const Emitter = require("component-emitter")
 const utils = require("./utils")
 
@@ -115,12 +116,12 @@ export class Node extends Emitter {
   }
 
   getField(msg, field) {
-    console.log(field)
+    Log.info(field)
     let index = field.length
     let object = msg
     do {
       const key = field[field.length - index]
-      console.log(key)
+      Log.info(key)
       if (index <= 1) {
         if (object[key] !== null) {
           return { key, object }

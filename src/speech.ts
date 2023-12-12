@@ -1,3 +1,5 @@
+import { Log } from "~/logger"
+
 const _selectEngine = (mode: string) => {
   if (mode === "whisper") {
     return require("./speech-to-text-whisper")
@@ -22,7 +24,7 @@ export const selectEngine = (mode: string) => {
 
 function main() {
   const speech = selectEngine("reazon").default
-  console.log(speech)
+  Log.info(speech)
 }
 
 if (require.main === module) {

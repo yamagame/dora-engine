@@ -1,6 +1,7 @@
 import * as EventEmitter from "events"
 import * as path from "path"
 import { spawn } from "child_process"
+import { Log } from "~/logger"
 
 import { config } from "./config"
 
@@ -47,6 +48,6 @@ export default player
 if (require.main === module) {
   player.play(process.argv[2])
   player.on("done", function () {
-    console.log("done")
+    Log.info("done")
   })
 }
