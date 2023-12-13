@@ -1,12 +1,9 @@
 #!/bin/sh
 #
-# RaspberryPi にNotoSansCJKフォントをインストールするスクリプト
+# RaspberryPi に Noto フォントをインストールするスクリプト
 #
 
-cd ~
-
-wget -O NotoSansCJKjp-hinted.zip https://noto-website-2.storage.googleapis.com/pkgs/NotoSansCJKjp-hinted.zip
-unzip -d NotoSansCJKjp-hinted NotoSansCJKjp-hinted.zip
-sudo mkdir -p /usr/share/fonts/opentype
-sudo mv -fv ./NotoSansCJKjp-hinted /usr/share/fonts/opentype/note
-sudo fc-cache -fv
+#lsb_release -a
+#sudo apt-cache search font japanese
+#sudo apt-cache search font japanese | grep noto
+sudo apt-get -y install fonts-noto
