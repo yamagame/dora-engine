@@ -1,0 +1,11 @@
+//ELYZA連携
+/slide/images/llm-chat/001.png
+:TOP
+/quiz.speech
+/chat.ask/{{speechText}}
+:LOOP
+/chat.get
+/if/end/:END
+{{payload}}
+/goto/:LOOP
+:END
