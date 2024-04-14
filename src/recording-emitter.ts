@@ -1,4 +1,4 @@
-import * as EventEmitter from "events"
+import { EventEmitter } from "events"
 import { Socket } from "socket.io"
 
 export class RecordingEmitter extends EventEmitter {

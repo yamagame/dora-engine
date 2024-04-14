@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package wave;
+
+message WaveUnit {
+  int32 id = 1;
+  enum Action {
+    ACTION_UNKNOWN = 0;
+    ACTION_BODY = 1;
+    ACTION_CLOSE = 2;
+    ACTION_RESET = 3;
+  }
+  Action action = 2;
+  bytes wave = 3;
+}

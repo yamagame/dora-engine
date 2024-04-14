@@ -1,4 +1,4 @@
-import * as EventEmitter from "events"
+import { EventEmitter } from "events"
 const io = require("socket.io-client")
 import * as ping from "ping"
 import { Log } from "~/logger"

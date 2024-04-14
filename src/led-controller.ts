@@ -1,4 +1,4 @@
-import * as EventEmitter from "events"
+import { EventEmitter } from "events"
 
 class LedController extends EventEmitter {
   now = 0

@@ -1,11 +1,14 @@
+// https://github.com/ashishbajaj99/mic
+// 上記記事のソースを参考にしています。
+
+import { Stream, Writable } from "stream"
 import { spawn, SpawnOptions } from "child_process"
 import * as os from "os"
-import * as stream from "stream"
-import { IsSilence } from "./silenceTransform"
+import { VADStream, VAD, VADProps } from "./vad"
+import { EventEmitter } from "events"
 
 const isMac = os.type() == "Darwin"
 const isWindows = os.type().indexOf("Windows") > -1
-const { PassThrough } = stream
 
 class MicOptions {
   endian?: "little" | "big"
@@ -17,9 +20,10 @@ class MicOptions {
   exitOnSilence?: number
   fileType?: string
   debug?: boolean = false
+  audioStream?: Writable = null
 }
 
-export class Mic {
+export class Mic extends EventEmitter {
   options: {
     endian: "little" | "big"
     bitwidth: string
@@ -29,6 +33,7 @@ export class Mic {
     device: string
     exitOnSilence: number
     fileType: string
+    audioStream: Writable
   } = {
     endian: "little",
     bitwidth: "16",
@@ -38,22 +43,53 @@ export class Mic {
     device: "plughw:1,0",
     exitOnSilence: 6,
     fileType: "raw",
+    audioStream: null,
   }
   debug: boolean
   format = ""
   formatEndian = "BE"
   formatEncoding = "U"
   audioProcess = null
-  infoStream = new PassThrough()
-  audioStream: any
+  vadStream: Stream
+  audioStream: Writable | null
   audioProcessOptions: SpawnOptions = {
     stdio: ["ignore", "pipe", "ignore"],
   }
+  vad: VAD
 
   constructor(options: MicOptions) {
-    this.audioStream = new IsSilence({ debug: options.debug })
+    super()
+    const energyThresholdRatioPos = 1
+    const energyThresholdRatioNeg = 0.5
+    const vadOptions = new VADProps()
+    vadOptions.energy_threshold_ratio_pos = energyThresholdRatioPos
+    vadOptions.energy_threshold_ratio_neg = energyThresholdRatioNeg
+    vadOptions.sampleRate = parseInt(options.rate)
+    const vad = new VAD(vadOptions)
+    vad.on("ready", () => {
+      this.emit("ready")
+    })
+    vad.recorder.on("voice_start", () => {
+      this.emit("voice_start")
+    })
+    vad.recorder.on("voice_stop", () => {
+      this.emit("voice_stop")
+    })
+    vad.recorder.on("start_recording", () => {
+      this.emit("start_recording")
+    })
+    vad.recorder.on("stop_recording", () => {
+      this.emit("stop_recording")
+    })
+    vad.recorder.on("data", (data) => {
+      this.emit("data", data)
+    })
+
     this.options = { ...this.options, ...options }
     this.debug = options.debug || this.debug
+
+    this.vadStream = VADStream(vad)
+    this.audioStream = this.options.audioStream
 
     if (this.debug) {
       this.audioProcessOptions.stdio = ["ignore", "pipe", "pipe"]
@@ -71,16 +107,8 @@ export class Mic {
       this.formatEncoding = "S"
     }
     this.format = this.formatEncoding + this.options.bitwidth + "_" + this.formatEndian
-    this.audioStream.setNumSilenceFramesExitThresh(this.options.exitOnSilence)
 
-    if (this.debug) {
-      this.infoStream.on("data", function (data) {
-        console.log("Received Info: " + data)
-      })
-      this.infoStream.on("error", function (error) {
-        console.log("Error in Info Stream: " + error)
-      })
-    }
+    this.vad = vad
   }
 
   start() {
@@ -89,42 +117,46 @@ export class Mic {
     const format = this.format
     if (this.audioProcess === null) {
       if (isWindows) {
-        const options = [
-          "-b",
-          bitwidth,
-          "--endian",
-          endian,
-          "-c",
-          channels,
-          "-r",
-          rate,
-          "-e",
-          encoding,
-          "-t",
-          "waveaudio",
-          "default",
-          "-p",
-        ]
-        this.audioProcess = spawn("sox", options, this.audioProcessOptions)
+        this.audioProcess = spawn(
+          "sox",
+          [
+            "-b",
+            bitwidth,
+            "--endian",
+            endian,
+            "-c",
+            channels,
+            "-r",
+            rate,
+            "-e",
+            encoding,
+            "-t",
+            "waveaudio",
+            "default",
+            "-p",
+          ],
+          this.audioProcessOptions
+        )
       } else if (isMac) {
-        const options = [
-          "--default-device",
-          "--no-show-progress",
-          "--bits",
-          bitwidth,
-          "--endian",
-          endian,
-          "--channels",
-          channels,
-          "--rate",
-          rate,
-          "--encoding",
-          encoding,
-          "--type",
-          fileType,
-          "-",
-        ]
-        this.audioProcess = spawn("sox", options, this.audioProcessOptions)
+        this.audioProcess = spawn(
+          "rec",
+          [
+            "-b",
+            bitwidth,
+            "--endian",
+            endian,
+            "-c",
+            channels,
+            "-r",
+            rate,
+            "-e",
+            encoding,
+            "-t",
+            fileType,
+            "-",
+          ],
+          this.audioProcessOptions
+        )
       } else {
         this.audioProcess = spawn(
           "arecord",
@@ -133,17 +165,20 @@ export class Mic {
         )
       }
 
+      if (this.audioStream != null) {
+        this.vadStream.pipe(this.audioStream)
+      } else {
+        this.vadStream.on("data", (data) => {
+          // なにもしない
+        })
+      }
+
       this.audioProcess.on("exit", (code, sig) => {
         if (code != null && sig === null) {
-          this.audioStream.emit("audioProcessExitComplete")
           if (debug) console.log("recording audioProcess has exited with code = %d", code)
         }
       })
-      this.audioProcess.stdout.pipe(this.audioStream)
-      if (debug) {
-        this.audioProcess.stderr.pipe(this.infoStream)
-      }
-      this.audioStream.emit("startComplete")
+      this.audioProcess.stdout.pipe(this.vadStream)
     } else {
       if (debug) {
         throw new Error("Duplicate calls to start(): Microphone already started!")
@@ -152,36 +187,33 @@ export class Mic {
   }
 
   stop() {
-    const debug = this.debug
     if (this.audioProcess != null) {
       this.audioProcess.kill("SIGTERM")
       this.audioProcess = null
-      this.audioStream.emit("stopComplete")
-      if (debug) console.log("Microphone stopped")
     }
   }
 
   pause() {
-    const debug = this.debug
     if (this.audioProcess != null) {
       this.audioProcess.kill("SIGSTOP")
-      this.audioStream.pause()
-      this.audioStream.emit("pauseComplete")
-      if (debug) console.log("Microphone paused")
     }
   }
 
   resume() {
-    const debug = this.debug
     if (this.audioProcess != null) {
       this.audioProcess.kill("SIGCONT")
-      this.audioStream.resume()
-      this.audioStream.emit("resumeComplete")
-      if (debug) console.log("Microphone resumed")
     }
   }
 
-  getAudioStream() {
-    return this.audioStream
+  isRecording() {
+    return this.vad.isRecording()
+  }
+
+  startRecording() {
+    this.vad.startRecording()
+  }
+
+  stopRecording() {
+    this.vad.stopRecording()
   }
 }

@@ -1,4 +1,4 @@
-import * as EventEmitter from "events"
+import { EventEmitter } from "events"
 import { ChildProcess } from "child_process"
 
 import { localhostToken } from "./access-check"

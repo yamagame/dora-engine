@@ -2,6 +2,7 @@
   "extends": "./tsconfig.base.json",
   "exclude": ["build/**/*"],
   "compilerOptions": {
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "esModuleInterop": true
   }
 }

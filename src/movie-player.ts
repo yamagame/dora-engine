@@ -1,4 +1,4 @@
-import * as EventEmitter from "events"
+import { EventEmitter } from "events"
 import * as path from "path"
 import { spawn } from "child_process"
 import { Log } from "~/logger"

@@ -3,8 +3,6 @@ import { RecordingEmitter } from "./recording-emitter"
 import { Recorder } from "./voice/recorder"
 import { Log } from "~/logger"
 
-const VOICE_RECORDER_ENERGY_POS = process.env["VOICE_RECORDER_ENERGY_POS"] || "2"
-const VOICE_RECORDER_ENERGY_NEG = process.env["VOICE_RECORDER_ENERGY_NEG"] || "0.5"
 const PRELOAD_COUNT = 3
 const SAMPLE_RATE_HERTZ = 16000
 
@@ -71,11 +69,7 @@ class SpeechStream {
 
 function Speech() {
   const speechEmitter = new GoogleSpeechRecordingEmitter()
-  const recorder = new Recorder({
-    energyThresholdRatioPos: parseFloat(VOICE_RECORDER_ENERGY_POS),
-    energyThresholdRatioNeg: parseFloat(VOICE_RECORDER_ENERGY_NEG),
-    sampleRate: SAMPLE_RATE_HERTZ,
-  })
+  const recorder = new Recorder()
 
   const speechStream = new SpeechStream()
   let streamQue = []
