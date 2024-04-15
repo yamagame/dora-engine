@@ -393,6 +393,9 @@ export class VAD extends EventEmitter {
 
   startRecording() {
     this.recorder.start_recording()
+    this.voiceTrend = this.voiceTrendMin
+    this.state = "idle"
+    this.vadState = false
   }
 
   stopRecording() {
