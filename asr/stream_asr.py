@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import warnings
 from dotenv import load_dotenv
+import io
 import os
 import threading
 import socket
@@ -141,8 +142,6 @@ def transcribe(sample):
     return speech2text(y)
 
 
-count = 1
-
 MAX_SAMPLE_BUFFER = 16000*2*20  # 受信バッファは最大60秒
 start = time.time()
 received = []
@@ -194,24 +193,17 @@ while True:
                         print("> transcribe:", res[0][0], time.time()-start)
                         print("decoder:", res[0][3].scores["decoder"], "ctc:", res[0]
                               [3].scores["ctc"], "lm:", res[0][3].scores["lm"])
-                        # 音声データ出力
-                        p = 'work/received-'+str(count)+'.raw'
-                        with open(p, 'wb') as f:
-                            f.write(wavedat)
-                        print("save:", p)
                         # raw -> wav 変換
-                        w = 'work/received-'+str(count)+'.wav'
-                        with open(p, "rb") as inp_f:
-                            data = inp_f.read()
-                            with wave.open(w, "wb") as out_f:
-                                out_f.setnchannels(1)
-                                out_f.setsampwidth(2)  # number of bytes
-                                out_f.setframerate(16000)
-                                out_f.writeframesraw(data)
+                        raw = io.BytesIO()
+                        with wave.open(raw, "wb") as out_f:
+                            out_f.setnchannels(1)
+                            out_f.setsampwidth(2)  # number of bytes
+                            out_f.setframerate(16000)
+                            out_f.writeframesraw(wavedat)
+                        raw.seek(0)
                         # 話者分離
-                        if diarization(w):
+                        if diarization(raw):
                             print("> 認識結果:", res[0][0], flush=True)
-                        count += 1
                     else:
                         print(res)
                     print("> 処理時間:", time.time()-start, flush=True)
