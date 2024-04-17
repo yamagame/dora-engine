@@ -1,11 +1,8 @@
 import * as fs from "fs"
 import { RecordingEmitter } from "./recording-emitter"
-import { Recorder } from "./voice/recorder"
+import { Mic } from "./voice/mic"
 import { Log } from "~/logger"
-
-const PRELOAD_COUNT = 3
 const SAMPLE_RATE_HERTZ = 16000
-
 const defaultRequestOpts = {
   config: {
     encoding: "LINEAR16",
@@ -69,7 +66,18 @@ class SpeechStream {
 
 function Speech() {
   const speechEmitter = new GoogleSpeechRecordingEmitter()
-  const recorder = new Recorder()
+
+  const mic = new Mic({
+    rate: "16000",
+    channels: "1",
+    debug: false,
+    exitOnSilence: 0,
+    encoding: "signed-integer",
+    fileType: "raw",
+    endian: "little",
+    // audioStream: fs.createWriteStream("./work/recording.raw"),
+    // audioStream: new PassThrough(),
+  })
 
   const speechStream = new SpeechStream()
   let streamQue = []
@@ -123,13 +131,13 @@ function Speech() {
   }
 
   const start_recording = () => {
-    recorder.recording = true
+    mic.startRecording()
     speechEmitter.recording = true
     streamQue = []
   }
 
   const end_recording = (mode = false) => {
-    recorder.recording = false
+    mic.stopRecording()
     if (!mode) {
       speechEmitter.recording = false
     }
@@ -183,8 +191,7 @@ function Speech() {
   }
 
   // 音声区間検出
-  recorder.on("voice_start", () => {
-    if (!recorder.recording) return
+  mic.on("voice_start", () => {
     Log.info("writing_start")
     if (!speechStream.isActive()) {
       const fname = `./work/output-${timestamp()}.raw`
@@ -199,14 +206,13 @@ function Speech() {
   })
 
   // 無音区間検出
-  recorder.on("voice_stop", () => {
-    if (!recorder.recording) return
+  mic.on("voice_stop", () => {
     Log.info("writing_stop")
     writing_timeout()
   })
 
   // 音声データ受信
-  recorder.on("data", (payload) => {
+  mic.on("data", (raw) => {
     if (speechEmitter.writing && speechEmitter.recording) {
       speechEmitter.writing = true
       if (speechStream.isActive()) {
@@ -216,11 +222,8 @@ function Speech() {
           })
           streamQue = []
         }
-        speechStream.stream.write(payload.raw)
+        speechStream.stream.write(raw)
       }
-    } else {
-      streamQue.push(payload.raw)
-      streamQue = streamQue.slice(-PRELOAD_COUNT)
     }
   })
 
@@ -265,7 +268,7 @@ function Speech() {
     }
 
     requestOpts = opts
-    Log.info("#", "startRecording", recorder.recording)
+    Log.info("#", "startRecording", mic.isRecording())
   })
 
   // 音声解析停止
