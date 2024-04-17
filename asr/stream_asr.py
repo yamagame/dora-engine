@@ -9,7 +9,7 @@ import time
 import torch
 import wave
 import numpy as np
-from inaSpeechSegmenter import Segmenter
+# from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.sidekit_mfcc import mfcc
 from espnet_onnx import Speech2Text
 from pyannote.audio import Pipeline
@@ -19,34 +19,38 @@ warnings.simplefilter('ignore', FutureWarning)
 
 
 load_dotenv()
-HUGGINGFACE_TOKEN = ""
+PYANNOTE_CHECK_POINT = ""  # huggingface のキャッシュ config.yaml へのパス
+if "PYANNOTE_CHECK_POINT" in os.environ:
+    PYANNOTE_CHECK_POINT = os.environ['PYANNOTE_CHECK_POINT']
+HUGGINGFACE_TOKEN = ""  # huggingface へのアクセストークン
 if "HUGGINGFACE_TOKEN" in os.environ:
     HUGGINGFACE_TOKEN = os.environ['HUGGINGFACE_TOKEN']
-
-print("> STEP1:", flush=True)
 
 
 def speakerDiarization():
     """
     話者分離準備
     """
-    if HUGGINGFACE_TOKEN == "":
-        return
-    # pipeline = Pipeline.from_pretrained(
-    #     "pyannote/speaker-diarization-3.1",
-    #     use_auth_token=HUGGINGFACE_TOKEN)
-    pipeline = Pipeline.from_pretrained(
-        "pyannote/speaker-diarization-3.1")
+    # PYANNOTE_CHECK_POINT 優先
+    if PYANNOTE_CHECK_POINT != "":
+        pipeline = Pipeline.from_pretrained(
+            checkpoint_path=PYANNOTE_CHECK_POINT)
+        pipeline.to(torch.device("mps"))
+        return pipeline
+    # HUGGINGFACE_TOKEN を使用
+    if HUGGINGFACE_TOKEN != "":
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1",
+            use_auth_token=HUGGINGFACE_TOKEN)
+        pipeline.to(torch.device("mps"))
+        return pipeline
 
-    pipeline.to(torch.device("mps"))
-    return pipeline
+    return
 
 
-print("> STEP2:", flush=True)
+print("> Pyannote 初期化", flush=True)
 
 pipeline = speakerDiarization()
-
-print("> STEP3:", flush=True)
 
 
 def diarization(filename):
@@ -61,24 +65,26 @@ def diarization(filename):
     retval = False
 
     # print the result
-    for turn, _, speaker in diarization.itertracks(yield_label=True):
-        print("> speaker:", speaker)
+    for turn, track_name, speaker in diarization.itertracks(yield_label=True):
+        print("> speaker:", speaker, track_name)
         print(f"start={turn.start:.1f}s stop={turn.end:.1f}s speaker_{speaker}")
         retval = True
 
     return retval
 
 
-seg = Segmenter()
+print("> Speech2Text 初期化", flush=True)
 
+speech2text = Speech2Text(tag_name='reazon-research/reazonspeech-espnet-v2')
+
+print("> UDP 受信スレッド開始", flush=True)
+
+buf = []
+
+M_SIZE = 1024
 serv_address = ('127.0.0.1', 8890)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(serv_address)
-
-M_SIZE = 1024
-speech2text = Speech2Text(tag_name='reazon-research/reazonspeech-espnet-v2')
-
-buf = []
 
 
 def recieve():
@@ -101,25 +107,26 @@ t = threading.Thread(target=recieve, args=())
 t.daemon = True
 t.start()
 
+# seg = Segmenter()
 
-def segmentation(y):
-    # inaSpeechSegmenterを使用してセグメント分析
-    _, loge, _, mspec = mfcc(y, get_mspec=True)
-    # print(len(loge), mspec)
+# def segmentation(y):
+#     # inaSpeechSegmenterを使用してセグメント分析
+#     _, loge, _, mspec = mfcc(y, get_mspec=True)
+#     # print(len(loge), mspec)
 
-    difflen = 0
-    if len(loge) < 68:
-        difflen = 68 - len(loge)
-        mspec = np.concatenate((mspec, np.ones((difflen, 24)) * np.min(mspec)))
+#     difflen = 0
+#     if len(loge) < 68:
+#         difflen = 68 - len(loge)
+#         mspec = np.concatenate((mspec, np.ones((difflen, 24)) * np.min(mspec)))
 
-    segmentation = seg.segment_feats(mspec, loge, difflen, 0)
-    print(segmentation)
+#     segmentation = seg.segment_feats(mspec, loge, difflen, 0)
+#     print(segmentation)
 
-    # 人の声が入っているか？
-    for v in segmentation:
-        if v[0] != 'male' and v[0] != 'female':
-            return True
-    return False
+#     # 人の声が入っているか？
+#     for v in segmentation:
+#         if v[0] != 'male' and v[0] != 'female':
+#             return True
+#     return False
 
 
 def transcribe(sample):
@@ -142,6 +149,9 @@ def transcribe(sample):
     return speech2text(y)
 
 
+# count = 1
+# count_max = 100
+
 MAX_SAMPLE_BUFFER = 16000*2*20  # 受信バッファは最大60秒
 start = time.time()
 received = []
@@ -151,7 +161,7 @@ sample = bytes(0)
 
 # 音声データは 16bit、littleエンディアン、16KHz のみ対応
 
-print("> サーバー起動", flush=True)
+print("> 音声認識開始", flush=True)
 
 while True:
     # スリープして受信スレッドに処理時間を与える
@@ -201,6 +211,13 @@ while True:
                             out_f.setframerate(16000)
                             out_f.writeframesraw(wavedat)
                         raw.seek(0)
+                        # Write the stuff
+                        # fname = 'work/received-'+str(count)+'.wav'
+                        # with open(fname, "wb") as f:
+                        #     f.write(raw.getbuffer())
+                        # count += 1
+                        # if count > count_max:
+                        #     count = 1
                         # 話者分離
                         if diarization(raw):
                             print("> 認識結果:", res[0][0], flush=True)
