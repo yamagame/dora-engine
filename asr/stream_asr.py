@@ -197,32 +197,33 @@ while True:
                     sample = bytes(0)
                     # 音声認識
                     start = time.time()
-                    res = transcribe(wavedat)
-                    if len(res) > 0 and len(res[0]) > 0:
-                        # 認識結果表示
-                        print("> transcribe:", res[0][0], time.time()-start)
-                        print("decoder:", res[0][3].scores["decoder"], "ctc:", res[0]
-                              [3].scores["ctc"], "lm:", res[0][3].scores["lm"])
-                        # raw -> wav 変換
-                        raw = io.BytesIO()
-                        with wave.open(raw, "wb") as out_f:
-                            out_f.setnchannels(1)
-                            out_f.setsampwidth(2)  # number of bytes
-                            out_f.setframerate(16000)
-                            out_f.writeframesraw(wavedat)
-                        raw.seek(0)
-                        # Write the stuff
-                        # fname = 'work/received-'+str(count)+'.wav'
-                        # with open(fname, "wb") as f:
-                        #     f.write(raw.getbuffer())
-                        # count += 1
-                        # if count > count_max:
-                        #     count = 1
-                        # 話者分離
-                        if diarization(raw):
+                    # raw -> wav 変換
+                    raw = io.BytesIO()
+                    with wave.open(raw, "wb") as out_f:
+                        out_f.setnchannels(1)
+                        out_f.setsampwidth(2)  # number of bytes
+                        out_f.setframerate(16000)
+                        out_f.writeframesraw(wavedat)
+                    raw.seek(0)
+                    # Write the stuff
+                    # fname = 'work/received-'+str(count)+'.wav'
+                    # with open(fname, "wb") as f:
+                    #     f.write(raw.getbuffer())
+                    # count += 1
+                    # if count > count_max:
+                    #     count = 1
+                    # 話者分離
+                    if diarization(raw):
+                        res = transcribe(wavedat)
+                        if len(res) > 0 and len(res[0]) > 0:
+                            # 認識結果表示
+                            print("> transcribe:",
+                                  res[0][0], time.time()-start)
+                            print("decoder:", res[0][3].scores["decoder"], "ctc:", res[0]
+                                  [3].scores["ctc"], "lm:", res[0][3].scores["lm"])
                             print("> 認識結果:", res[0][0], flush=True)
-                    else:
-                        print(res)
+                        else:
+                            print(res)
                     print("> 処理時間:", time.time()-start, flush=True)
                 # バッファを初期化
                 buf = buf[idx+1:]

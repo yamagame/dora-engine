@@ -7,7 +7,7 @@ export class Recorder extends EventEmitter {
   buffers: Int16Array[] = []
   state: RecorderState = "idle"
   recording: boolean = false
-  pre_recording_size = -1
+  pre_recording_size = -3
   delay_recording_size = 3
   pre_load_counter: number = 0
 

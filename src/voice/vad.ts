@@ -212,7 +212,7 @@ export class VAD extends EventEmitter {
 
     this.voiceTrendMax = 10
     this.voiceTrendMin = -10
-    this.voiceTrendStart = 3
+    this.voiceTrendStart = 5
     this.voiceTrendEnd = -5
     this.voiceTrend = this.voiceTrendMin
 
@@ -319,7 +319,7 @@ export class VAD extends EventEmitter {
     if (integration > 0 || !end) {
       this.energy_offset += integration
     } else {
-      this.energy_offset += integration * 15
+      this.energy_offset += integration * 10
     }
 
     this.energy_offset = this.energy_offset < 0 ? 0 : this.energy_offset
