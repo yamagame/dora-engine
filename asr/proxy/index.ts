@@ -44,7 +44,14 @@ function main() {
     })
   })
 
-  const sub = spawn("./asr/start-asr.sh")
+  let asr_mode = "reazon"
+  if (process.argv.length > 2) {
+    asr_mode = process.argv[2]
+  }
+
+  console.log(asr_mode)
+
+  const sub = spawn(`./asr/start-${asr_mode}-asr.sh`)
 
   sub.stdout.on("data", (data) => {
     const lines = data.toString().split("\n")

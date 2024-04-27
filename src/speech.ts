@@ -1,15 +1,10 @@
 import { Log } from "~/logger"
 
 const _selectEngine = (mode: string) => {
-  if (mode === "whisper") {
-    return require("./speech-to-text-whisper")
-  } else if (mode === "browser") {
+  if (mode === "browser") {
     return require("./speech-to-text-browser")
-  } else if (mode === "reazon") {
-    return require("./speech-to-text-reazon")
-  } else if (mode === "google") {
-    // return require("./speech-to-text-google-old")
-    return require("./speech-to-text-google")
+  } else if (mode === "stream") {
+    return require("./speech-to-text-stream")
   }
   return require("./speech-to-text-disabled")
 }

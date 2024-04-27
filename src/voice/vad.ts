@@ -91,7 +91,7 @@ class Filter {
   v: number = 0
 }
 
-const DEBUG = false
+const DEBUG = true
 
 export class VADProps {
   smoothingTimeConstant: number = 0.99

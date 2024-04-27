@@ -1,19 +1,22 @@
 #!/usr/bin/env python
 import warnings
 from dotenv import load_dotenv
-import io
 import os
+import sys
 import threading
 import socket
 import time
 import torch
-import wave
-import numpy as np
 # from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.sidekit_mfcc import mfcc
-from espnet_onnx import Speech2Text
 from pyannote.audio import Pipeline
 from proto.wave_pb2 import WaveUnit
+import wave_conv
+
+asrmode = "reazon"
+if len(sys.argv) > 1:
+    asrmode = sys.argv[1]
+
 
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -53,14 +56,18 @@ print("> Pyannote 初期化", flush=True)
 pipeline = speakerDiarization()
 
 
-def diarization(filename):
+def diarization(raw):
     """
     話者分離
     """
     if HUGGINGFACE_TOKEN == "":
         return
+
+    # raw -> wav
+    wav = wave_conv.to_wav(raw)
+
     # apply pretrained pipeline
-    diarization = pipeline(filename)
+    diarization = pipeline(wav)
 
     retval = False
 
@@ -73,9 +80,19 @@ def diarization(filename):
     return retval
 
 
-print("> Speech2Text 初期化", flush=True)
+print("> Speech2Text 初期化:"+asrmode, flush=True)
 
-speech2text = Speech2Text(tag_name='reazon-research/reazonspeech-espnet-v2')
+
+def Speech2Text():
+    if asrmode == "whisper":
+        from asr_whisper import WhisperAsr
+        return WhisperAsr()
+
+    from asr_reazon import ReazonAsr
+    return ReazonAsr()
+
+
+speech2text = Speech2Text()
 
 print("> UDP 受信スレッド開始", flush=True)
 
@@ -106,47 +123,6 @@ def recieve():
 t = threading.Thread(target=recieve, args=())
 t.daemon = True
 t.start()
-
-# seg = Segmenter()
-
-# def segmentation(y):
-#     # inaSpeechSegmenterを使用してセグメント分析
-#     _, loge, _, mspec = mfcc(y, get_mspec=True)
-#     # print(len(loge), mspec)
-
-#     difflen = 0
-#     if len(loge) < 68:
-#         difflen = 68 - len(loge)
-#         mspec = np.concatenate((mspec, np.ones((difflen, 24)) * np.min(mspec)))
-
-#     segmentation = seg.segment_feats(mspec, loge, difflen, 0)
-#     print(segmentation)
-
-#     # 人の声が入っているか？
-#     for v in segmentation:
-#         if v[0] != 'male' and v[0] != 'female':
-#             return True
-#     return False
-
-
-def transcribe(sample):
-    """
-    音声認識
-    """
-    y = np.frombuffer(sample,
-                      dtype=np.int16
-                      ).astype(np.float32)
-
-    # # セグメント分析
-    # if not segmentation(t):
-    #     return [[]]
-
-    # 音声データを 0 〜 1 にスケーリング
-    scale = 1./float(1 << ((8*2) - 1))
-    y *= scale
-
-    # 音声認識
-    return speech2text(y)
 
 
 # count = 1
@@ -197,33 +173,17 @@ while True:
                     sample = bytes(0)
                     # 音声認識
                     start = time.time()
-                    # raw -> wav 変換
-                    raw = io.BytesIO()
-                    with wave.open(raw, "wb") as out_f:
-                        out_f.setnchannels(1)
-                        out_f.setsampwidth(2)  # number of bytes
-                        out_f.setframerate(16000)
-                        out_f.writeframesraw(wavedat)
-                    raw.seek(0)
                     # Write the stuff
                     # fname = 'work/received-'+str(count)+'.wav'
-                    # with open(fname, "wb") as f:
-                    #     f.write(raw.getbuffer())
+                    # wave_conv.to_wavfile(wavedat, fname)
                     # count += 1
                     # if count > count_max:
                     #     count = 1
                     # 話者分離
-                    if diarization(raw):
-                        res = transcribe(wavedat)
-                        if len(res) > 0 and len(res[0]) > 0:
-                            # 認識結果表示
-                            print("> transcribe:",
-                                  res[0][0], time.time()-start)
-                            print("decoder:", res[0][3].scores["decoder"], "ctc:", res[0]
-                                  [3].scores["ctc"], "lm:", res[0][3].scores["lm"])
-                            print("> 認識結果:", res[0][0], flush=True)
-                        else:
-                            print(res)
+                    if diarization(wavedat):
+                        text = speech2text.transcribe(wavedat)
+                        if text != "":
+                            print("> 認識結果:", text, flush=True)
                     print("> 処理時間:", time.time()-start, flush=True)
                 # バッファを初期化
                 buf = buf[idx+1:]
