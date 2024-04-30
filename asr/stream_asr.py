@@ -99,7 +99,7 @@ print("> UDP 受信スレッド開始", flush=True)
 buf = []
 
 M_SIZE = 1024
-serv_address = ('127.0.0.1', 8890)
+serv_address = ('', 8890)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(serv_address)
 

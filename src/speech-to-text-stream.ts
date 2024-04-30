@@ -7,10 +7,12 @@ const io = require("socket.io-client")
 function Speech() {
   const speechEmitter = new RecordingEmitter()
 
-  const host = `http://localhost:3389`
-  const socket = io(host)
+  const host = process.env.ASR_STREAM_SERVER || "localhost"
 
-  const client = new UDPClient({ port: 8890, host: "localhost" })
+  const url = `http://${host}:3389`
+  const socket = io(url)
+
+  const client = new UDPClient({ port: 8890, host })
 
   const mic = new Mic({
     rate: "16000",

@@ -40,7 +40,7 @@ export class Mic extends EventEmitter {
     encoding: "signed-integer",
     rate: "16000",
     channels: "1",
-    device: "plughw:1,0",
+    device: "",
     exitOnSilence: 6,
     fileType: "raw",
     audioStream: null,
@@ -117,52 +117,61 @@ export class Mic extends EventEmitter {
     const format = this.format
     if (this.audioProcess === null) {
       if (isWindows) {
-        this.audioProcess = spawn(
-          "sox",
-          [
-            "-b",
-            bitwidth,
-            "--endian",
-            endian,
-            "-c",
-            channels,
-            "-r",
-            rate,
-            "-e",
-            encoding,
-            "-t",
-            "waveaudio",
-            "default",
-            "-p",
-          ],
-          this.audioProcessOptions
-        )
+        const opts = []
+        if (bitwidth) {
+          opts.push("-b", bitwidth)
+        }
+        if (endian) {
+          opts.push("--endian", endian)
+        }
+        if (channels) {
+          opts.push("-c", channels)
+        }
+        if (rate) {
+          opts.push("-r", rate)
+        }
+        if (encoding) {
+          opts.push("-e", encoding)
+        }
+        opts.push("-t", "waveaudio", "default", "-p")
+        this.audioProcess = spawn("sox", opts, this.audioProcessOptions)
       } else if (isMac) {
-        this.audioProcess = spawn(
-          "rec",
-          [
-            "-b",
-            bitwidth,
-            "--endian",
-            endian,
-            "-c",
-            channels,
-            "-r",
-            rate,
-            "-e",
-            encoding,
-            "-t",
-            fileType,
-            "-",
-          ],
-          this.audioProcessOptions
-        )
+        const opts = []
+        if (bitwidth) {
+          opts.push("-b", bitwidth)
+        }
+        if (endian) {
+          opts.push("--endian", endian)
+        }
+        if (channels) {
+          opts.push("-c", channels)
+        }
+        if (rate) {
+          opts.push("-r", rate)
+        }
+        if (encoding) {
+          opts.push("-e", encoding)
+        }
+        if (fileType) {
+          opts.push("-t", fileType)
+        }
+        opts.push("-")
+        this.audioProcess = spawn("rec", opts, this.audioProcessOptions)
       } else {
-        this.audioProcess = spawn(
-          "arecord",
-          ["-t", fileType, "-c", channels, "-r", rate, "-f", format, "-D", device],
-          this.audioProcessOptions
-        )
+        const opts = []
+        if (fileType) {
+          opts.push("-t", fileType)
+        }
+        if (channels) {
+          opts.push("-c", channels)
+        }
+        if (rate) {
+          opts.push("-r", rate)
+        }
+        if (device) {
+          opts.push("-D", device)
+        }
+        this.audioProcess = spawn("arecord", opts, this.audioProcessOptions)
       }
 
       if (this.audioStream != null) {

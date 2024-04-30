@@ -69,7 +69,7 @@
     "start": "SPEECH=browser ts-node -r tsconfig-paths/register src/robot-server.ts",
     "start:jtalk": "SPEECH=off ROBOT_DEFAULT_VOICE=open-jTalk ts-node -r tsconfig-paths/register src/robot-server.ts",
     "start:browser": "SPEECH=browser ts-node -r tsconfig-paths/register src/robot-server.ts",
-    "start:stream": "SPEECH=reazon ts-node -r tsconfig-paths/register src/robot-server.ts",
+    "start:stream": "SPEECH=stream ts-node -r tsconfig-paths/register src/robot-server.ts",
     "asr:reazon": "SPEECH=reazon ts-node -r tsconfig-paths/register asr/proxy/index.ts reazon",
     "asr:whisper": "SPEECH=reazon ts-node -r tsconfig-paths/register asr/proxy/index.ts whisper",
     "mic:reazon": "ts-node -r tsconfig-paths/register src/speech-to-text-reazon.ts",
