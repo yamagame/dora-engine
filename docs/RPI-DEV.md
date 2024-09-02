@@ -10,7 +10,7 @@
 $ pulseaudio -k && pulseaudio --load=module-native-protocol-tcp --exit-idle-time=-1 --daemon
 
 # ラズパイイメージを起動
-$ docker run --name rpi-dora-engine -it --rm -e PULSE_SERVER=host.docker.internal -v ./:/app -v ~/.config/pulse:/root/.config/pulse -p 3090:3090 -p 4000:4000 -w /app --entrypoint /bin/bash raspios_dialog_system
+$ docker run --name rpi-dora-engine -it --rm -e PULSE_SERVER=host.docker.internal -v ./:/app -v ~/.config/pulse:/root/.config/pulse -p 3090:3090 -p 4000:4000 -w /app --entrypoint /bin/bash raspios_lite_arm64:2023-10-10
 
 # 起動しているコンテナにログインする場合
 $ docker exec -it rpi-dora-engine /bin/bash
